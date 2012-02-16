@@ -1,0 +1,19 @@
+
+# Compiled source #
+###################
+src/*.o
+src/*.a
+src/*.so
+src/*.lc
+
+
+# Lib install     #
+###################
+bin
+lib
+include
+
+
+
+lua-5.2.0
+glfw
