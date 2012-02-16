@@ -11,6 +11,7 @@ static int luaC_Terminate(lua_State *L);
 static int luaC_OpenWindow(lua_State *L);
 static int luaC_RedrawScene(lua_State *L);
 static int luaC_BoundingBoxArtist(lua_State *L);
+static int luaC_PointsListArtist(lua_State *L);
 
 static void KeyboardInput(int key, int state);
 static void CharacterInput(int key, int state);
@@ -52,10 +53,11 @@ int luaopen_luview(lua_State *L)
   printf("loading luview...\n");
 
   luaL_Reg luview_api[] = { { "Init"       , luaC_Init },
-			   { "Terminate"  , luaC_Terminate },
-			   { "OpenWindow" , luaC_OpenWindow },
-			   { "RedrawScene", luaC_RedrawScene },
+			   { "Terminate"   , luaC_Terminate },
+			   { "OpenWindow"  , luaC_OpenWindow },
+			   { "RedrawScene" , luaC_RedrawScene },
 			   { "BoundingBoxArtist", luaC_BoundingBoxArtist },
+			   { "PointsListArtist" , luaC_PointsListArtist },
 			   { NULL, NULL} };
 
   lua_newtable(L);
@@ -200,7 +202,64 @@ int luaC_BoundingBoxArtist(lua_State *L)
   glPopMatrix();
   return 0;
 }
+static double *data = NULL;
+int luaC_PointsListArtist(lua_State *L)
+{
+  luaL_checktype(L, 1, LUA_TTABLE);
+  struct LuviewTraits T = luview_totraits(L, 1);
 
+  if (T.HasFocus) T.LineWidth = 2.0;
+
+  glPushMatrix();
+  glColor3dv(T.Color);
+  glLineWidth(T.LineWidth);
+
+  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
+  glScaled(T.Scale, T.Scale, T.Scale);
+  glRotated(T.Orientation[0], 1, 0, 0);
+  glRotated(T.Orientation[1], 0, 1, 0);
+  glRotated(T.Orientation[2], 0, 0, 1);
+
+
+
+  int N = 64*64*64;
+
+  if (data == NULL) {
+    printf("loading...\n");
+
+    FILE *points = fopen("/Users/jzrake/Work/luview/cells999.dat", "r");
+    data = (double*) malloc(N*9*sizeof(double));
+
+    for (int i=0; i<N; ++i) {
+      fscanf(points, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
+	     data+9*i+0, data+9*i+1, data+9*i+2,
+	     data+9*i+3, data+9*i+4, data+9*i+5,
+	     data+9*i+6, data+9*i+7, data+9*i+8);
+    }
+
+    fclose(points);
+    printf("done.\n");
+  }
+
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+
+  glPointSize(2.0);
+  glBegin(GL_POINTS);
+
+
+  for (int i=0; i<N; ++i) {
+    const double color[4] = {1e2*data[9*i + 8], 1e1*data[9*i + 8], 1e0*data[9*i + 8], 0.4 };
+    glColor4dv(color);
+    glVertex3dv(data + 9*i);
+  }
+
+  glEnd();
+  glDisable(GL_BLEND);
+  glPopMatrix();
+
+  return 0;
+}
 
 
 
