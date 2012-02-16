@@ -1,5 +1,6 @@
 
 
+#include <stdlib.h>
 #include "lualib.h"
 #include "lauxlib.h"
 #include "GL/glfw.h"
@@ -15,7 +16,7 @@ static void KeyboardInput(int key, int state);
 static void CharacterInput(int key, int state);
 
 
-static int luaC_bounding_box(lua_State *L);
+
 
 
 static int Autoplay     = 0;
@@ -29,15 +30,17 @@ static lua_State *LuaState;
 
 struct LuviewCamera
 {
-  double position[3];
-  double angle[2];
+  double Position[3];
+  double Angle[2];
 } ;
 struct LuviewTraits
 {
   double Position[3];
+  double Orientation[3];
   double Color[3];
   double Scale;
   double LineWidth;
+  int HasFocus;
 } ;
 struct LuviewCamera luview_tocamera(lua_State *L, int pos);
 struct LuviewTraits luview_totraits(lua_State *L, int pos);
@@ -81,7 +84,7 @@ int luaC_Terminate(lua_State *L)
 }
 int luaC_OpenWindow(lua_State *L)
 {
-  double ClearColor[3] = { 0.1, 0.2, 0.2 };
+  double ClearColor[3] = { 0.1, 0.1, 0.0 };
 
   glfwOpenWindow(WindowWidth, WindowHeight, 0,0,0,0,0,0, GLFW_WINDOW);
 
@@ -100,6 +103,8 @@ int luaC_OpenWindow(lua_State *L)
 }
 
 int luaC_RedrawScene(lua_State *L)
+// @inputs: (1) Scene := { Camera={}, Keyboard={}, Actors={ Artist={}, Traits={}, } }
+// @return: nil
 {
   LuaState = L;
 
@@ -118,14 +123,25 @@ int luaC_RedrawScene(lua_State *L)
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
-    glTranslated(-C.position[0], -C.position[1], -C.position[2]);
-    glScalef(ZoomFactor, ZoomFactor, ZoomFactor);
+    glTranslated(-C.Position[0], -C.Position[1], -C.Position[2]);
+    glScaled(ZoomFactor, ZoomFactor, ZoomFactor);
 
-    glRotatef(C.angle[0], 1, 0, 0);
-    glRotatef(C.angle[1], 0, 1, 0);
+    glRotated(C.Angle[0], 1, 0, 0);
+    glRotated(C.Angle[1], 0, 1, 0);
 
-    lua_getfield(L, 1, "Draw");
-    lua_call(L, 0, 0);
+    lua_getfield(L, 1, "Actors");
+
+    for (int nactor=1; nactor<=lua_rawlen(L, -1); ++nactor) {
+      lua_rawgeti(L, -1, nactor);
+      int actpos = lua_gettop(L);
+
+      lua_getfield(L, actpos, "Artist");
+      lua_getfield(L, actpos, "Traits");
+
+      lua_call(L, 1, 0);
+      lua_pop(L, 1); // pop the Actor
+    }
+    lua_pop(L, 1);
 
     glFlush();
     glfwSwapBuffers();
@@ -143,59 +159,45 @@ int luaC_RedrawScene(lua_State *L)
 }
 
 int luaC_BoundingBoxArtist(lua_State *L)
-{
-  lua_newtable(L);
-
-  lua_pushcfunction(L, luaC_bounding_box);
-  lua_setfield(L, 1, "Draw");
-
-  return 1;
-}
-
-int luaC_bounding_box(lua_State *L)
-// @inputs: (1) Artist (2) Traits
+// @inputs: (1) Traits
 // @return: nil
 {
   luaL_checktype(L, 1, LUA_TTABLE);
-  luaL_checktype(L, 2, LUA_TTABLE);
+  struct LuviewTraits T = luview_totraits(L, 1);
 
-  struct LuviewTraits T = luview_totraits(L, 2);
+  if (T.HasFocus) T.LineWidth = 2.0;
 
-  const double L0  = T.Scale;
-  const double Lx0 = -L0;
-  const double Lx1 =  L0;
-  const double Ly0 = -L0;
-  const double Ly1 =  L0;
-  const double Lz0 = -L0;
-  const double Lz1 =  L0;
-
-  // Drawing a bounding box
-  // ---------------------------------------------------------------------------
+  glPushMatrix();
   glColor3dv(T.Color);
   glLineWidth(T.LineWidth);
 
-  glBegin(GL_LINES);
+  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
+  glScaled(T.Scale, T.Scale, T.Scale);
+  glRotated(T.Orientation[0], 1, 0, 0);
+  glRotated(T.Orientation[1], 0, 1, 0);
+  glRotated(T.Orientation[2], 0, 0, 1);
 
+  glBegin(GL_LINES);
   // x-edges
-  glVertex3f(Lx0, Ly0, Lz0); glVertex3f(Lx1, Ly0, Lz0);
-  glVertex3f(Lx0, Ly0, Lz1); glVertex3f(Lx1, Ly0, Lz1);
-  glVertex3f(Lx0, Ly1, Lz0); glVertex3f(Lx1, Ly1, Lz0);
-  glVertex3f(Lx0, Ly1, Lz1); glVertex3f(Lx1, Ly1, Lz1);
+  glVertex3f(-0.5, -0.5, -0.5); glVertex3f(+0.5, -0.5, -0.5);
+  glVertex3f(-0.5, -0.5, +0.5); glVertex3f(+0.5, -0.5, +0.5);
+  glVertex3f(-0.5, +0.5, -0.5); glVertex3f(+0.5, +0.5, -0.5);
+  glVertex3f(-0.5, +0.5, +0.5); glVertex3f(+0.5, +0.5, +0.5);
 
   // y-edges
-  glVertex3f(Lx0, Ly0, Lz0); glVertex3f(Lx0, Ly1, Lz0);
-  glVertex3f(Lx1, Ly0, Lz0); glVertex3f(Lx1, Ly1, Lz0);
-  glVertex3f(Lx0, Ly0, Lz1); glVertex3f(Lx0, Ly1, Lz1);
-  glVertex3f(Lx1, Ly0, Lz1); glVertex3f(Lx1, Ly1, Lz1);
+  glVertex3f(-0.5, -0.5, -0.5); glVertex3f(-0.5, +0.5, -0.5);
+  glVertex3f(+0.5, -0.5, -0.5); glVertex3f(+0.5, +0.5, -0.5);
+  glVertex3f(-0.5, -0.5, +0.5); glVertex3f(-0.5, +0.5, +0.5);
+  glVertex3f(+0.5, -0.5, +0.5); glVertex3f(+0.5, +0.5, +0.5);
 
   // z-edges
-  glVertex3f(Lx0, Ly0, Lz0); glVertex3f(Lx0, Ly0, Lz1);
-  glVertex3f(Lx0, Ly1, Lz0); glVertex3f(Lx0, Ly1, Lz1);
-  glVertex3f(Lx1, Ly0, Lz0); glVertex3f(Lx1, Ly0, Lz1);
-  glVertex3f(Lx1, Ly1, Lz0); glVertex3f(Lx1, Ly1, Lz1);
+  glVertex3f(-0.5, -0.5, -0.5); glVertex3f(-0.5, -0.5, +0.5);
+  glVertex3f(-0.5, +0.5, -0.5); glVertex3f(-0.5, +0.5, +0.5);
+  glVertex3f(+0.5, -0.5, -0.5); glVertex3f(+0.5, -0.5, +0.5);
+  glVertex3f(+0.5, +0.5, -0.5); glVertex3f(+0.5, +0.5, +0.5);
 
   glEnd();
-
+  glPopMatrix();
   return 0;
 }
 
@@ -208,30 +210,22 @@ void KeyboardInput(int key, int state)
   if (state != GLFW_PRESS) return;
 
   lua_getfield(LuaState, 1, "Keyboard");
+  lua_pushvalue(LuaState, 1); // Scene
   lua_pushnumber(LuaState, key);
   lua_pushnumber(LuaState, state);
-  lua_call(LuaState, 2, 0);
+  lua_call(LuaState, 3, 0);
 }
 
 void CharacterInput(int key, int state)
 {
-  switch (key) {
+  char keystr[1] = { key };
+  if (state != GLFW_PRESS) return;
 
-  case 'z':
-    ZoomFactor /= 1.1;
-    break;
-
-  case 'Z':
-    ZoomFactor *= 1.1;
-    break;
-
-  case 'p':
-    Autoplay ^= 1;
-    break;
-
-  default:
-    break;
-  }
+  lua_getfield(LuaState, 1, "Keyboard");
+  lua_pushvalue(LuaState, 1); // Scene
+  lua_pushlstring(LuaState, keystr, 1);
+  lua_pushnumber(LuaState, state);
+  lua_call(LuaState, 3, 0);
 }
 
 
@@ -248,6 +242,12 @@ struct LuviewTraits luview_totraits(lua_State *L, int pos)
   lua_rawgeti(L, pos+1, 3); T.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
+  lua_getfield(L, pos, "Orientation");
+  lua_rawgeti(L, pos+1, 1); T.Orientation[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, pos+1, 2); T.Orientation[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, pos+1, 3); T.Orientation[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_pop(L, 1);
+
   lua_getfield(L, pos, "Color");
   lua_rawgeti(L, pos+1, 1); T.Color[0] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_rawgeti(L, pos+1, 2); T.Color[1] = lua_tonumber(L, -1); lua_pop(L, 1);
@@ -256,6 +256,7 @@ struct LuviewTraits luview_totraits(lua_State *L, int pos)
 
   lua_getfield(L, pos, "Scale"    ); T.Scale     = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_getfield(L, pos, "LineWidth"); T.LineWidth = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, pos, "HasFocus" ); T.HasFocus  = lua_toboolean(L, -1); lua_pop(L, 1);
 
   return T;
 }
@@ -264,15 +265,15 @@ struct LuviewCamera luview_tocamera(lua_State *L, int pos)
 {
   struct LuviewCamera C;
 
-  lua_getfield(L, pos, "position");
-  lua_rawgeti(L, pos+1, 1); C.position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); C.position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 3); C.position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, pos, "Position");
+  lua_rawgeti(L, pos+1, 1); C.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, pos+1, 2); C.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, pos+1, 3); C.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, pos, "angle");
-  lua_rawgeti(L, pos+1, 1); C.angle[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); C.angle[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, pos, "Angle");
+  lua_rawgeti(L, pos+1, 1); C.Angle[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, pos+1, 2); C.Angle[1] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
   return C;
