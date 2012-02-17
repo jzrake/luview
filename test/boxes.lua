@@ -8,8 +8,8 @@ function luview.traits(opts)
       Position           = { 0.0, 0.0, 0.0 },
       Orientation        = { 0.0, 0.0, 0.0 },
       Color              = { 0.5, 0.5, 0.5 },
-      Scale              =   1.0,
-      LineWidth          =   1.0,
+      Scale              =   2.0,
+      LineWidth          =   2.0,
    }
    if opts then
       for k,v in pairs(opts) do t[k] = v end

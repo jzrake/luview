@@ -184,8 +184,8 @@ int luaC_BoundingBoxArtist(lua_State *L)
   glColor3dv(T.Color);
   glLineWidth(T.LineWidth);
 
-  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
   glScaled(T.Scale, T.Scale, T.Scale);
+  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
   glRotated(T.Orientation[0], 1, 0, 0);
   glRotated(T.Orientation[1], 0, 1, 0);
   glRotated(T.Orientation[2], 0, 0, 1);
@@ -223,13 +223,12 @@ int luaC_PointsListArtist(lua_State *L)
   luaL_checktype(L, 1, LUA_TTABLE);
   struct LuviewTraits T = luview_totraits(L, 1);
 
-  int Nv, Ns;
-
 
   lua_getfield(L, 2, "Vectors");
   if (!lunum_hasmetatable(L, -1, "array")) {
     luaL_error(L, "need an array for DataSource.Vectors");
   }
+  int Nv;
   double *vectors = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Nv);
 
   
@@ -237,6 +236,7 @@ int luaC_PointsListArtist(lua_State *L)
   if (!lunum_hasmetatable(L, -1, "array")) {
     luaL_error(L, "need an array for DataSource.Scalars");
   }
+  int Ns;
   double *scalars = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Ns);
 
 
@@ -245,8 +245,8 @@ int luaC_PointsListArtist(lua_State *L)
   glColor3dv(T.Color);
   glLineWidth(T.LineWidth);
 
-  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
   glScaled(T.Scale, T.Scale, T.Scale);
+  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
   glRotated(T.Orientation[0], 1, 0, 0);
   glRotated(T.Orientation[1], 0, 1, 0);
   glRotated(T.Orientation[2], 0, 0, 1);
