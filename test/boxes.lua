@@ -8,8 +8,9 @@ function luview.traits(opts)
       Position           = { 0.0, 0.0, 0.0 },
       Orientation        = { 0.0, 0.0, 0.0 },
       Color              = { 0.5, 0.5, 0.5 },
-      Scale              =   2.0,
-      LineWidth          =   2.0,
+      Scale              =   1.0,
+      LineWidth          =   1.0,
+      Transparency       =   1.0,
    }
    if opts then
       for k,v in pairs(opts) do t[k] = v end
@@ -30,9 +31,22 @@ function luview.PositionResponse(self)
    }
 end
 
-
-luview.Init()
-luview.OpenWindow()
+function luview.ColormapResponse(self)
+   local src = self.raw_source
+   local fil = luview.ColormapFilter
+   local c = '1'
+   return {
+      ["0"] = function() self.DataSource.Colors = fil(src,0,c) end,
+      ["1"] = function() self.DataSource.Colors = fil(src,1,c) end,
+      ["2"] = function() self.DataSource.Colors = fil(src,2,c) end,
+      ["3"] = function() self.DataSource.Colors = fil(src,3,c) end,
+      ["4"] = function() self.DataSource.Colors = fil(src,4,c) end,
+      ["5"] = function() self.DataSource.Colors = fil(src,5,c) end,
+      ["6"] = function() self.DataSource.Colors = fil(src,6,c) end,
+      ["w"] = function() self.Traits.LineWidth = self.Traits.LineWidth - 0.2 end,
+      ["W"] = function() self.Traits.LineWidth = self.Traits.LineWidth + 0.2 end,
+   }
+end
 
 local Camera = {
 
@@ -66,8 +80,10 @@ local Scene  =  {
 
 		  { Artist   = luview.PointsListArtist,
 		    Traits   = luview.traits{Position={-0.5,-0.5,-0.5}},
-		    Response = luview.PositionResponse,
- 		    DataSource = { Vectors=cells[':,0:3'], Scalars=cells[':,8'] }
+		    Response = luview.ColormapResponse,
+		    raw_source = cells[':,6'],
+ 		    DataSource = { Positions=cells[':,0:3'],
+				   Colors=luview.ColormapFilter(cells[':,6'],0) }
 		 }
                },
    Camera    =  Camera,
@@ -92,9 +108,11 @@ local Scene  =  {
    NextObject = function(self)
                    if self.ObjFoc then self.ObjFoc.Traits.LineWidth = 1.0 end
                    self.KeyFoc, self.ObjFoc = next(self.Actors, self.KeyFoc)
-                   if self.ObjFoc then self.ObjFoc.Traits.LineWidth = 4.0 end
+                   if self.ObjFoc then self.ObjFoc.Traits.LineWidth = 3.0 end
                 end
 }
 
 
+luview.Init()
+luview.OpenWindow()
 luview.RedrawScene(Scene)

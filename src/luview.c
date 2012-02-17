@@ -1,6 +1,8 @@
 
 
 #include <stdlib.h>
+#include "numarray.h"
+#include "image.h"
 #include "lunum.h"
 #include "lualib.h"
 #include "lauxlib.h"
@@ -13,6 +15,7 @@ static int luaC_OpenWindow(lua_State *L);
 static int luaC_RedrawScene(lua_State *L);
 static int luaC_BoundingBoxArtist(lua_State *L);
 static int luaC_PointsListArtist(lua_State *L);
+static int luaC_ColormapFilter(lua_State *L);
 
 static void KeyboardInput(int key, int state);
 static void CharacterInput(int key, int state);
@@ -58,6 +61,7 @@ int luaopen_luview(lua_State *L)
                             { "RedrawScene" , luaC_RedrawScene },
                             { "BoundingBoxArtist", luaC_BoundingBoxArtist },
                             { "PointsListArtist" , luaC_PointsListArtist },
+                            { "ColormapFilter" , luaC_ColormapFilter },
                             { NULL, NULL} };
 
   lua_newtable(L);
@@ -224,22 +228,14 @@ int luaC_PointsListArtist(lua_State *L)
   struct LuviewTraits T = luview_totraits(L, 1);
 
 
-  lua_getfield(L, 2, "Vectors");
-  if (!lunum_hasmetatable(L, -1, "array")) {
-    luaL_error(L, "need an array for DataSource.Vectors");
-  }
-  int Nv;
-  double *vectors = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Nv);
-
+  lua_getfield(L, 2, "Positions");
+  struct Array *A = lunum_checkarray1(L, -1);
   
-  lua_getfield(L, 2, "Scalars");
-  if (!lunum_hasmetatable(L, -1, "array")) {
-    luaL_error(L, "need an array for DataSource.Scalars");
-  }
-  int Ns;
-  double *scalars = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Ns);
+  lua_getfield(L, 2, "Colors");
+  struct Array *B = lunum_checkarray1(L, -1);
 
-
+  double *positions = (double*) A->data;
+  double *colors = (double*) B->data;
 
   glPushMatrix();
   glColor3dv(T.Color);
@@ -257,12 +253,9 @@ int luaC_PointsListArtist(lua_State *L)
   glPointSize(T.LineWidth);
   glBegin(GL_POINTS);
 
-  for (int i=0; i<Ns; ++i) {
-    const double color[4] = { 2e1*scalars[i],
-			      1e1*scalars[i],
-			      1e0*scalars[i], 0.25 };
-    glColor4dv(color);
-    glVertex3dv(vectors + 3*i);
+  for (int i=0; i<A->shape[0]; ++i) {
+    glColor4dv(colors + 4*i);
+    glVertex3dv(positions + 3*i);
   }
 
   glEnd();
@@ -271,6 +264,68 @@ int luaC_PointsListArtist(lua_State *L)
   return 0;
 }
 
+int luaC_ColormapFilter(lua_State *L)
+// -----------------------------------------------------------------------------
+// @inputs: (1) N-element array of data values
+//          (2) color-map index [0-6]
+//          (3) transparency mode [0.0, 1.0] or 'L' (linear) or '1', '2', '3' (use cmap)
+// @return: (N x 4) array of color-mapped doubles.
+// -----------------------------------------------------------------------------
+{
+  struct Array *A = lunum_checkarray1(L, 1);
+  struct Array  B = array_new_zeros(A->size * 4, ARRAY_TYPE_DOUBLE);
+  const int cmap_ind = luaL_checkinteger(L, 2);
+
+  int alpha_mode=0, ind=0;
+  double alpha_val=1.0;
+
+  if (lua_type(L, 3) == LUA_TSTRING) {
+    switch (lua_tostring(L, 3)[0]) {
+    case 'L': alpha_mode = 2; break;
+    case '1': alpha_mode = 3; ind = 0;
+    case '2': alpha_mode = 3; ind = 1;
+    case '3': alpha_mode = 3; ind = 2;
+    }
+  }
+  else if (lua_type(L, 3) == LUA_TNUMBER) {
+    alpha_mode = 1;
+    alpha_val = lua_tonumber(L, 3);
+  }
+  else {
+    alpha_mode = 0;
+    alpha_val = 1.0;
+  }
+
+  const float *cmap = luview_get_colormap(cmap_ind);
+  const double *in = (double*) A->data;
+  double *out = (double*) B.data;
+
+  double smax=-1e16, smin=1e16;
+
+  for (int m=0; m<A->size; ++m) {
+    if (in[m] < smin) smin = in[m];
+    if (in[m] > smax) smax = in[m];
+  }
+  for (int m=0; m<A->size; ++m) {
+    const int cm = 255.0 * (in[m] - smin) / (smax - smin);
+    out[4*m + 0] = cmap[3*cm + 0];
+    out[4*m + 1] = cmap[3*cm + 1];
+    out[4*m + 2] = cmap[3*cm + 2];
+    if (alpha_mode == 2) {
+      out[4*m + 3] = cm/255.0;
+    }
+    else if (alpha_mode == 3) {
+      out[4*m + 3] = cmap[3*cm + ind];
+    }
+    else {
+      out[4*m + 3] = alpha_val;
+    }
+  }
+  int shape[2] = { A->size, 4 };
+  array_resize(&B, shape, 2);
+  lunum_pusharray1(L, &B);
+  return 1;
+}
 
 
 
