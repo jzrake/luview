@@ -1,7 +1,7 @@
 
 GL_L = -framework OpenGL -framework Cocoa
 
-LUA = $(LUA_HOME)/bin/lua
+LUA = ../bin/lua
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
@@ -9,12 +9,12 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 	$(CC) $(CFLAGS) -std=c99 -c $<
 
 luview.o : luview.c
-	$(CC) $(CFLAGS) -std=c99 -c $< -I$(LUA_HOME)/include -I$(GLFW_HOME)/include
+	$(CC) $(CFLAGS) -std=c99 -c $< -I../include -I../include
 
-$(LUVIEW_A)  : luview.o $(GLFW_HOME)/lib/libglfw.a
+$(LUVIEW_A)  : luview.o ../lib/libglfw.a ../lib/liblunum.a
 	$(AR) $@ $?
 
-$(LUVIEW_SO) : luview.o $(GLFW_HOME)/lib/libglfw.a
+$(LUVIEW_SO) : luview.o ../lib/libglfw.a ../lib/liblunum.a
 	$(SO) -o $(LUVIEW_SO) $^ $(GL_L)
 
 clean :

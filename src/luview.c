@@ -1,6 +1,7 @@
 
 
 #include <stdlib.h>
+#include "lunum.h"
 #include "lualib.h"
 #include "lauxlib.h"
 #include "GL/glfw.h"
@@ -41,7 +42,6 @@ struct LuviewTraits
   double Color[3];
   double Scale;
   double LineWidth;
-  int HasFocus;
 } ;
 struct LuviewCamera luview_tocamera(lua_State *L, int pos);
 struct LuviewTraits luview_totraits(lua_State *L, int pos);
@@ -53,12 +53,12 @@ int luaopen_luview(lua_State *L)
   printf("loading luview...\n");
 
   luaL_Reg luview_api[] = { { "Init"       , luaC_Init },
-			   { "Terminate"   , luaC_Terminate },
-			   { "OpenWindow"  , luaC_OpenWindow },
-			   { "RedrawScene" , luaC_RedrawScene },
-			   { "BoundingBoxArtist", luaC_BoundingBoxArtist },
-			   { "PointsListArtist" , luaC_PointsListArtist },
-			   { NULL, NULL} };
+                            { "Terminate"   , luaC_Terminate },
+                            { "OpenWindow"  , luaC_OpenWindow },
+                            { "RedrawScene" , luaC_RedrawScene },
+                            { "BoundingBoxArtist", luaC_BoundingBoxArtist },
+                            { "PointsListArtist" , luaC_PointsListArtist },
+                            { NULL, NULL} };
 
   lua_newtable(L);
   luaL_setfuncs(L, luview_api, 0);
@@ -86,7 +86,7 @@ int luaC_Terminate(lua_State *L)
 }
 int luaC_OpenWindow(lua_State *L)
 {
-  double ClearColor[3] = { 0.1, 0.1, 0.0 };
+  double ClearColor[3] = { 0.025, 0.050, 0.025 };
 
   glfwOpenWindow(WindowWidth, WindowHeight, 0,0,0,0,0,0, GLFW_WINDOW);
 
@@ -132,18 +132,29 @@ int luaC_RedrawScene(lua_State *L)
     glRotated(C.Angle[1], 0, 1, 0);
 
     lua_getfield(L, 1, "Actors");
+    int nactors = lua_rawlen(L, -1);
 
-    for (int nactor=1; nactor<=lua_rawlen(L, -1); ++nactor) {
+    for (int nactor=1; nactor<=nactors; ++nactor) {
+
+
+
       lua_rawgeti(L, -1, nactor);
       int actpos = lua_gettop(L);
 
+
       lua_getfield(L, actpos, "Artist");
       lua_getfield(L, actpos, "Traits");
+      lua_getfield(L, actpos, "DataSource");
 
-      lua_call(L, 1, 0);
-      lua_pop(L, 1); // pop the Actor
+
+
+      int err = lua_pcall(L, 2, 0, 0);
+      if (err) {
+        luaL_error(L, lua_tostring(L, -1));
+      }
+      lua_pop(L, 1); // pop the nth Actor
     }
-    lua_pop(L, 1);
+    lua_pop(L, 1); // pop the Actors list
 
     glFlush();
     glfwSwapBuffers();
@@ -161,13 +172,13 @@ int luaC_RedrawScene(lua_State *L)
 }
 
 int luaC_BoundingBoxArtist(lua_State *L)
+// -----------------------------------------------------------------------------
 // @inputs: (1) Traits
 // @return: nil
+// -----------------------------------------------------------------------------
 {
   luaL_checktype(L, 1, LUA_TTABLE);
   struct LuviewTraits T = luview_totraits(L, 1);
-
-  if (T.HasFocus) T.LineWidth = 2.0;
 
   glPushMatrix();
   glColor3dv(T.Color);
@@ -202,13 +213,33 @@ int luaC_BoundingBoxArtist(lua_State *L)
   glPopMatrix();
   return 0;
 }
-static double *data = NULL;
+
 int luaC_PointsListArtist(lua_State *L)
+// -----------------------------------------------------------------------------
+// @inputs: (1) Traits (2) DataSource
+// @return: nil
+// -----------------------------------------------------------------------------
 {
   luaL_checktype(L, 1, LUA_TTABLE);
   struct LuviewTraits T = luview_totraits(L, 1);
 
-  if (T.HasFocus) T.LineWidth = 2.0;
+  int Nv, Ns;
+
+
+  lua_getfield(L, 2, "Vectors");
+  if (!lunum_hasmetatable(L, -1, "array")) {
+    luaL_error(L, "need an array for DataSource.Vectors");
+  }
+  double *vectors = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Nv);
+
+  
+  lua_getfield(L, 2, "Scalars");
+  if (!lunum_hasmetatable(L, -1, "array")) {
+    luaL_error(L, "need an array for DataSource.Scalars");
+  }
+  double *scalars = (double*) lunum_checkarray2(L, -1, ARRAY_TYPE_DOUBLE, &Ns);
+
+
 
   glPushMatrix();
   glColor3dv(T.Color);
@@ -220,44 +251,23 @@ int luaC_PointsListArtist(lua_State *L)
   glRotated(T.Orientation[1], 0, 1, 0);
   glRotated(T.Orientation[2], 0, 0, 1);
 
-
-
-  int N = 64*64*64;
-
-  if (data == NULL) {
-    printf("loading...\n");
-
-    FILE *points = fopen("/Users/jzrake/Work/luview/cells999.dat", "r");
-    data = (double*) malloc(N*9*sizeof(double));
-
-    for (int i=0; i<N; ++i) {
-      fscanf(points, "%lf %lf %lf %lf %lf %lf %lf %lf %lf\n",
-	     data+9*i+0, data+9*i+1, data+9*i+2,
-	     data+9*i+3, data+9*i+4, data+9*i+5,
-	     data+9*i+6, data+9*i+7, data+9*i+8);
-    }
-
-    fclose(points);
-    printf("done.\n");
-  }
-
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
 
-  glPointSize(2.0);
+  glPointSize(T.LineWidth);
   glBegin(GL_POINTS);
 
-
-  for (int i=0; i<N; ++i) {
-    const double color[4] = {1e2*data[9*i + 8], 1e1*data[9*i + 8], 1e0*data[9*i + 8], 0.4 };
+  for (int i=0; i<Ns; ++i) {
+    const double color[4] = { 2e1*scalars[i],
+			      1e1*scalars[i],
+			      1e0*scalars[i], 0.25 };
     glColor4dv(color);
-    glVertex3dv(data + 9*i);
+    glVertex3dv(vectors + 3*i);
   }
 
   glEnd();
   glDisable(GL_BLEND);
   glPopMatrix();
-
   return 0;
 }
 
@@ -294,46 +304,51 @@ void CharacterInput(int key, int state)
 struct LuviewTraits luview_totraits(lua_State *L, int pos)
 {
   struct LuviewTraits T;
+  lua_pushvalue(L, pos);
+  int top = lua_gettop(L);
 
-  lua_getfield(L, pos, "Position");
-  lua_rawgeti(L, pos+1, 1); T.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); T.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 3); T.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Position");
+  lua_rawgeti(L, top+1, 1); T.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 2); T.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 3); T.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, pos, "Orientation");
-  lua_rawgeti(L, pos+1, 1); T.Orientation[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); T.Orientation[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 3); T.Orientation[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Orientation");
+  lua_rawgeti(L, top+1, 1); T.Orientation[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 2); T.Orientation[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 3); T.Orientation[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, pos, "Color");
-  lua_rawgeti(L, pos+1, 1); T.Color[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); T.Color[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 3); T.Color[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Color");
+  lua_rawgeti(L, top+1, 1); T.Color[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 2); T.Color[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 3); T.Color[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, pos, "Scale"    ); T.Scale     = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_getfield(L, pos, "LineWidth"); T.LineWidth = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_getfield(L, pos, "HasFocus" ); T.HasFocus  = lua_toboolean(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Scale"    ); T.Scale     = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "LineWidth"); T.LineWidth = lua_tonumber(L, -1); lua_pop(L, 1);
 
+  lua_pop(L, 1);
   return T;
 }
 
 struct LuviewCamera luview_tocamera(lua_State *L, int pos)
 {
   struct LuviewCamera C;
+  lua_pushvalue(L, pos);
+  int top = lua_gettop(L);
 
-  lua_getfield(L, pos, "Position");
-  lua_rawgeti(L, pos+1, 1); C.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); C.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 3); C.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Position");
+  lua_rawgeti(L, top+1, 1); C.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 2); C.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 3); C.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, pos, "Angle");
-  lua_rawgeti(L, pos+1, 1); C.Angle[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, pos+1, 2); C.Angle[1] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Angle");
+  lua_rawgeti(L, top+1, 1); C.Angle[0] = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_rawgeti(L, top+1, 2); C.Angle[1] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
+  lua_pop(L, 1);
   return C;
 }
