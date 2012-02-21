@@ -1,6 +1,9 @@
 
 
 #include <stdlib.h>
+#include <time.h>
+#include <math.h>
+
 #include "numarray.h"
 #include "image.h"
 #include "lunum.h"
@@ -15,6 +18,7 @@ static int luaC_OpenWindow(lua_State *L);
 static int luaC_RedrawScene(lua_State *L);
 static int luaC_BoundingBoxArtist(lua_State *L);
 static int luaC_PointsListArtist(lua_State *L);
+static int luaC_SphereArtist(lua_State *L);
 static int luaC_ColormapFilter(lua_State *L);
 
 static void KeyboardInput(int key, int state);
@@ -27,17 +31,11 @@ static void CharacterInput(int key, int state);
 static int Autoplay     = 0;
 static int WindowWidth  = 1024;
 static int WindowHeight = 768;
-static float ZoomFactor = 1.0;
-
+static double modulate(double a, double b);
 
 static lua_State *LuaState;
 
 
-struct LuviewCamera
-{
-  double Position[3];
-  double Angle[2];
-} ;
 struct LuviewTraits
 {
   double Position[3];
@@ -45,8 +43,8 @@ struct LuviewTraits
   double Color[3];
   double Scale;
   double LineWidth;
+  int HasFocus, IsVisible;
 } ;
-struct LuviewCamera luview_tocamera(lua_State *L, int pos);
 struct LuviewTraits luview_totraits(lua_State *L, int pos);
 
 
@@ -61,6 +59,7 @@ int luaopen_luview(lua_State *L)
                             { "RedrawScene" , luaC_RedrawScene },
                             { "BoundingBoxArtist", luaC_BoundingBoxArtist },
                             { "PointsListArtist" , luaC_PointsListArtist },
+                            { "SphereArtist"     , luaC_SphereArtist },
                             { "ColormapFilter" , luaC_ColormapFilter },
                             { NULL, NULL} };
 
@@ -123,38 +122,41 @@ int luaC_RedrawScene(lua_State *L)
   while (1) {
 
     lua_getfield(L, 1, "Camera");
-    struct LuviewCamera C = luview_tocamera(L, 2);
+    struct LuviewTraits C = luview_totraits(L, 2);
     lua_pop(L, 1);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
     glTranslated(-C.Position[0], -C.Position[1], -C.Position[2]);
-    glScaled(ZoomFactor, ZoomFactor, ZoomFactor);
+    glScaled(C.Scale, C.Scale, C.Scale);
 
-    glRotated(C.Angle[0], 1, 0, 0);
-    glRotated(C.Angle[1], 0, 1, 0);
+    glRotated(C.Orientation[0], 1, 0, 0);
+    glRotated(C.Orientation[1], 0, 1, 0);
+    glRotated(C.Orientation[2], 0, 0, 1);
 
     lua_getfield(L, 1, "Actors");
     int nactors = lua_rawlen(L, -1);
 
     for (int nactor=1; nactor<=nactors; ++nactor) {
 
-
-
       lua_rawgeti(L, -1, nactor);
       int actpos = lua_gettop(L);
 
 
-      lua_getfield(L, actpos, "Artist");
       lua_getfield(L, actpos, "Traits");
-      lua_getfield(L, actpos, "DataSource");
+      struct LuviewTraits T = luview_totraits(L, -1);
+      lua_pop(L, 1);
+      if (T.IsVisible) {
 
+        lua_getfield(L, actpos, "Artist");
+        lua_getfield(L, actpos, "Traits");
+        lua_getfield(L, actpos, "DataSource");
 
-
-      int err = lua_pcall(L, 2, 0, 0);
-      if (err) {
-        luaL_error(L, lua_tostring(L, -1));
+        int err = lua_pcall(L, 2, 0, 0);
+        if (err) {
+          luaL_error(L, lua_tostring(L, -1));
+        }
       }
       lua_pop(L, 1); // pop the nth Actor
     }
@@ -183,6 +185,8 @@ int luaC_BoundingBoxArtist(lua_State *L)
 {
   luaL_checktype(L, 1, LUA_TTABLE);
   struct LuviewTraits T = luview_totraits(L, 1);
+
+  if (T.HasFocus) T.LineWidth *= modulate(1.0,5.0);
 
   glPushMatrix();
   glColor3dv(T.Color);
@@ -215,6 +219,7 @@ int luaC_BoundingBoxArtist(lua_State *L)
 
   glEnd();
   glPopMatrix();
+
   return 0;
 }
 
@@ -227,10 +232,9 @@ int luaC_PointsListArtist(lua_State *L)
   luaL_checktype(L, 1, LUA_TTABLE);
   struct LuviewTraits T = luview_totraits(L, 1);
 
-
   lua_getfield(L, 2, "Positions");
   struct Array *A = lunum_checkarray1(L, -1);
-  
+
   lua_getfield(L, 2, "Colors");
   struct Array *B = lunum_checkarray1(L, -1);
 
@@ -240,6 +244,8 @@ int luaC_PointsListArtist(lua_State *L)
   glPushMatrix();
   glColor3dv(T.Color);
   glLineWidth(T.LineWidth);
+
+  T.Scale *= 1.0 + T.HasFocus*modulate(-0.001,0.001);
 
   glScaled(T.Scale, T.Scale, T.Scale);
   glTranslated(T.Position[0], T.Position[1], T.Position[2]);
@@ -264,11 +270,40 @@ int luaC_PointsListArtist(lua_State *L)
   return 0;
 }
 
+int luaC_SphereArtist(lua_State *L)
+{
+  luaL_checktype(L, 1, LUA_TTABLE);
+  struct LuviewTraits T = luview_totraits(L, 1);
+
+  glPushMatrix();
+  glColor3dv(T.Color);
+  glLineWidth(T.LineWidth);
+
+  T.Scale *= 1.0 + T.HasFocus*modulate(-0.001,0.001);
+
+  glScaled(T.Scale, T.Scale, T.Scale);
+  glTranslated(T.Position[0], T.Position[1], T.Position[2]);
+  glRotated(T.Orientation[0], 1, 0, 0);
+  glRotated(T.Orientation[1], 0, 1, 0);
+  glRotated(T.Orientation[2], 0, 0, 1);
+
+  glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  glEnable(GL_BLEND);
+
+  GLUquadric *q = gluNewQuadric();
+  gluSphere(q, 1.0, 24, 24);
+  gluDeleteQuadric(q);
+  glPopMatrix();
+
+  return 0;
+}
+
 int luaC_ColormapFilter(lua_State *L)
 // -----------------------------------------------------------------------------
 // @inputs: (1) N-element array of data values
 //          (2) color-map index [0-6]
 //          (3) transparency mode [0.0, 1.0] or 'L' (linear) or '1', '2', '3' (use cmap)
+//
 // @return: (N x 4) array of color-mapped doubles.
 // -----------------------------------------------------------------------------
 {
@@ -380,30 +415,18 @@ struct LuviewTraits luview_totraits(lua_State *L, int pos)
   lua_rawgeti(L, top+1, 3); T.Color[2] = lua_tonumber(L, -1); lua_pop(L, 1);
   lua_pop(L, 1);
 
-  lua_getfield(L, top, "Scale"    ); T.Scale     = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_getfield(L, top, "LineWidth"); T.LineWidth = lua_tonumber(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "Scale"    ); T.Scale     = lua_tonumber(L, -1);  lua_pop(L, 1);
+  lua_getfield(L, top, "LineWidth"); T.LineWidth = lua_tonumber(L, -1);  lua_pop(L, 1);
+  lua_getfield(L, top, "HasFocus" ); T.HasFocus  = lua_toboolean(L, -1); lua_pop(L, 1);
+  lua_getfield(L, top, "IsVisible"); T.IsVisible = lua_toboolean(L, -1); lua_pop(L, 1);
 
   lua_pop(L, 1);
   return T;
 }
 
-struct LuviewCamera luview_tocamera(lua_State *L, int pos)
+double modulate(double a, double b)
 {
-  struct LuviewCamera C;
-  lua_pushvalue(L, pos);
-  int top = lua_gettop(L);
-
-  lua_getfield(L, top, "Position");
-  lua_rawgeti(L, top+1, 1); C.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 2); C.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 3); C.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, top, "Angle");
-  lua_rawgeti(L, top+1, 1); C.Angle[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 2); C.Angle[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_pop(L, 1);
-
-  lua_pop(L, 1);
-  return C;
+  const double w = 2*M_PI;
+  const double t = (double)clock() / CLOCKS_PER_SEC;
+  return a + (b-a) * sin(w*t);
 }
