@@ -7,8 +7,7 @@
 #include "numarray.h"
 #include "image.h"
 #include "lunum.h"
-#include "lualib.h"
-#include "lauxlib.h"
+#include "luview.h"
 #include "GL/glfw.h"
 
 
@@ -23,30 +22,12 @@ static int luaC_ColormapFilter(lua_State *L);
 
 static void KeyboardInput(int key, int state);
 static void CharacterInput(int key, int state);
-
-
-
-
+static double modulate(double a, double b);
 
 static int Autoplay     = 0;
 static int WindowWidth  = 1024;
 static int WindowHeight = 768;
-static double modulate(double a, double b);
-
-static lua_State *LuaState;
-
-
-struct LuviewTraits
-{
-  double Position[3];
-  double Orientation[3];
-  double Color[3];
-  double Scale;
-  double LineWidth;
-  int HasFocus, IsVisible;
-} ;
-struct LuviewTraits luview_totraits(lua_State *L, int pos);
-
+static lua_State *LuaState = NULL;
 
 
 int luaopen_luview(lua_State *L)
@@ -65,7 +46,7 @@ int luaopen_luview(lua_State *L)
 
   lua_newtable(L);
   luaL_setfuncs(L, luview_api, 0);
-
+  lv_register_types(L);
 
   lua_pushnumber(L, GLFW_KEY_LEFT ); lua_setfield(L, -2, "KEY_LEFT" );
   lua_pushnumber(L, GLFW_KEY_RIGHT); lua_setfield(L, -2, "KEY_RIGHT");
@@ -74,6 +55,7 @@ int luaopen_luview(lua_State *L)
 
   lua_setglobal(L, "luview");
   lua_getglobal(L, "luview");
+
   return 1;
 }
 
@@ -122,7 +104,7 @@ int luaC_RedrawScene(lua_State *L)
   while (1) {
 
     lua_getfield(L, 1, "Camera");
-    struct LuviewTraits C = luview_totraits(L, 2);
+    struct LuviewTraits C = *luview_totraits(L, 2);
     lua_pop(L, 1);
 
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -145,8 +127,9 @@ int luaC_RedrawScene(lua_State *L)
 
 
       lua_getfield(L, actpos, "Traits");
-      struct LuviewTraits T = luview_totraits(L, -1);
+      struct LuviewTraits T = *luview_totraits(L, -1);
       lua_pop(L, 1);
+
       if (T.IsVisible) {
 
         lua_getfield(L, actpos, "Artist");
@@ -184,7 +167,7 @@ int luaC_BoundingBoxArtist(lua_State *L)
 // -----------------------------------------------------------------------------
 {
   luaL_checktype(L, 1, LUA_TTABLE);
-  struct LuviewTraits T = luview_totraits(L, 1);
+  struct LuviewTraits T = *luview_totraits(L, 1);
 
   if (T.HasFocus) T.LineWidth *= modulate(1.0,5.0);
 
@@ -230,7 +213,7 @@ int luaC_PointsListArtist(lua_State *L)
 // -----------------------------------------------------------------------------
 {
   luaL_checktype(L, 1, LUA_TTABLE);
-  struct LuviewTraits T = luview_totraits(L, 1);
+  struct LuviewTraits T = *luview_totraits(L, 1);
 
   lua_getfield(L, 2, "Positions");
   struct Array *A = lunum_checkarray1(L, -1);
@@ -273,7 +256,7 @@ int luaC_PointsListArtist(lua_State *L)
 int luaC_SphereArtist(lua_State *L)
 {
   luaL_checktype(L, 1, LUA_TTABLE);
-  struct LuviewTraits T = luview_totraits(L, 1);
+  struct LuviewTraits T = *luview_totraits(L, 1);
 
   glPushMatrix();
   glColor3dv(T.Color);
@@ -287,11 +270,13 @@ int luaC_SphereArtist(lua_State *L)
   glRotated(T.Orientation[1], 0, 1, 0);
   glRotated(T.Orientation[2], 0, 0, 1);
 
+
   glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   glEnable(GL_BLEND);
 
+
   GLUquadric *q = gluNewQuadric();
-  gluSphere(q, 1.0, 24, 24);
+  gluSphere(q, 2.0, 100, 100);
   gluDeleteQuadric(q);
   glPopMatrix();
 
@@ -389,44 +374,43 @@ void CharacterInput(int key, int state)
 
 
 
-
-
-struct LuviewTraits luview_totraits(lua_State *L, int pos)
-{
-  struct LuviewTraits T;
-  lua_pushvalue(L, pos);
-  int top = lua_gettop(L);
-
-  lua_getfield(L, top, "Position");
-  lua_rawgeti(L, top+1, 1); T.Position[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 2); T.Position[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 3); T.Position[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, top, "Orientation");
-  lua_rawgeti(L, top+1, 1); T.Orientation[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 2); T.Orientation[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 3); T.Orientation[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, top, "Color");
-  lua_rawgeti(L, top+1, 1); T.Color[0] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 2); T.Color[1] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_rawgeti(L, top+1, 3); T.Color[2] = lua_tonumber(L, -1); lua_pop(L, 1);
-  lua_pop(L, 1);
-
-  lua_getfield(L, top, "Scale"    ); T.Scale     = lua_tonumber(L, -1);  lua_pop(L, 1);
-  lua_getfield(L, top, "LineWidth"); T.LineWidth = lua_tonumber(L, -1);  lua_pop(L, 1);
-  lua_getfield(L, top, "HasFocus" ); T.HasFocus  = lua_toboolean(L, -1); lua_pop(L, 1);
-  lua_getfield(L, top, "IsVisible"); T.IsVisible = lua_toboolean(L, -1); lua_pop(L, 1);
-
-  lua_pop(L, 1);
-  return T;
-}
-
 double modulate(double a, double b)
 {
   const double w = 2*M_PI;
   const double t = (double)clock() / CLOCKS_PER_SEC;
   return a + (b-a) * sin(w*t);
 }
+
+
+
+/*
+
+
+
+  GLfloat LightPosition        [] = {0.0, 0.0, 1.0, 1.0};
+  GLfloat redDiffuseMaterial   [] = {1.0, 0.0, 0.0}; // set the material to red
+  GLfloat whiteSpecularMaterial[] = {1.0, 1.0, 1.0}; // set the material to white
+  GLfloat greenEmissiveMaterial[] = {0.0, 1.0, 0.0}; // set the material to green
+  GLfloat whiteSpecularLight   [] = {1.0, 1.0, 1.0}; // set the light specular to white
+  GLfloat blackAmbientLight    [] = {0.0, 0.0, 0.0}; // set the light ambient to black
+  GLfloat whiteDiffuseLight    [] = {1.0, 1.0, 1.0}; // set the diffuse light to white
+  GLfloat blankMaterial        [] = {0.0, 0.0, 0.0}; // set the diffuse light to white
+  GLfloat mShininess           [] = {128.0};         // set the shininess of the material
+
+
+  // Set up lighting
+  // ---------------------------------------------------------------------------
+  glEnable(GL_COLOR_MATERIAL);
+  glEnable(GL_LIGHTING);
+
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, whiteSpecularMaterial);
+  glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mShininess);
+
+  glLightfv(GL_LIGHT1, GL_SPECULAR, whiteSpecularLight);
+  glLightfv(GL_LIGHT1, GL_AMBIENT, blackAmbientLight);
+  glLightfv(GL_LIGHT1, GL_DIFFUSE, whiteDiffuseLight);
+  glLightfv(GL_LIGHT1, GL_POSITION, LightPosition);
+
+  glEnable(GL_LIGHT1);
+
+*/

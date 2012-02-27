@@ -3,23 +3,6 @@ require 'luview'
 require 'lunum'
 
 
-function luview.NewTraits(opts)
-   local t = {
-      Position           = { 0.0, 0.0, 0.0 },
-      Orientation        = { 0.0, 0.0, 0.0 },
-      Color              = { 0.5, 0.5, 0.5 },
-      Scale              =   1.0,
-      LineWidth          =   1.0,
-      Transparency       =   1.0,
-      HasFocus           = false,
-      IsVisible          = true,
-   }
-   if opts then
-      for k,v in pairs(opts) do t[k] = v end
-   end
-   return t
-end
-
 function luview.PositionResponse(self)
    local ori = self.Traits.Orientation
    local pos = self.Traits.Position
@@ -52,9 +35,9 @@ function luview.ColormapResponse(self)
    }
 end
 
-local Camera = luview.NewTraits()
-Camera.Position    = {  0.0, 0.0, 1.8 }
-Camera.Orientation = { 40.0, 0.0, 0.0 }
+local Camera = luview.Traits:new{Position    = {  0.0, 0.0, 1.8 },
+				 Orientation = { 40.0, 0.0, 0.0 }}
+
 function Camera:Response()
    local ori = self.Orientation
    return {
@@ -69,18 +52,16 @@ end
 
 local function boxactor(t)
    return { Artist = luview.BoundingBoxArtist,
-            Traits = luview.NewTraits(t),
+            Traits = luview.Traits:new(t),
             Response = luview.PositionResponse,
-	    DataSource = nil
-         }
+	    DataSource = nil }
 end
 
 local function sphereactor(t)
    return { Artist = luview.SphereArtist,
-            Traits = luview.NewTraits(t),
+            Traits = luview.Traits:new(t),
             Response = luview.PositionResponse,
-	    DataSource = nil
-         }
+	    DataSource = nil }
 end
 
 local cells = lunum.loadtxt("/Users/jzrake/Work/luview/test/cells999.dat")
@@ -95,7 +76,7 @@ local Scene  =  {
                   sphereactor{Scale=0.2, Color={0.2,0.5,0.2}, Position={1.0,0,0}},
 
 		  { Artist   = luview.PointsListArtist,
-		    Traits   = luview.NewTraits{Position={-0.5,-0.5,-0.5}},
+		    Traits   = luview.Traits:new{Position={-0.5,-0.5,-0.5}},
 		    Response = luview.ColormapResponse,
 		    raw_source = cells[':,6'],
  		    DataSource = { Positions=cells[':,0:3'],
