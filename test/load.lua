@@ -1,0 +1,5 @@
+
+
+require 'luview'
+
+luview.Init()
