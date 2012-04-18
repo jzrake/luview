@@ -13,10 +13,10 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 
 types.o : proxy.lc
 
-$(LUVIEW_A)  : luview.o image.o types.o ../lib/libglfw.a ../lib/liblunum.a
+$(LUVIEW_A)  : luview.o ../lib/libglfw.a ../lib/liblunum.a
 	$(AR) $@ $?
 
-$(LUVIEW_SO) : luview.o image.o types.o ../lib/libglfw.a ../lib/liblunum.a
+$(LUVIEW_SO) : luview.o ../lib/libglfw.a ../lib/liblunum.a
 	$(SO) -o $(LUVIEW_SO) $^ $(GL_L)
 
 clean :
