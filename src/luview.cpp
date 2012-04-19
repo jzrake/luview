@@ -26,6 +26,26 @@ protected:
   double Scale[3];
   double LineWidth;
 public:
+  LuviewTraitedObject()
+  {
+    Position[0] = 0.0;
+    Position[1] = 0.0;
+    Position[2] = 0.0;
+
+    Orientation[0] = 0.0;
+    Orientation[1] = 0.0;
+    Orientation[2] = 0.0;
+
+    Color[0] = 1.0;
+    Color[1] = 1.0;
+    Color[2] = 1.0;
+
+    Scale[0] = 1.0;
+    Scale[1] = 1.0;
+    Scale[2] = 1.0;
+
+    LineWidth = 1.0;
+  }
   void set_position(double x, double y, double z);
   void set_orientation(double x, double y, double z);
   void set_color(double x, double y, double z);
@@ -37,22 +57,21 @@ public:
 class DrawableObject : public LuviewTraitedObject
 {
 public:
-  virtual void draw() = 0;
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  virtual void draw()
   {
-    AttributeMap attr;
-    attr["draw"] = _draw_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
-  }
-  static int _draw_(lua_State *L)
-  {
-    DrawableObject *self = checkarg<DrawableObject>(L, 1);
     glPushMatrix();
-    self->draw();
+
+    glTranslated(Position[0], Position[1], Position[2]);
+    glScaled(Scale[0], Scale[1], Scale[2]);
+    glRotated(Orientation[0], 1, 0, 0);
+    glRotated(Orientation[1], 0, 1, 0);
+    glRotated(Orientation[2], 0, 0, 1);
+    this->draw_local();
+
     glPopMatrix();
-    return 0;
   }
+protected:
+  virtual void draw_local() = 0;
 } ;
 
 
@@ -112,9 +131,10 @@ private:
       glRotated(Orientation[0], 1, 0, 0);
       glRotated(Orientation[1], 0, 1, 0);
 
-      for (std::vector<DrawableObject*>::iterator actor=actors.begin();
-           actor!=actors.end(); ++actor) {
-        (*actor)->draw();
+      for (std::vector<DrawableObject*>::iterator a=actors.begin();
+           a!=actors.end(); ++a) {
+	DrawableObject *actor = *a;
+        actor->draw();
       }
 
       glFlush();
@@ -176,8 +196,8 @@ Window *Window::CurrentWindow;
 
 class BoundingBox : public DrawableObject
 {
-public:
-  void draw()
+private:
+  void draw_local()
   {
     glColor3d(0.8, 0.7, 0.4);
     glBegin(GL_LINES);
