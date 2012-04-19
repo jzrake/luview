@@ -21,20 +21,24 @@ extern "C" {
 #define GETSET_TRAITS_D1(prop)						\
   static int _get_##prop##_(lua_State *L) {				\
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    lua_remove(L, 1);							\
     return __get_vec__(L, &self->prop, 1);				\
   }									\
   static int _set_##prop##_(lua_State *L) {				\
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    lua_remove(L, 1);							\
     return __set_vec__(L, &self->prop, 1);				\
   }									\
 
 #define GETSET_TRAITS_D3(prop)						\
   static int _get_##prop##_(lua_State *L) {				\
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    lua_remove(L, 1);							\
     return __get_vec__(L, self->prop, 3);				\
   }									\
   static int _set_##prop##_(lua_State *L) {				\
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    lua_remove(L, 1);							\
     return __set_vec__(L, self->prop, 3);				\
   }									\
 
@@ -102,7 +106,7 @@ protected:
     return n;
   }
   static int __set_vec__(lua_State *L, double *v, int n) {
-    for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, n+1);
+    for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, i+1);
     return 0;
   }
 } ;
@@ -116,10 +120,14 @@ public:
     glPushMatrix();
 
     glTranslated(Position[0], Position[1], Position[2]);
-    glScaled(Scale[0], Scale[1], Scale[2]);
     glRotated(Orientation[0], 1, 0, 0);
     glRotated(Orientation[1], 0, 1, 0);
     glRotated(Orientation[2], 0, 0, 1);
+    glScaled(Scale[0], Scale[1], Scale[2]);
+
+    glColor3dv(Color);
+    glLineWidth(LineWidth);
+
     this->draw_local();
 
     glPopMatrix();
@@ -253,7 +261,6 @@ class BoundingBox : public DrawableObject
 private:
   void draw_local()
   {
-    glColor3d(0.8, 0.7, 0.4);
     glBegin(GL_LINES);
     // x-edges
     glVertex3f(-0.5, -0.5, -0.5); glVertex3f(+0.5, -0.5, -0.5);
