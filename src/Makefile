@@ -6,7 +6,10 @@ LUA = ../bin/lua
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
 %.o : %.c
-	$(CC) $(CFLAGS) -std=c99 -c $< -I../include -I../include
+	$(CC) $(CFLAGS) -std=c99 -c $< -I../include
+
+%.o : %.cpp
+	$(CXX) $(CFLAGS) -c $< -I../include
 
 %.lc : %.lua
 	$(LUA) bin2c.lua +$< > $@
