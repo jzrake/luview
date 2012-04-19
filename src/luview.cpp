@@ -17,6 +17,28 @@ extern "C" {
 }
 
 
+
+#define GETSET_TRAITS_D1(prop)						\
+  static int _get_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    return __get_vec__(L, &self->prop, 1);				\
+  }									\
+  static int _set_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    return __set_vec__(L, &self->prop, 1);				\
+  }									\
+
+#define GETSET_TRAITS_D3(prop)						\
+  static int _get_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    return __get_vec__(L, self->prop, 3);				\
+  }									\
+  static int _set_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
+    return __set_vec__(L, self->prop, 3);				\
+  }									\
+
+
 class LuviewTraitedObject : public LuaCppObject
 {
 protected:
@@ -51,6 +73,38 @@ public:
   void set_color(double x, double y, double z);
   void set_scale(double x, double y, double z);
   void set_linewidth(double w);
+
+protected:
+
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["get_position"] = _get_Position_;
+    attr["set_position"] = _set_Position_;
+    attr["get_orientation"] = _get_Orientation_;
+    attr["set_orientation"] = _set_Orientation_;
+    attr["get_color"] = _get_Color_;
+    attr["set_color"] = _set_Color_;
+    attr["get_scale"] = _get_Scale_;
+    attr["set_scale"] = _set_Scale_;
+    attr["get_linewidth"] = _get_LineWidth_;
+    attr["set_linewidth"] = _set_LineWidth_;
+    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  }
+  GETSET_TRAITS_D3(Position);
+  GETSET_TRAITS_D3(Orientation);
+  GETSET_TRAITS_D3(Color);
+  GETSET_TRAITS_D3(Scale);
+  GETSET_TRAITS_D1(LineWidth);
+
+  static int __get_vec__(lua_State *L, double *v, int n) {
+    for (int i=0; i<n; ++i) lua_pushnumber(L, v[i]);
+    return n;
+  }
+  static int __set_vec__(lua_State *L, double *v, int n) {
+    for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, n+1);
+    return 0;
+  }
 } ;
 
 
@@ -173,7 +227,7 @@ protected:
   {
     AttributeMap attr;
     attr["render_scene"] = _render_scene_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+    RETURN_ATTR_OR_CALL_SUPER(LuviewTraitedObject);
   }
   static int _render_scene_(lua_State *L)
   {
