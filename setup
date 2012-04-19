@@ -6,7 +6,7 @@ luabin=$(pwd)/bin
 PATH=${PATH/${luabin}:/""} # Remove lua/bin from path if it exists
 
 export PATH=${luabin}:$PATH
-export LUA_CPATH=$(pwd)/src/?.so
+export LUA_CPATH=$(pwd)/lib/?.so
 export LUA_HOME=$(pwd)
 
 echo "*** run with 'source' to export these environment variables for build: ***"

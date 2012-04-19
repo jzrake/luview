@@ -12,35 +12,35 @@ extern "C" {
 #include "numarray.h"
 #include "lunum.h"
 #include "GL/glfw.h"
-
-  int luaopen_luview(lua_State *L);
 }
 
 
 
-#define GETSET_TRAITS_D1(prop)						\
-  static int _get_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
-    lua_remove(L, 1);							\
-    return __get_vec__(L, &self->prop, 1);				\
-  }									\
-  static int _set_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
-    lua_remove(L, 1);							\
-    return __set_vec__(L, &self->prop, 1);				\
-  }									\
-
-#define GETSET_TRAITS_D3(prop)						\
-  static int _get_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
-    lua_remove(L, 1);							\
-    return __get_vec__(L, self->prop, 3);				\
-  }									\
-  static int _set_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);	\
-    lua_remove(L, 1);							\
-    return __set_vec__(L, self->prop, 3);				\
-  }									\
+// ---------------------------------------------------------------------------
+#define GETSET_TRAITS_D1(prop)                                          \
+  static int _get_##prop##_(lua_State *L) {                             \
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __get_vec__(L, &self->prop, 1);                              \
+  }                                                                     \
+  static int _set_##prop##_(lua_State *L) {                             \
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __set_vec__(L, &self->prop, 1);                              \
+  }                                                                     \
+  // ---------------------------------------------------------------------------
+#define GETSET_TRAITS_D3(prop)                                          \
+  static int _get_##prop##_(lua_State *L) {                             \
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __get_vec__(L, self->prop, 3);                               \
+  }                                                                     \
+  static int _set_##prop##_(lua_State *L) {                             \
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __set_vec__(L, self->prop, 3);                               \
+  }                                                                     \
+  // ---------------------------------------------------------------------------
 
 
 class LuviewTraitedObject : public LuaCppObject
@@ -145,7 +145,7 @@ private:
 
 public:
   Window() : WindowWidth(1024),
-	     WindowHeight(768)
+             WindowHeight(768)
   {
     Color[0] = 0.12;
     Color[1] = 0.05;
@@ -189,13 +189,13 @@ private:
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
       glLoadIdentity();
 
-      glTranslated(0,0,-1.4);
+      glTranslated(Position[0], Position[1], Position[2]);
       glRotated(Orientation[0], 1, 0, 0);
       glRotated(Orientation[1], 0, 1, 0);
 
       for (std::vector<DrawableObject*>::iterator a=actors.begin();
            a!=actors.end(); ++a) {
-	DrawableObject *actor = *a;
+        DrawableObject *actor = *a;
         actor->draw();
       }
 
@@ -217,7 +217,7 @@ private:
     switch (key) {
     case GLFW_KEY_RIGHT : Orientation[1] += 3; break;
     case GLFW_KEY_LEFT  : Orientation[1] -= 3; break;
-      
+
     case GLFW_KEY_DOWN  : Orientation[0] += 3; break;
     case GLFW_KEY_UP    : Orientation[0] -= 3; break;
     }
@@ -258,7 +258,7 @@ Window *Window::CurrentWindow;
 
 class BoundingBox : public DrawableObject
 {
-private:
+public:
   void draw_local()
   {
     glBegin(GL_LINES);
@@ -285,15 +285,75 @@ private:
 } ;
 
 
-int luaopen_luview(lua_State *L)
+
+
+
+class RegularGrid2D : public DrawableObject
+{
+private:
+  //  double Lx, Ly;
+  //  int Nx, Ny;
+
+public:
+  void draw_local()
+  {
+    const int Nx = 8;
+    const int Ny = 8;
+
+    double Lx0=-0.5, Lx1=0.5, Ly0=-0.5, Ly1=0.5;
+
+    const int sx = Ny;
+    const int sy = 1;
+
+    const double dx = (Lx1 - Lx0) / (Nx - 1);
+    const double dy = (Ly1 - Ly0) / (Ny - 1);
+
+    GLfloat *surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
+
+    for (int i=0; i<Nx; ++i) {
+      for (int j=0; j<Ny; ++j) {
+
+        const double x = Lx0 + i*dx;
+        const double y = Ly0 + j*dy;
+        const double z = (x*x + y*y) - 0.5;
+        const int m = i*sx + j*sy;
+
+        surfdata[3*m + 0] = x;
+        surfdata[3*m + 1] = z;
+        surfdata[3*m + 2] = y;
+      }
+    }
+
+
+    glEnable(GL_MAP2_VERTEX_3);
+    glEnable(GL_AUTO_NORMAL);
+    glEnable(GL_NORMALIZE);
+
+    glMap2f(GL_MAP2_VERTEX_3, Lx0, Lx1, 3*sx, Nx, Ly0, Ly1, 3*sy, Ny, surfdata);
+    glMapGrid2f(Nx, Lx0, Lx1, Ny, Ly0, Ly1);
+    glEvalMesh2(GL_LINE, 0, Nx, 0, Ny);
+
+    glDisable(GL_MAP2_VERTEX_3);
+    glDisable(GL_AUTO_NORMAL);
+    glDisable(GL_NORMALIZE);
+
+    free(surfdata);
+
+  }
+} ;
+
+
+
+extern "C" int luaopen_luview(lua_State *L)
 {
   printf("loading luview...\n");
 
   lua_newtable(L);
 
   LuaCppObject::Init(L);
-  LuaCppObject::Register<Window>(L, -1);
-  LuaCppObject::Register<BoundingBox>(L, -1);
+  LuaCppObject::Register<Window>(L);
+  LuaCppObject::Register<BoundingBox>(L);
+  LuaCppObject::Register<RegularGrid2D>(L);
 
   return 1;
 }

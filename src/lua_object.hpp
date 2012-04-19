@@ -68,14 +68,14 @@ class LuaCppObject
     lua_setmetatable(L, -2);
     lua_setglobal(L, "LuaCppObject");
   }
-  template <class T> static void Register(lua_State *L, int pos)
+  template <class T> static void Register(lua_State *L)
   // ---------------------------------------------------------------------------
-  // Registers the constructor for a given class in the table at position `pos`.
+  // Registers the constructor for a given class in the table at the top of the
+  // stack.
   // ---------------------------------------------------------------------------
   {
-    pos = lua_absindex(L, pos);
     lua_pushcfunction(L, newobj<T>);
-    lua_setfield(L, pos, demangle(typeid(T).name()).c_str());
+    lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
   }
 
 protected:
