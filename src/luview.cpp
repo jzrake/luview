@@ -17,9 +17,24 @@ extern "C" {
 }
 
 
+class LuviewTraitedObject : public LuaCppObject
+{
+protected:
+  double Position[3];
+  double Orientation[3];
+  double Color[3];
+  double Scale[3];
+  double LineWidth;
+public:
+  void set_position(double x, double y, double z);
+  void set_orientation(double x, double y, double z);
+  void set_color(double x, double y, double z);
+  void set_scale(double x, double y, double z);
+  void set_linewidth(double w);
+} ;
 
 
-class DrawableObject : public LuaCppObject
+class DrawableObject : public LuviewTraitedObject
 {
 public:
   virtual void draw() = 0;
@@ -41,26 +56,33 @@ protected:
 } ;
 
 
-class Window : public LuaCppObject
+class Window : public LuviewTraitedObject
 {
 private:
   double WindowWidth, WindowHeight;
-  static double RotationAngleX, RotationAngleY;
+  static Window *CurrentWindow;
 
 public:
   Window() : WindowWidth(1024),
-	     WindowHeight(768) { }
+	     WindowHeight(768)
+  {
+    Color[0] = 0.12;
+    Color[1] = 0.05;
+    Color[2] = 0.02;
+
+    Orientation[0] = 9.0;
+    Orientation[1] = 0.0;
+    Orientation[2] = 0.0;
+  }
   virtual ~Window() { }
 
 private:
   void start_window()
   {
-    double ClearColor[3] = { 0.025, 0.050, 0.025 };
-
     glfwInit();
     glfwOpenWindow(WindowWidth, WindowHeight, 0,0,0,0,0,0, GLFW_WINDOW);
 
-    glClearColor(ClearColor[0], ClearColor[1], ClearColor[2], 0.0);
+    glClearColor(Color[0], Color[1], Color[2], 0.0);
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
     glEnable(GL_DEPTH_TEST);
@@ -71,7 +93,6 @@ private:
     gluPerspective(45.0, (float) WindowWidth / WindowHeight, 0.1, 100.0);
     glMatrixMode(GL_MODELVIEW);
 
-
     glfwSetKeyCallback(KeyboardInput);
     glfwSetCharCallback(CharacterInput);
     glfwEnable(GLFW_STICKY_KEYS);
@@ -80,6 +101,7 @@ private:
 
   void render_scene(std::vector<DrawableObject*> &actors)
   {
+    CurrentWindow = this;
     this->start_window();
 
     while (1) {
@@ -87,8 +109,8 @@ private:
       glLoadIdentity();
 
       glTranslated(0,0,-1.4);
-      glRotated(RotationAngleX, 1, 0, 0);
-      glRotated(RotationAngleY, 0, 1, 0);
+      glRotated(Orientation[0], 1, 0, 0);
+      glRotated(Orientation[1], 0, 1, 0);
 
       for (std::vector<DrawableObject*>::iterator actor=actors.begin();
            actor!=actors.end(); ++actor) {
@@ -109,19 +131,19 @@ private:
   static void KeyboardInput(int key, int state)
   {
     if (state != GLFW_PRESS) return;
+    double *Orientation = CurrentWindow->Orientation;
     switch (key) {
-    case GLFW_KEY_RIGHT : RotationAngleY += 3; break;
-    case GLFW_KEY_LEFT  : RotationAngleY -= 3; break;
+    case GLFW_KEY_RIGHT : Orientation[1] += 3; break;
+    case GLFW_KEY_LEFT  : Orientation[1] -= 3; break;
       
-    case GLFW_KEY_DOWN  : RotationAngleX += 3; break;
-    case GLFW_KEY_UP    : RotationAngleX -= 3; break;
+    case GLFW_KEY_DOWN  : Orientation[0] += 3; break;
+    case GLFW_KEY_UP    : Orientation[0] -= 3; break;
     }
-    printf("received key: %d\n", key);
+    //    printf("received key: %d\n", key);
   }
   static void CharacterInput(int key, int state)
   {
-    //    char keystr[1] = { key };
-    //    if (state != GLFW_PRESS) return;
+    //    printf("received character: %\n", key);
   }
 
 
@@ -149,9 +171,7 @@ protected:
     return 0;
   }
 } ;
-double Window::RotationAngleX = 9.0;
-double Window::RotationAngleY = 0.0;
-
+Window *Window::CurrentWindow;
 
 
 class BoundingBox : public DrawableObject
@@ -189,6 +209,7 @@ int luaopen_luview(lua_State *L)
   printf("loading luview...\n");
 
   lua_newtable(L);
+
   LuaCppObject::Init(L);
   LuaCppObject::Register<Window>(L, -1);
   LuaCppObject::Register<BoundingBox>(L, -1);
