@@ -302,6 +302,109 @@ public:
 
 
 
+class SurfaceEvaluator : public DrawableObject
+{
+private:
+  GLfloat *surfdata;
+  double Lx0, Lx1, Ly0, Ly1;
+  int Nx, Ny;
+
+public:
+  SurfaceEvaluator() : surfdata(NULL)
+  {
+    gl_modes.push_back(GL_MAP2_VERTEX_3);
+    gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
+
+    Orientation[0] = -90.0;
+
+    Lx0 = -0.5;
+    Lx1 =  0.5;
+    Ly0 = -0.5;
+    Ly1 =  0.5;
+
+    Nx = 0;
+    Ny = 0;
+  }
+  ~SurfaceEvaluator()
+  {
+    if (surfdata) free(surfdata);
+  }
+
+  void set_data(const double *data, int nx, int ny)
+  {
+    Nx = nx;
+    Ny = ny;
+
+    const int sx = Ny;
+    const int sy = 1;
+
+    const double dx = (Lx1 - Lx0) / (Nx - 1);
+    const double dy = (Ly1 - Ly0) / (Ny - 1);
+
+    if (surfdata) free(surfdata);
+    surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
+
+    for (int i=0; i<Nx; ++i) {
+      for (int j=0; j<Ny; ++j) {
+
+        const double x = Lx0 + i*dx;
+        const double y = Ly0 + j*dy;
+        const int m = i*sx + j*sy;
+
+        surfdata[3*m + 0] = x;
+        surfdata[3*m + 1] = y;
+        surfdata[3*m + 2] = data[m];
+      }
+    }
+  }
+
+  void draw_local()
+  {
+    const int sx = Ny;
+    const int sy = 1;
+
+    const double dx = (Lx1 - Lx0) / (Nx - 1);
+    const double dy = (Ly1 - Ly0) / (Ny - 1);
+
+    for (int i=1; i<Nx-1; ++i) {
+      for (int j=1; j<Ny-1; ++j) {
+
+        const double x = Lx0 + i*dx;
+        const double y = Ly0 + j*dy;
+        const GLfloat *s = &surfdata[3*((i-1)*sx + (j-1)*sy)];
+
+        glMap2f(GL_MAP2_VERTEX_3, x-dx, x+dx, 3*sx, 3, y-dy, y+dy, 3*sy, 3, s);
+        glMapGrid2f(4, x-dx/2, x+dx/2, 4, y-dy/2, y+dy/2);
+        glEvalMesh2(GL_LINE, 0, 4, 0, 4);
+      }
+    }
+  }
+
+
+protected:
+ virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["set_data"] = _set_data_;
+    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+  }
+  static int _set_data_(lua_State *L)
+  {
+    SurfaceEvaluator *self = checkarg<SurfaceEvaluator>(L, 1);
+    Array *A = lunum_checkarray1(L, 2);
+
+    if (A->ndims != 2 || A->dtype != ARRAY_TYPE_DOUBLE) {
+      luaL_error(L, "need a 2d array of doubles\n");
+    }
+    self->set_data((const double*)A->data, A->shape[0], A->shape[1]);
+
+    return 0;
+  }
+} ;
+
+
+
 class ExampleSimpleEvaluator : public DrawableObject
 {
 public:
@@ -499,6 +602,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Init(L);
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
+  LuaCppObject::Register<SurfaceEvaluator>(L);
   LuaCppObject::Register<ExampleSimpleEvaluator>(L);
   LuaCppObject::Register<ExampleSimpleVBO>(L);
   LuaCppObject::Register<ExampleSimpleNURBS>(L);
