@@ -162,13 +162,8 @@ public:
   Window() : WindowWidth(1024),
              WindowHeight(768)
   {
-    Color[0] = 0.12;
-    Color[1] = 0.05;
-    Color[2] = 0.02;
-
     Orientation[0] = 9.0;
-    Orientation[1] = 0.0;
-    Orientation[2] = 0.0;
+    this->start_window();
   }
   virtual ~Window() { }
 
@@ -178,7 +173,6 @@ private:
     glfwInit();
     glfwOpenWindow(WindowWidth, WindowHeight, 0,0,0,0,0,0, GLFW_WINDOW);
 
-    glClearColor(Color[0], Color[1], Color[2], 0.0);
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
     glShadeModel(GL_SMOOTH);
@@ -197,7 +191,7 @@ private:
   void render_scene(std::vector<DrawableObject*> &actors)
   {
     CurrentWindow = this;
-    this->start_window();
+    glClearColor(Color[0], Color[1], Color[2], 0.0);
 
     while (1) {
       glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -408,18 +402,29 @@ class SurfaceEvaluator : public SurfaceRendering
 class SurfaceNURBS : public SurfaceRendering
 {
 private:
-  GLUnurbsObj *theNurb;
   int order;
+  GLUnurbsObj *theNurb;
 
 public:
-  SurfaceNURBS() : order(3)
+  SurfaceNURBS() : order(4)
   {
     gl_modes.push_back(GL_LIGHTING);
     gl_modes.push_back(GL_LIGHT0);
 
     Orientation[0] = -90.0;
+
+    theNurb = gluNewNurbsRenderer();
+    gluNurbsProperty(theNurb, GLU_SAMPLING_METHOD, GLU_DOMAIN_DISTANCE);
+    gluNurbsProperty(theNurb, GLU_U_STEP, 0.0);
+    gluNurbsProperty(theNurb, GLU_V_STEP, 0.0);
+
+    gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);//GLU_OUTLINE_PATCH);
+    gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
   }
-  ~SurfaceNURBS() { }
+  ~SurfaceNURBS()
+  {
+    gluDeleteNurbsRenderer(theNurb);
+  }
 
 private:
   void draw_local()
@@ -433,7 +438,7 @@ private:
     const int sx = Ny;
     const int sy = 1;
 
-    GLfloat mat_diffuse[] = { 0.7, 0.7, 0.7, 1.0 };
+    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 1.0 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 100.0 };
 
@@ -441,18 +446,12 @@ private:
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-    theNurb = gluNewNurbsRenderer();
-    gluNurbsProperty(theNurb, GLU_SAMPLING_TOLERANCE, 25.0);
-    gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);
-    gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
-
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
                     Nx + order, knots_x, Ny + order, knots_y,
                     3*sx, 3*sy, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
     gluEndSurface(theNurb);
-    gluDeleteNurbsRenderer(theNurb);
 
     free(knots_x);
     free(knots_y);
