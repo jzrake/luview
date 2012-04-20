@@ -299,18 +299,15 @@ public:
 } ;
 
 
-
-
-
-class SurfaceEvaluator : public DrawableObject
+class SurfaceRendering : public DrawableObject
 {
-private:
+protected:
   GLfloat *surfdata;
   double Lx0, Lx1, Ly0, Ly1;
   int Nx, Ny;
 
 public:
-  SurfaceEvaluator() : surfdata(NULL)
+  SurfaceRendering() : surfdata(NULL)
   {
     gl_modes.push_back(GL_MAP2_VERTEX_3);
     gl_modes.push_back(GL_AUTO_NORMAL);
@@ -326,10 +323,11 @@ public:
     Nx = 0;
     Ny = 0;
   }
-  ~SurfaceEvaluator()
+  virtual ~SurfaceRendering()
   {
     if (surfdata) free(surfdata);
   }
+  virtual void draw_local() = 0;
 
   void set_data(const double *data, int nx, int ny)
   {
@@ -359,6 +357,31 @@ public:
     }
   }
 
+protected:
+ virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["set_data"] = _set_data_;
+    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+  }
+  static int _set_data_(lua_State *L)
+  {
+    SurfaceRendering *self = checkarg<SurfaceRendering>(L, 1);
+    Array *A = lunum_checkarray1(L, 2);
+
+    if (A->ndims != 2 || A->dtype != ARRAY_TYPE_DOUBLE) {
+      luaL_error(L, "need a 2d array of doubles\n");
+    }
+    self->set_data((const double*)A->data, A->shape[0], A->shape[1]);
+
+    return 0;
+  }
+} ;
+
+
+
+class SurfaceEvaluator : public SurfaceRendering
+{
   void draw_local()
   {
     const int sx = Ny;
@@ -380,28 +403,70 @@ public:
       }
     }
   }
+} ;
 
+class SurfaceNURBS : public SurfaceRendering
+{
+private:
+  GLUnurbsObj *theNurb;
+  int order;
 
-protected:
- virtual LuaInstanceMethod __getattr__(std::string &method_name)
+public:
+  SurfaceNURBS() : order(3)
   {
-    AttributeMap attr;
-    attr["set_data"] = _set_data_;
-    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+
+    Orientation[0] = -90.0;
   }
-  static int _set_data_(lua_State *L)
+  ~SurfaceNURBS() { }
+
+private:
+  void draw_local()
   {
-    SurfaceEvaluator *self = checkarg<SurfaceEvaluator>(L, 1);
-    Array *A = lunum_checkarray1(L, 2);
+    GLfloat *knots_x = (GLfloat*) malloc((Nx + order)*sizeof(GLfloat));
+    GLfloat *knots_y = (GLfloat*) malloc((Ny + order)*sizeof(GLfloat));
 
-    if (A->ndims != 2 || A->dtype != ARRAY_TYPE_DOUBLE) {
-      luaL_error(L, "need a 2d array of doubles\n");
-    }
-    self->set_data((const double*)A->data, A->shape[0], A->shape[1]);
+    for (int i=0; i<Nx+order; ++i) knots_x[i] = i;
+    for (int i=0; i<Ny+order; ++i) knots_y[i] = i;
 
-    return 0;
+    const int sx = Ny;
+    const int sy = 1;
+
+    GLfloat mat_diffuse[] = { 0.7, 0.7, 0.7, 1.0 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_shininess[] = { 100.0 };
+
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+    theNurb = gluNewNurbsRenderer();
+    gluNurbsProperty(theNurb, GLU_SAMPLING_TOLERANCE, 25.0);
+    gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);
+    gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
+
+    gluBeginSurface(theNurb);
+    gluNurbsSurface(theNurb,
+                    Nx + order, knots_x, Ny + order, knots_y,
+                    3*sx, 3*sy, surfdata,
+                    order, order, GL_MAP2_VERTEX_3);
+    gluEndSurface(theNurb);
+    gluDeleteNurbsRenderer(theNurb);
+
+    free(knots_x);
+    free(knots_y);
+  }
+
+  static void nurbsError(GLenum errorCode)
+  {
+    fprintf(stderr, "Nurbs Error: %s\n", gluErrorString(errorCode));
+    exit(0);
   }
 } ;
+
+
+
 
 
 
@@ -461,6 +526,7 @@ public:
 } ;
 
 
+
 class ExampleSimpleVBO : public DrawableObject
 {
 public:
@@ -498,6 +564,8 @@ public:
 } ;
 
 
+
+
 class ExampleSimpleNURBS : public DrawableObject
 {
 private:
@@ -513,6 +581,8 @@ public:
     gl_modes.push_back(GL_AUTO_NORMAL);
     gl_modes.push_back(GL_NORMALIZE);
 
+    Orientation[0] = 90.0;
+
     init_surface();
   }
   ~ExampleSimpleNURBS() { }
@@ -521,8 +591,8 @@ private:
   void draw_local()
   {
     int i,j;
-    GLfloat knots[12] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
-    			 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
+    GLfloat knots[8] = {0,1,2,3,4,5,6,7};
+
     GLfloat mat_diffuse[] = { 0.7, 0.7, 0.7, 1.0 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 100.0 };
@@ -538,9 +608,9 @@ private:
 
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
-                    12, knots, 12, knots,
-                    6*3, 3, &ctlpoints[0][0][0],
-                    6, 6, GL_MAP2_VERTEX_3);
+                    8, knots, 8, knots,
+                    3*6, 3, &ctlpoints[0][0][0],
+                    2, 2, GL_MAP2_VERTEX_3);
     gluEndSurface(theNurb);
 
     if (showPoints) {
@@ -573,10 +643,10 @@ private:
         ctlpoints[u][v][1] = v - 2.5;
 
         if ((u == 2 || u == 3) && (v == 2 || v == 3)) {
-          ctlpoints[u][v][2] = 3.0;
+          ctlpoints[u][v][2] = -3.0;
 	}
         else {
-          ctlpoints[u][v][2] = -3.0;
+          ctlpoints[u][v][2] = 3.0;
 	}
       }
     }
@@ -584,9 +654,7 @@ private:
 
   static void nurbsError(GLenum errorCode)
   {
-    const GLubyte *estring;
-    estring = gluErrorString(errorCode);
-    fprintf(stderr, "Nurbs Error: %s\n", estring);
+    fprintf(stderr, "Nurbs Error: %s\n", gluErrorString(errorCode));
     exit(0);
   }
 } ;
@@ -603,6 +671,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceEvaluator>(L);
+  LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<ExampleSimpleEvaluator>(L);
   LuaCppObject::Register<ExampleSimpleVBO>(L);
   LuaCppObject::Register<ExampleSimpleNURBS>(L);
