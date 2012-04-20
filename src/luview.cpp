@@ -177,6 +177,7 @@ private:
     glDepthFunc(GL_LESS);
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+    glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
     gluPerspective(45.0, (float) WindowWidth / WindowHeight, 0.1, 100.0);
@@ -410,13 +411,14 @@ public:
   {
     gl_modes.push_back(GL_LIGHTING);
     gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_BLEND);
 
     Orientation[0] = -90.0;
 
     theNurb = gluNewNurbsRenderer();
     gluNurbsProperty(theNurb, GLU_SAMPLING_METHOD, GLU_DOMAIN_DISTANCE);
-    gluNurbsProperty(theNurb, GLU_U_STEP, 0.0);
-    gluNurbsProperty(theNurb, GLU_V_STEP, 0.0);
+    gluNurbsProperty(theNurb, GLU_U_STEP, 0.1);
+    gluNurbsProperty(theNurb, GLU_V_STEP, 0.1);
 
     gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);//GLU_OUTLINE_PATCH);
     gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
@@ -438,8 +440,8 @@ private:
     const int sx = Ny;
     const int sy = 1;
 
-    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 1.0 };
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
     GLfloat mat_shininess[] = { 100.0 };
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);

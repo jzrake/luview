@@ -26,7 +26,7 @@ end
 
 
 nurbs:set_data(MakeSurfaceData())
-
+nurbs:set_position(0,-0.5,0)
 
 --surface:set_data(surfdata)
 surface:set_position(0,-1,0)
@@ -45,6 +45,6 @@ little_box:set_color(1.0, 0.2, 0.1)
 
 
 window:set_orientation(45,0,0)
-window:set_position(0.0, 0.0, -3.0)
-window:set_color(0.95, 0.95, 0.95)
-window:render_scene({bounding_box, nurbs})
+window:set_position(0.0, 0.0, -2)
+window:set_color(0.7, 0.95, 0.95)
+window:render_scene({bounding_box, little_box, nurbs})
