@@ -11,14 +11,18 @@ local evaluator = luview.ExampleSimpleEvaluator()
 local surface = luview.SurfaceEvaluator()
 
 
-local surfdata = lunum.zeros{10,10}
-surfdata[{5,5}] = 0.6
-surfdata[{4,4}] = 0.6
+local surfdata = lunum.zeros{6,6}
+surfdata[{2,2}] = 0.6
+surfdata[{2,3}] = 0.6
+surfdata[{3,2}] = 0.6
+surfdata[{3,3}] = 0.6
+
 surface:set_data(surfdata)
 surface:set_position(0,-1,0)
+surface:set_scale(3,3,3)
 
 
-
+bounding_box:set_scale(2,2,2)
 bounding_box:set_linewidth(2.5)
 bounding_box:set_color(0.8, 0.9, 0.3)
 
@@ -35,7 +39,7 @@ nurbs:set_scale(0.1, 0.1, 0.1)
 
 window:set_position(0.0, 0.0, -3.0)
 window:set_color(0.1, 0.05, 0.1)
-window:render_scene({bounding_box, little_box, surface})
+window:render_scene({bounding_box, surface})
 
 
 

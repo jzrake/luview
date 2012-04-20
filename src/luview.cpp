@@ -375,8 +375,8 @@ public:
         const GLfloat *s = &surfdata[3*((i-1)*sx + (j-1)*sy)];
 
         glMap2f(GL_MAP2_VERTEX_3, x-dx, x+dx, 3*sx, 3, y-dy, y+dy, 3*sy, 3, s);
-        glMapGrid2f(4, x-dx/2, x+dx/2, 4, y-dy/2, y+dy/2);
-        glEvalMesh2(GL_LINE, 0, 4, 0, 4);
+        glMapGrid2f(1, x-dx/2, x+dx/2, 1, y-dy/2, y+dy/2);
+        glEvalMesh2(GL_LINE, 0, 1, 0, 1);
       }
     }
   }
