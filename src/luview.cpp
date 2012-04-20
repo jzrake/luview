@@ -398,7 +398,7 @@ public:
 class ExampleSimpleNURBS : public DrawableObject
 {
 private:
-  GLfloat ctlpoints[4][4][3];
+  GLfloat ctlpoints[6][6][3];
   int showPoints;
   GLUnurbsObj *theNurb;
 
@@ -418,8 +418,8 @@ private:
   void draw_local()
   {
     int i,j;
-
-    GLfloat knots[8] = {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
+    GLfloat knots[12] = {0.0, 0.0, 0.0, 0.0, 0.0, 0.0,
+    			 1.0, 1.0, 1.0, 1.0, 1.0, 1.0};
     GLfloat mat_diffuse[] = { 0.7, 0.7, 0.7, 1.0 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 100.0 };
@@ -433,14 +433,11 @@ private:
     gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);
     gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
 
-    glRotatef(-90.0, 1.0, 0.0, 0.0);
-    glScalef(0.1, 0.1, 0.1);
-
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
-                    8, knots, 8, knots,
-                    4*3, 3, &ctlpoints[0][0][0],
-                    4, 4, GL_MAP2_VERTEX_3);
+                    12, knots, 12, knots,
+                    6*3, 3, &ctlpoints[0][0][0],
+                    6, 6, GL_MAP2_VERTEX_3);
     gluEndSurface(theNurb);
 
     if (showPoints) {
@@ -449,8 +446,8 @@ private:
       glColor3f(1.0, 1.0, 0.0);
       glBegin(GL_POINTS);
 
-      for (i=0; i<4; i++) {
-        for (j=0; j<4; j++) {
+      for (i=0; i<6; i++) {
+        for (j=0; j<6; j++) {
           glVertex3f(ctlpoints[i][j][0],
 		     ctlpoints[i][j][1],
 		     ctlpoints[i][j][2]);
@@ -466,12 +463,13 @@ private:
   void init_surface()
   {
     int u, v;
-    for (u=0; u<4; u++) {
-      for (v=0; v<4; v++) {
-        ctlpoints[u][v][0] = 2.0*((GLfloat)u - 1.5);
-        ctlpoints[u][v][1] = 2.0*((GLfloat)v - 1.5);
+    for (u=0; u<6; u++) {
+      for (v=0; v<6; v++) {
 
-        if ((u == 1 || u == 2) && (v == 1 || v == 2)) {
+        ctlpoints[u][v][0] = u - 2.5;
+        ctlpoints[u][v][1] = v - 2.5;
+
+        if ((u == 2 || u == 3) && (v == 2 || v == 3)) {
           ctlpoints[u][v][2] = 3.0;
 	}
         else {
