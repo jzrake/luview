@@ -298,11 +298,12 @@ class SurfaceRendering : public DrawableObject
 {
 protected:
   GLfloat *surfdata;
+  GLfloat *colordata;
   double Lx0, Lx1, Ly0, Ly1;
   int Nx, Ny;
 
 public:
-  SurfaceRendering() : surfdata(NULL)
+  SurfaceRendering() : surfdata(NULL), colordata(NULL)
   {
     gl_modes.push_back(GL_MAP2_VERTEX_3);
     gl_modes.push_back(GL_AUTO_NORMAL);
@@ -336,18 +337,27 @@ public:
     const double dy = (Ly1 - Ly0) / (Ny - 1);
 
     if (surfdata) free(surfdata);
+    if (colordata) free(colordata);
     surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
+    colordata = (GLfloat*) malloc(Nx*Ny*4*sizeof(GLfloat));
 
     for (int i=0; i<Nx; ++i) {
       for (int j=0; j<Ny; ++j) {
 
+        const int m = i*sx + j*sy;
+
         const double x = Lx0 + i*dx;
         const double y = Ly0 + j*dy;
-        const int m = i*sx + j*sy;
+        const double z = data[m];
 
         surfdata[3*m + 0] = x;
         surfdata[3*m + 1] = y;
         surfdata[3*m + 2] = data[m];
+
+	colordata[4*m + 0] = pow(sin(20*z), 2);
+	colordata[4*m + 1] = pow(cos(20*z), 2);
+	colordata[4*m + 2] = pow(sin(20*z+10), 4);
+	colordata[4*m + 3] = 0.9;
       }
     }
   }
@@ -386,6 +396,7 @@ public:
     gl_modes.push_back(GL_LIGHTING);
     gl_modes.push_back(GL_LIGHT0);
     gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_COLOR_MATERIAL);
 
     Orientation[0] = -90.0;
 
@@ -427,6 +438,11 @@ private:
                     Nx + order, knots_x, Ny + order, knots_y,
                     3*sx, 3*sy, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
+    gluNurbsSurface(theNurb,
+                    Nx + order, knots_x, Ny + order, knots_y,
+                    4*sx, 4*sy, colordata,
+		    order, order, GL_MAP2_COLOR_4);
+
     gluEndSurface(theNurb);
 
     free(knots_x);
