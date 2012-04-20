@@ -114,9 +114,20 @@ protected:
 
 class DrawableObject : public LuviewTraitedObject
 {
+protected:
+  std::vector<int> gl_modes;
+
 public:
+  DrawableObject()
+  {
+    gl_modes.push_back(GL_DEPTH_TEST);
+  }
   virtual void draw()
   {
+    for (unsigned int i=0; i<gl_modes.size(); ++i) {
+      glEnable(gl_modes[i]);
+    }
+
     glPushMatrix();
 
     glTranslated(Position[0], Position[1], Position[2]);
@@ -131,6 +142,10 @@ public:
     this->draw_local();
 
     glPopMatrix();
+
+    for (unsigned int i=0; i<gl_modes.size(); ++i) {
+      glDisable(gl_modes[i]);
+    }
   }
 protected:
   virtual void draw_local() = 0;
@@ -166,7 +181,6 @@ private:
     glClearColor(Color[0], Color[1], Color[2], 0.0);
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
-    glEnable(GL_DEPTH_TEST);
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glMatrixMode(GL_PROJECTION);
@@ -291,6 +305,13 @@ public:
 class ExampleSimpleEvaluator : public DrawableObject
 {
 public:
+  ExampleSimpleEvaluator()
+  {
+    gl_modes.push_back(GL_MAP2_VERTEX_3);
+    gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
+  }
+
   void draw_local()
   {
     const int Nx = 8;
@@ -320,10 +341,6 @@ public:
       }
     }
 
-    glEnable(GL_MAP2_VERTEX_3);
-    glEnable(GL_AUTO_NORMAL);
-    glEnable(GL_NORMALIZE);
-
     for (int i=1; i<Nx-1; ++i) {
       for (int j=1; j<Ny-1; ++j) {
 
@@ -336,11 +353,6 @@ public:
         glEvalMesh2(GL_LINE, 0, 4, 0, 4);
       }
     }
-
-    glDisable(GL_MAP2_VERTEX_3);
-    glDisable(GL_AUTO_NORMAL);
-    glDisable(GL_NORMALIZE);
-
     free(surfdata);
   }
 } ;
@@ -393,32 +405,21 @@ private:
 public:
   ExampleSimpleNURBS() : showPoints(1)
   {
-    //    init_surface();
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
+
+    init_surface();
   }
-  ~ExampleSimpleNURBS()
-  {
-    // delete NURB
-  }
+  ~ExampleSimpleNURBS() { }
 
 private:
-  void init_surface()
+  void draw_local()
   {
-    int u, v;
-    for (u = 0; u < 4; u++) {
-      for (v = 0; v < 4; v++) {
-        ctlpoints[u][v][0] = 2.0*((GLfloat)u - 1.5);
-        ctlpoints[u][v][1] = 2.0*((GLfloat)v - 1.5);
+    int i,j;
 
-        if ( (u == 1 || u == 2) && (v == 1 || v == 2))
-          ctlpoints[u][v][2] = 3.0;
-        else
-          ctlpoints[u][v][2] = -3.0;
-      }
-    }
-  }
-
-  void init()
-  {
+    GLfloat knots[8] = {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
     GLfloat mat_diffuse[] = { 0.7, 0.7, 0.7, 1.0 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 100.0 };
@@ -427,25 +428,10 @@ private:
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-    glEnable(GL_LIGHTING);
-    glEnable(GL_LIGHT0);
-    glEnable(GL_AUTO_NORMAL);
-    glEnable(GL_NORMALIZE);
-
-    init_surface();
-
     theNurb = gluNewNurbsRenderer();
     gluNurbsProperty(theNurb, GLU_SAMPLING_TOLERANCE, 25.0);
     gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);
-    gluNurbsCallback(theNurb, GLU_ERROR,
-		     (GLvoid (*)()) nurbsError);
-  }
-
-  void draw_local()
-  {
-    GLfloat knots[8] = {0.0, 0.0, 0.0, 0.0, 1.0, 1.0, 1.0, 1.0};
-    int i, j;
-    init();
+    gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);
 
     glRotatef(-90.0, 1.0, 0.0, 0.0);
     glScalef(0.1, 0.1, 0.1);
@@ -453,7 +439,7 @@ private:
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
                     8, knots, 8, knots,
-                    4 * 3, 3, &ctlpoints[0][0][0],
+                    4*3, 3, &ctlpoints[0][0][0],
                     4, 4, GL_MAP2_VERTEX_3);
     gluEndSurface(theNurb);
 
@@ -462,31 +448,45 @@ private:
       glDisable(GL_LIGHTING);
       glColor3f(1.0, 1.0, 0.0);
       glBegin(GL_POINTS);
-      for (i = 0; i < 4; i++) {
-        for (j = 0; j < 4; j++) {
+
+      for (i=0; i<4; i++) {
+        for (j=0; j<4; j++) {
           glVertex3f(ctlpoints[i][j][0],
-                     ctlpoints[i][j][1], ctlpoints[i][j][2]);
+		     ctlpoints[i][j][1],
+		     ctlpoints[i][j][2]);
         }
       }
       glEnd();
       glEnable(GL_LIGHTING);
     }
 
-    glDisable(GL_LIGHTING);
-    glDisable(GL_LIGHT0);
-    glDisable(GL_AUTO_NORMAL);
-    glDisable(GL_NORMALIZE);
-
     gluDeleteNurbsRenderer(theNurb);
+  }
+
+  void init_surface()
+  {
+    int u, v;
+    for (u=0; u<4; u++) {
+      for (v=0; v<4; v++) {
+        ctlpoints[u][v][0] = 2.0*((GLfloat)u - 1.5);
+        ctlpoints[u][v][1] = 2.0*((GLfloat)v - 1.5);
+
+        if ((u == 1 || u == 2) && (v == 1 || v == 2)) {
+          ctlpoints[u][v][2] = 3.0;
+	}
+        else {
+          ctlpoints[u][v][2] = -3.0;
+	}
+      }
+    }
   }
 
   static void nurbsError(GLenum errorCode)
   {
     const GLubyte *estring;
-
     estring = gluErrorString(errorCode);
-    fprintf (stderr, "Nurbs Error: %s\n", estring);
-    exit (0);
+    fprintf(stderr, "Nurbs Error: %s\n", estring);
+    exit(0);
   }
 } ;
 
