@@ -189,33 +189,31 @@ private:
     glfwEnable(GLFW_KEY_REPEAT);
   }
 
-  void render_scene(std::vector<DrawableObject*> &actors)
+  const char *render_scene(std::vector<DrawableObject*> &actors)
   {
     CurrentWindow = this;
     glClearColor(Color[0], Color[1], Color[2], 0.0);
+    glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+    glLoadIdentity();
 
-    while (1) {
-      glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-      glLoadIdentity();
+    glTranslated(Position[0], Position[1], Position[2]);
+    glRotated(Orientation[0], 1, 0, 0);
+    glRotated(Orientation[1], 0, 1, 0);
 
-      glTranslated(Position[0], Position[1], Position[2]);
-      glRotated(Orientation[0], 1, 0, 0);
-      glRotated(Orientation[1], 0, 1, 0);
-
-      for (std::vector<DrawableObject*>::iterator a=actors.begin();
-           a!=actors.end(); ++a) {
-        DrawableObject *actor = *a;
-        actor->draw();
-      }
-
-      glFlush();
-      glfwSwapBuffers();
-
-      if (glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)) {
-        glfwCloseWindow();
-        break;
-      }
+    for (std::vector<DrawableObject*>::iterator a=actors.begin();
+         a!=actors.end(); ++a) {
+      DrawableObject *actor = *a;
+      actor->draw();
     }
+
+    glFlush();
+    glfwSwapBuffers();
+
+    if (glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)) {
+      glfwCloseWindow();
+      return "terminate";
+    }
+    return "continue";
   }
 
 private:
@@ -258,8 +256,8 @@ protected:
       lua_pop(L, 1);
     }
 
-    self->render_scene(actors);
-    return 0;
+    lua_pushstring(L, self->render_scene(actors));
+    return 1;
   }
 } ;
 Window *Window::CurrentWindow;
