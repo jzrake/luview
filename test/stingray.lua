@@ -16,7 +16,7 @@ local function MakeSurfaceData(t)
    for i,j in surfdata:indices() do
       local x = i / Nx - 0.5
       local y = j / Ny - 0.5
-      surfdata[{i,j}] = 10*(x^4 * math.sin(t) + x*y^3 * math.cos(2*t))
+      surfdata[{i,j}] = 5*(x^4 + x*y^3) * math.cos(t) * math.cos(20*x*y)
    end
    return surfdata
 end
