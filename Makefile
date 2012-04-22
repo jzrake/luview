@@ -34,7 +34,7 @@ FPIC = -fPIC
 WARN = -Wall
 
 # robust optimazation level
-OPTIM = -O2
+OPTIM = -O3
 
 # debug flags, use -g for debug symbols
 DEBUG =

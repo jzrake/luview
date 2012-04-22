@@ -9,24 +9,19 @@ local little_box = luview.BoundingBox()
 local surface = luview.SurfaceNURBS()
 
 
+
+local Nx = 64
+local Ny = 64
+
+local X = lunum.zeros{Nx,Ny}
+local Y = lunum.zeros{Nx,Ny}
+
+for i,j in X:indices() do X[{i,j}] = i / Nx - 0.5 end
+for i,j in Y:indices() do Y[{i,j}] = j / Ny - 0.5 end
+
 local function MakeSurfaceData(t)
-   local Nx = 32
-   local Ny = 32
-   local surfdata = lunum.zeros{Nx,Ny}
-   for i,j in surfdata:indices() do
-      local x = i / Nx - 0.5
-      local y = j / Ny - 0.5
-      surfdata[{i,j}] = 5*(x^4 + x*y^3) * math.cos(t) * math.cos(20*x*y)
-   end
-   return surfdata
+   return 5 * (X^4 + X*Y^3) * lunum.cos(20*X*Y) * math.cos(t)
 end
-
-
-
---	  colordata[4*m + 0] = 
---	  colordata[4*m + 1] = pow(cos(20*z), 2);
---	  colordata[4*m + 2] = pow(sin(20*z+10), 4);
---	  colordata[4*m + 3] = 0.9;
 
 
 bounding_box:set_linewidth(5.5)
@@ -39,16 +34,17 @@ little_box:set_position(0, 0.5, 0)
 
 window:set_orientation(45,0,0)
 window:set_position(0.0, 0.0, -2)
-window:set_color(0.7, 0.95, 0.95)
+window:set_color(0.3, 0.5, 0.5)
 
 local function color_func(x)
    return
    math.sin(40*x)^2,
-   math.cos(40*x)^2,
+   math.cos(40*x)^6,
    math.sin(40*x+10)^4
 end
 
 --surface:set_color(0,1,0)
+surface:set_alpha(0.8)
 surface:set_callback("color_function", color_func)
 
 
