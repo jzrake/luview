@@ -22,6 +22,13 @@ local function MakeSurfaceData(t)
 end
 
 
+
+--	  colordata[4*m + 0] = pow(sin(20*z), 2);
+--	  colordata[4*m + 1] = pow(cos(20*z), 2);
+--	  colordata[4*m + 2] = pow(sin(20*z+10), 4);
+--	  colordata[4*m + 3] = 0.9;
+
+
 bounding_box:set_linewidth(5.5)
 bounding_box:set_color(0.1, 0.8, 0.6)
 
@@ -33,6 +40,13 @@ little_box:set_position(0, 0.5, 0)
 window:set_orientation(45,0,0)
 window:set_position(0.0, 0.0, -2)
 window:set_color(0.7, 0.95, 0.95)
+
+local function color_func(x)
+   return 0.5
+end
+
+--surface:set_color(0,1,0)
+surface:set_callback("color_function", color_func)
 
 local scene = {bounding_box, little_box, surface}
 local time = 0.0

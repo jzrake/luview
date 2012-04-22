@@ -49,14 +49,26 @@ class CallbackFunction : public LuaCppObject
 public:
   CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
 
-  double call(double x)
+  std::vector<double> call(double x)
   {
     lua_State *L = __lua_state;
+    std::vector<double> res;
+
     push_lua_refid(L, __refid);
     lua_pushnumber(L, x);
-    lua_call(L, 1, 1);
-    double res = lua_tonumber(L, -1);
-    lua_pop(L, 1);
+
+    if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
+      luaL_error(L, lua_tostring(L, -1));
+    }
+
+    int nret = lua_gettop(L) - 2;
+
+    for (int i=0; i<nret; ++i) {
+      res.push_back(lua_tonumber(L, -1));
+      lua_pop(L, 1);
+    }
+
+    reverse(res.begin(), res.end());
     return res;
   }
 } ;
@@ -70,6 +82,7 @@ protected:
   double Color[3];
   double Scale[3];
   double LineWidth;
+  double Alpha;
   std::map<std::string, CallbackFunction*> callbacks;
 
 public:
@@ -91,6 +104,7 @@ public:
     Scale[1] = 1.0;
     Scale[2] = 1.0;
 
+    Alpha = 0.9;
     LineWidth = 1.0;
   }
   void set_position(double x, double y, double z);
@@ -114,6 +128,8 @@ protected:
     attr["set_scale"] = _set_Scale_;
     attr["get_linewidth"] = _get_LineWidth_;
     attr["set_linewidth"] = _set_LineWidth_;
+    attr["get_alpha"] = _get_Alpha_;
+    attr["set_alpha"] = _set_Alpha_;
     attr["get_callback"] = _get_callback_;
     attr["set_callback"] = _set_callback_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
@@ -123,6 +139,7 @@ protected:
   GETSET_TRAITS_D3(Color);
   GETSET_TRAITS_D3(Scale);
   GETSET_TRAITS_D1(LineWidth);
+  GETSET_TRAITS_D1(Alpha);
 
   static int _get_callback_(lua_State *L)
   {
@@ -407,6 +424,13 @@ public:
     surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
     colordata = (GLfloat*) malloc(Nx*Ny*4*sizeof(GLfloat));
 
+    CallbackFunction *color_function = NULL;
+
+    if (callbacks.find("color_function") != callbacks.end()) {
+      color_function = callbacks["color_function"];
+    }
+
+
     for (int i=0; i<Nx; ++i) {
       for (int j=0; j<Ny; ++j) {
 
@@ -418,12 +442,43 @@ public:
 
         surfdata[3*m + 0] = x;
         surfdata[3*m + 1] = y;
-        surfdata[3*m + 2] = data[m];
+        surfdata[3*m + 2] = z;
 
-	colordata[4*m + 0] = pow(sin(20*z), 2);
-	colordata[4*m + 1] = pow(cos(20*z), 2);
-	colordata[4*m + 2] = pow(sin(20*z+10), 4);
-	colordata[4*m + 3] = 0.9;
+	if (color_function) {
+	  std::vector<double> v = color_function->call(z);
+
+	  if (v.size() == 1) {
+	    colordata[4*m + 0] = v[0];
+	    colordata[4*m + 1] = v[0];
+	    colordata[4*m + 2] = v[0];
+	    colordata[4*m + 3] = Alpha;
+	  }
+
+	  else if (v.size() == 3) {
+	    colordata[4*m + 0] = v[0];
+	    colordata[4*m + 1] = v[1];
+	    colordata[4*m + 2] = v[2];
+	    colordata[4*m + 3] = Alpha;
+	  }
+
+	  else if (v.size() == 4) {
+	    colordata[4*m + 0] = v[0];
+	    colordata[4*m + 1] = v[1];
+	    colordata[4*m + 2] = v[2];
+	    colordata[4*m + 3] = v[3];
+	  }
+	  else {
+	    luaL_error(__lua_state,
+		       "color function must return either 1, 3, or 4 values, "
+		       "got %d\n", v.size());
+	  }
+	}
+	else {
+	  colordata[4*m + 0] = Color[0];
+	  colordata[4*m + 1] = Color[1];
+	  colordata[4*m + 2] = Color[2];
+	  colordata[4*m + 3] = Alpha;
+	}
       }
     }
   }
