@@ -5,6 +5,8 @@
 #include <ctime>
 #include <cmath>
 #include <vector>
+#include <algorithm>
+
 #include "lua_object.hpp"
 
 extern "C" {
@@ -430,6 +432,8 @@ public:
       color_function = callbacks["color_function"];
     }
 
+    //    double zmax = *std::max_element(data, data + Nx*Ny);
+    //    double zmin = *std::min_element(data, data + Nx*Ny);
 
     for (int i=0; i<Nx; ++i) {
       for (int j=0; j<Ny; ++j) {
@@ -512,7 +516,7 @@ private:
   GLUnurbsObj *theNurb;
 
 public:
-  SurfaceNURBS() : order(4)
+  SurfaceNURBS() : order(3)
   {
     gl_modes.push_back(GL_LIGHTING);
     gl_modes.push_back(GL_LIGHT0);

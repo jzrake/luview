@@ -21,6 +21,7 @@ for i,j in Y:indices() do Y[{i,j}] = j / Ny - 0.5 end
 
 local function MakeSurfaceData(t)
    return 5 * (X^4 + X*Y^3) * lunum.cos(20*X*Y) * math.cos(t)
+--   return 0.3*lunum.cos(4*X*Y) * lunum.sin(3*Y*X) * math.sin(t)
 end
 
 
