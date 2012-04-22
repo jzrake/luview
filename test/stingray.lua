@@ -23,7 +23,7 @@ end
 
 
 
---	  colordata[4*m + 0] = pow(sin(20*z), 2);
+--	  colordata[4*m + 0] = 
 --	  colordata[4*m + 1] = pow(cos(20*z), 2);
 --	  colordata[4*m + 2] = pow(sin(20*z+10), 4);
 --	  colordata[4*m + 3] = 0.9;
@@ -42,13 +42,17 @@ window:set_position(0.0, 0.0, -2)
 window:set_color(0.7, 0.95, 0.95)
 
 local function color_func(x)
-   return 0.5
+   return
+   math.sin(40*x)^2,
+   math.cos(40*x)^2,
+   math.sin(40*x+10)^4
 end
 
 --surface:set_color(0,1,0)
 surface:set_callback("color_function", color_func)
 
-local scene = {bounding_box, little_box, surface}
+
+local scene = {bounding_box, surface}
 local time = 0.0
 
 while window:render_scene(scene) == "continue" do

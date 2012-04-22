@@ -585,15 +585,12 @@ private:
 
 extern "C" int luaopen_luview(lua_State *L)
 {
-  printf("loading luview...\n");
-
   lua_newtable(L);
 
   LuaCppObject::Init(L);
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
-  //  LuaCppObject::RegisterWithConstructor<CallbackFunction>(L);
 
   return 1;
 }
