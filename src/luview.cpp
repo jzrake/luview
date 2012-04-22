@@ -49,28 +49,16 @@ class CallbackFunction : public LuaCppObject
 public:
   CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
 
-  /*
   double call(double x)
   {
     lua_State *L = __lua_state;
-    int top = lua_gettop(L);
-    push_lua_refid(L, callback_refid);
-    printf("the ref at index %d is %s\n", callback_refid, luaL_typename(L, -1));
+    push_lua_refid(L, __refid);
     lua_pushnumber(L, x);
     lua_call(L, 1, 1);
     double res = lua_tonumber(L, -1);
-    lua_settop(L, top);
+    lua_pop(L, 1);
     return res;
   }
-
-  static int __new__(lua_State *L)
-  {
-    luaL_argcheck(L, lua_type(L, 1) == LUA_TFUNCTION, 1, "function expected");
-    CallbackFunction *newobj = new CallbackFunction;
-    newobj->callback_refid = make_refid(L, 1);
-    return make_lua_obj(L, newobj);
-  }
-  */
 } ;
 
 
@@ -140,7 +128,10 @@ protected:
   {
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
     const char *name = luaL_checkstring(L, 2);
-    if (self->callbacks.find(name) == self->callbacks.end()) {
+    std::map<std::string, CallbackFunction*>::iterator val =
+      self->callbacks.find(name);
+
+    if (val == self->callbacks.end()) {
       lua_pushnil(L);
     }
     else {
@@ -280,11 +271,6 @@ private:
          a!=actors.end(); ++a) {
       DrawableObject *actor = *a;
       actor->draw();
-    }
-
-    if (callbacks.find("test_cb") != callbacks.end()) {
-      printf("running test_cb\n");
-      //      std::cout << callbacks["test_cb"]->call(3.14) <<std::endl;
     }
 
     glFlush();
