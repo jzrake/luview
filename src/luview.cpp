@@ -43,6 +43,37 @@ extern "C" {
   // ---------------------------------------------------------------------------
 
 
+class CallbackFunction : public LuaCppObject
+{
+
+public:
+  CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
+
+  /*
+  double call(double x)
+  {
+    lua_State *L = __lua_state;
+    int top = lua_gettop(L);
+    push_lua_refid(L, callback_refid);
+    printf("the ref at index %d is %s\n", callback_refid, luaL_typename(L, -1));
+    lua_pushnumber(L, x);
+    lua_call(L, 1, 1);
+    double res = lua_tonumber(L, -1);
+    lua_settop(L, top);
+    return res;
+  }
+
+  static int __new__(lua_State *L)
+  {
+    luaL_argcheck(L, lua_type(L, 1) == LUA_TFUNCTION, 1, "function expected");
+    CallbackFunction *newobj = new CallbackFunction;
+    newobj->callback_refid = make_refid(L, 1);
+    return make_lua_obj(L, newobj);
+  }
+  */
+} ;
+
+
 class LuviewTraitedObject : public LuaCppObject
 {
 protected:
@@ -51,6 +82,8 @@ protected:
   double Color[3];
   double Scale[3];
   double LineWidth;
+  std::map<std::string, CallbackFunction*> callbacks;
+
 public:
   LuviewTraitedObject()
   {
@@ -93,6 +126,8 @@ protected:
     attr["set_scale"] = _set_Scale_;
     attr["get_linewidth"] = _get_LineWidth_;
     attr["set_linewidth"] = _set_LineWidth_;
+    attr["get_callback"] = _get_callback_;
+    attr["set_callback"] = _set_callback_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   GETSET_TRAITS_D3(Position);
@@ -101,11 +136,52 @@ protected:
   GETSET_TRAITS_D3(Scale);
   GETSET_TRAITS_D1(LineWidth);
 
-  static int __get_vec__(lua_State *L, double *v, int n) {
+  static int _get_callback_(lua_State *L)
+  {
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    if (self->callbacks.find(name) == self->callbacks.end()) {
+      lua_pushnil(L);
+    }
+    else {
+      self->push_lua_obj(L, self->callbacks[name]);
+    }
+    return 1;
+  }
+  static int _set_callback_(lua_State *L)
+  // ---------------------------------------------------------------------------
+  // Arguments:
+  //
+  // (1) Lua function or nil
+  //
+  // ---------------------------------------------------------------------------
+  {
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    std::map<std::string, CallbackFunction*>::iterator val =
+      self->callbacks.find(name);
+
+    if (lua_type(L, 3) == LUA_TFUNCTION) {
+      if (val == self->callbacks.end()) delete self->callbacks[name];
+      self->callbacks[name] = new CallbackFunction(L, 3);
+    }
+    else if (lua_type(L, 3) == LUA_TNIL && (val == self->callbacks.end())) {
+      delete self->callbacks[name];
+      self->callbacks.erase(val);
+    }
+    else {
+      luaL_error(L, "requires either function or nil");
+    }
+    return 0;
+  }
+
+  static int __get_vec__(lua_State *L, double *v, int n)
+  {
     for (int i=0; i<n; ++i) lua_pushnumber(L, v[i]);
     return n;
   }
-  static int __set_vec__(lua_State *L, double *v, int n) {
+  static int __set_vec__(lua_State *L, double *v, int n)
+  {
     for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, i+1);
     return 0;
   }
@@ -206,6 +282,11 @@ private:
       actor->draw();
     }
 
+    if (callbacks.find("test_cb") != callbacks.end()) {
+      printf("running test_cb\n");
+      //      std::cout << callbacks["test_cb"]->call(3.14) <<std::endl;
+    }
+
     glFlush();
     glfwSwapBuffers();
 
@@ -234,7 +315,6 @@ private:
   {
     //    printf("received character: %\n", key);
   }
-
 
 
 protected:
@@ -468,6 +548,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
+  //  LuaCppObject::RegisterWithConstructor<CallbackFunction>(L);
 
   return 1;
 }

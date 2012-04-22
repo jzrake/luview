@@ -21,6 +21,16 @@ local function MakeSurfaceData(t)
    return surfdata
 end
 
+function the_cb(x) 
+   print "in the callback!"
+   return 2*x
+end
+
+
+surface:set_callback("test_cb", the_cb)
+print(surface:get_callback("test_cb")(3.14))
+
+
 
 surface:set_data(MakeSurfaceData(0.0))
 surface:set_position(0,0,0)

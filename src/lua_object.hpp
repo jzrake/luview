@@ -45,6 +45,8 @@ class LuaCppObject
   // Used as the key into the symbol table (with weak values) of registered
   // objects at global key `LuaCppObject`.
   int __refid;
+  lua_State *__lua_state;
+  bool __is_cxx_only;
 
  public:
 
@@ -52,8 +54,25 @@ class LuaCppObject
   // P U B L I C   C L A S S   M E T H O D S
   // =======================================
 
-  LuaCppObject() : __refid(LUA_NOREF) { }
-  virtual ~LuaCppObject() { }
+  LuaCppObject() : __refid(LUA_NOREF),
+		   __lua_state(NULL),
+		   __is_cxx_only(false) { }
+
+  // ---------------------------------------------------------------------------
+  // This constructor is intended for C++ only methods, i.e. one which was
+  // created and will be deleted by C++ code. These objects are never returned
+  // to Lua, and are thus never entered as a user data or receive a metatable.
+  // ---------------------------------------------------------------------------
+  LuaCppObject(lua_State *L, int pos) : __refid(make_refid(L, pos)),
+					__lua_state(L),
+					__is_cxx_only(true) { }
+
+  virtual ~LuaCppObject()
+  {
+    if (__is_cxx_only) {
+      unmake_refid(__lua_state, __refid);
+    }
+  }
 
   static void Init(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -75,6 +94,11 @@ class LuaCppObject
   // ---------------------------------------------------------------------------
   {
     lua_pushcfunction(L, newobj<T>);
+    lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
+  }
+  template <class T> static void RegisterWithConstructor(lua_State *L)
+  {
+    lua_pushcfunction(L, T::__new__);
     lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
   }
 
@@ -110,11 +134,32 @@ protected:
     }
     return result;
   }
-  static void push_lua_obj(lua_State *L, LuaCppObject *object)
+  static int make_refid(lua_State *L, int pos)
+  {
+    pos = lua_absindex(L, pos);
+
+    lua_getglobal(L, "LuaCppObject");
+    lua_pushvalue(L, pos);
+    int refid = luaL_ref(L, -2);
+    lua_pop(L, 1);
+    lua_remove(L, -2); // LuaCppObject
+    return refid;
+  }
+  static void unmake_refid(lua_State *L, int refid)
   {
     lua_getglobal(L, "LuaCppObject");
-    lua_rawgeti(L, -1, object->__refid);
+    luaL_unref(L, -1, refid);
+    lua_pop(L, 1);
+  }
+  static void push_lua_refid(lua_State *L, int refid)
+  {
+    lua_getglobal(L, "LuaCppObject");
+    lua_rawgeti(L, -1, refid);
     lua_remove(L, -2);
+  }
+  static void push_lua_obj(lua_State *L, LuaCppObject *object)
+  {
+    push_lua_refid(L, object->__refid);
   }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   {
@@ -139,6 +184,7 @@ protected:
     lua_getglobal(L, "LuaCppObject");
     lua_pushvalue(L, -2);
     object->__refid = luaL_ref(L, -2);
+    object->__lua_state = L;
     lua_pop(L, 1);
 
     return 1;
@@ -250,12 +296,7 @@ protected:
   // ---------------------------------------------------------------------------
   {
     LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
-
-    // Unregister the object
-    // -------------------------------------------------------------------------
-    lua_getglobal(L, "LuaCppObject");
-    luaL_unref(L, -1, object->__refid);
-    lua_pop(L, 1);
+    unmake_refid(L, object->__refid);
 
     //    printf("killing object with refid %d...\n", object->__refid);
 
