@@ -386,6 +386,7 @@ public:
   virtual ~SurfaceRendering()
   {
     if (surfdata) free(surfdata);
+    if (colordata) free(colordata);
   }
   virtual void draw_local() = 0;
 
@@ -402,6 +403,7 @@ public:
 
     if (surfdata) free(surfdata);
     if (colordata) free(colordata);
+
     surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
     colordata = (GLfloat*) malloc(Nx*Ny*4*sizeof(GLfloat));
 
@@ -480,6 +482,8 @@ public:
 private:
   void draw_local()
   {
+    if (surfdata == NULL) return;
+
     GLfloat *knots_x = (GLfloat*) malloc((Nx + order)*sizeof(GLfloat));
     GLfloat *knots_y = (GLfloat*) malloc((Ny + order)*sizeof(GLfloat));
 

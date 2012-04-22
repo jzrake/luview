@@ -10,8 +10,8 @@ local surface = luview.SurfaceNURBS()
 
 
 local function MakeSurfaceData(t)
-   local Nx = 64
-   local Ny = 64
+   local Nx = 32
+   local Ny = 32
    local surfdata = lunum.zeros{Nx,Ny}
    for i,j in surfdata:indices() do
       local x = i / Nx - 0.5
@@ -34,12 +34,8 @@ window:set_orientation(45,0,0)
 window:set_position(0.0, 0.0, -2)
 window:set_color(0.7, 0.95, 0.95)
 
-
 local scene = {bounding_box, little_box, surface}
 local time = 0.0
-
---surface:set_data(MakeSurfaceData(0.0))
-surface:set_position(0,0,0)
 
 while window:render_scene(scene) == "continue" do
    time = time + 0.05
