@@ -45,9 +45,9 @@ extern "C" {
   // ---------------------------------------------------------------------------
 
 
+
 class CallbackFunction : public LuaCppObject
 {
-
 public:
   CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
 
@@ -73,6 +73,30 @@ public:
     reverse(res.begin(), res.end());
     return res;
   }
+
+  std::vector<double> call2(double u, double v)
+  {
+    lua_State *L = __lua_state;
+    std::vector<double> res;
+
+    push_lua_refid(L, __refid);
+    lua_pushnumber(L, u);
+    lua_pushnumber(L, v);
+
+    if (lua_pcall(L, 2, LUA_MULTRET, 0) != 0) {
+      luaL_error(L, lua_tostring(L, -1));
+    }
+
+    int nret = lua_gettop(L) - 2;
+
+    for (int i=0; i<nret; ++i) {
+      res.push_back(lua_tonumber(L, -1));
+      lua_pop(L, 1);
+    }
+
+    reverse(res.begin(), res.end());
+    return res;
+  }
 } ;
 
 
@@ -85,7 +109,10 @@ protected:
   double Scale[3];
   double LineWidth;
   double Alpha;
-  std::map<std::string, CallbackFunction*> callbacks;
+  std::map<std::string, CallbackFunction*> Callbacks;
+  std::map<std::string, Array*> DataSources;
+  typedef std::map<std::string, CallbackFunction*>::iterator EntryCB;
+  typedef std::map<std::string, Array*>::iterator EntryDS;
 
 public:
   LuviewTraitedObject()
@@ -132,8 +159,10 @@ protected:
     attr["set_linewidth"] = _set_LineWidth_;
     attr["get_alpha"] = _get_Alpha_;
     attr["set_alpha"] = _set_Alpha_;
-    attr["get_callback"] = _get_callback_;
-    attr["set_callback"] = _set_callback_;
+    attr["get_callback"] = _get_Callback_;
+    attr["set_callback"] = _set_Callback_;
+    attr["get_data"] = _get_DataSource_;
+    attr["set_data"] = _set_DataSource_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   GETSET_TRAITS_D3(Position);
@@ -143,22 +172,21 @@ protected:
   GETSET_TRAITS_D1(LineWidth);
   GETSET_TRAITS_D1(Alpha);
 
-  static int _get_callback_(lua_State *L)
+  static int _get_Callback_(lua_State *L)
   {
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
     const char *name = luaL_checkstring(L, 2);
-    std::map<std::string, CallbackFunction*>::iterator val =
-      self->callbacks.find(name);
+    EntryCB val = self->Callbacks.find(name);
 
-    if (val == self->callbacks.end()) {
+    if (val == self->Callbacks.end()) {
       lua_pushnil(L);
     }
     else {
-      self->push_lua_obj(L, self->callbacks[name]);
+      self->push_lua_obj(L, val->second);
     }
     return 1;
   }
-  static int _set_callback_(lua_State *L)
+  static int _set_Callback_(lua_State *L)
   // ---------------------------------------------------------------------------
   // Arguments:
   //
@@ -168,20 +196,45 @@ protected:
   {
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
     const char *name = luaL_checkstring(L, 2);
-    std::map<std::string, CallbackFunction*>::iterator val =
-      self->callbacks.find(name);
+    EntryCB val = self->Callbacks.find(name);
 
     if (lua_type(L, 3) == LUA_TFUNCTION) {
-      if (val == self->callbacks.end()) delete self->callbacks[name];
-      self->callbacks[name] = new CallbackFunction(L, 3);
+      if (val == self->Callbacks.end()) delete self->Callbacks[name];
+      self->Callbacks[name] = new CallbackFunction(L, 3);
     }
-    else if (lua_type(L, 3) == LUA_TNIL && (val == self->callbacks.end())) {
-      delete self->callbacks[name];
-      self->callbacks.erase(val);
+    else if (lua_type(L, 3) == LUA_TNIL && (val == self->Callbacks.end())) {
+      delete self->Callbacks[name];
+      self->Callbacks.erase(val);
     }
     else {
       luaL_error(L, "requires either function or nil");
     }
+    return 0;
+  }
+  static int _get_DataSource_(lua_State *L)
+  {
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+
+    EntryDS val = self->DataSources.find(name);
+
+    if (val == self->DataSources.end()) {
+      lua_pushnil(L);
+    }
+    else {
+      // copies are necessary for now, since lunum_pusharray1 only registers new
+      // arrays.
+      Array A = array_new_copy(val->second, val->second->dtype);
+      lunum_pusharray1(L, &A);
+    }
+    return 1;
+  }
+  static int _set_DataSource_(lua_State *L)
+  {
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    Array *A = lunum_checkarray1(L, 3);
+    self->DataSources[name] = A;
     return 0;
   }
 
@@ -196,6 +249,7 @@ protected:
     return 0;
   }
 } ;
+
 
 
 class DrawableObject : public LuviewTraitedObject
@@ -377,139 +431,113 @@ public:
 } ;
 
 
-class SurfaceRendering : public DrawableObject
+
+class ParametricDataSource : public DrawableObject
 {
 protected:
-  GLfloat *surfdata;
-  GLfloat *colordata;
-  double Lx0, Lx1, Ly0, Ly1;
-  int Nx, Ny;
+  GLfloat *ctrlpoint;
+  double u0, u1, v0, v1;
+  int Nu, Nv;
 
 public:
-  SurfaceRendering() : surfdata(NULL), colordata(NULL)
+  ParametricDataSource()
   {
-    gl_modes.push_back(GL_MAP2_VERTEX_3);
-    gl_modes.push_back(GL_AUTO_NORMAL);
-    gl_modes.push_back(GL_NORMALIZE);
+    u0 = -0.5;
+    u1 =  0.5;
+    v0 = -0.5;
+    v1 =  0.5;
 
-    Orientation[0] = -90.0;
+    Nu = 32;
+    Nv = 32;
 
-    Lx0 = -0.5;
-    Lx1 =  0.5;
-    Ly0 = -0.5;
-    Ly1 =  0.5;
+    ctrlpoint = (GLfloat*) malloc(3*Nu*Nv*sizeof(GLfloat));
 
-    Nx = 0;
-    Ny = 0;
-  }
-  virtual ~SurfaceRendering()
-  {
-    if (surfdata) free(surfdata);
-    if (colordata) free(colordata);
-  }
-  virtual void draw_local() = 0;
+    const int su = Nv;
+    const int sv = 1;
+    const double du = (u1 - u0) / (Nu - 1);
+    const double dv = (v1 - v0) / (Nv - 1);
 
-  void set_data(const double *data, int nx, int ny)
-  {
-    Nx = nx;
-    Ny = ny;
-
-    const int sx = Ny;
-    const int sy = 1;
-
-    const double dx = (Lx1 - Lx0) / (Nx - 1);
-    const double dy = (Ly1 - Ly0) / (Ny - 1);
-
-    if (surfdata) free(surfdata);
-    if (colordata) free(colordata);
-
-    surfdata = (GLfloat*) malloc(Nx*Ny*3*sizeof(GLfloat));
-    colordata = (GLfloat*) malloc(Nx*Ny*4*sizeof(GLfloat));
-
-    CallbackFunction *color_function = NULL;
-
-    if (callbacks.find("color_function") != callbacks.end()) {
-      color_function = callbacks["color_function"];
-    }
-
-    //    double zmax = *std::max_element(data, data + Nx*Ny);
-    //    double zmin = *std::min_element(data, data + Nx*Ny);
-
-    for (int i=0; i<Nx; ++i) {
-      for (int j=0; j<Ny; ++j) {
-
-        const int m = i*sx + j*sy;
-
-        const double x = Lx0 + i*dx;
-        const double y = Ly0 + j*dy;
-        const double z = data[m];
-
-        surfdata[3*m + 0] = x;
-        surfdata[3*m + 1] = y;
-        surfdata[3*m + 2] = z;
-
-	if (color_function) {
-	  std::vector<double> v = color_function->call(z);
-
-	  if (v.size() == 1) {
-	    colordata[4*m + 0] = v[0];
-	    colordata[4*m + 1] = v[0];
-	    colordata[4*m + 2] = v[0];
-	    colordata[4*m + 3] = Alpha;
-	  }
-
-	  else if (v.size() == 3) {
-	    colordata[4*m + 0] = v[0];
-	    colordata[4*m + 1] = v[1];
-	    colordata[4*m + 2] = v[2];
-	    colordata[4*m + 3] = Alpha;
-	  }
-
-	  else if (v.size() == 4) {
-	    colordata[4*m + 0] = v[0];
-	    colordata[4*m + 1] = v[1];
-	    colordata[4*m + 2] = v[2];
-	    colordata[4*m + 3] = v[3];
-	  }
-	  else {
-	    luaL_error(__lua_state,
-		       "color function must return either 1, 3, or 4 values, "
-		       "got %d\n", v.size());
-	  }
-	}
-	else {
-	  colordata[4*m + 0] = Color[0];
-	  colordata[4*m + 1] = Color[1];
-	  colordata[4*m + 2] = Color[2];
-	  colordata[4*m + 3] = Alpha;
-	}
+    // -------------------------------------------------------------------------
+    // Initialize to a uniform, flat grid
+    // -------------------------------------------------------------------------
+    for (int i=0; i<Nu; ++i) {
+      for (int j=0; j<Nv; ++j) {
+        const int m = i*su + j*sv;
+        const double x = u0 + i*du;
+        const double y = v0 + j*dv;
+        const double z = 0.0;
+        ctrlpoint[3*m + 0] = x;
+        ctrlpoint[3*m + 1] = y;
+        ctrlpoint[3*m + 2] = z;
       }
     }
   }
-
-protected:
- virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  ~ParametricDataSource()
   {
-    AttributeMap attr;
-    attr["set_data"] = _set_data_;
-    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+    free(ctrlpoint);
   }
-  static int _set_data_(lua_State *L)
+  virtual void draw_local() { }
+  GLfloat *get_control_points()
   {
-    SurfaceRendering *self = checkarg<SurfaceRendering>(L, 1);
-    Array *A = lunum_checkarray1(L, 2);
+    const int su = Nv;
+    const int sv = 1;
+    const double du = (u1 - u0) / (Nu - 1);
+    const double dv = (v1 - v0) / (Nv - 1);
 
-    if (A->ndims != 2 || A->dtype != ARRAY_TYPE_DOUBLE) {
-      luaL_error(L, "need a 2d array of doubles\n");
+    EntryCB cb = Callbacks.find("control_points");
+    EntryDS ds = DataSources.find("control_points");
+
+    if (cb != Callbacks.end()) {
+      // -----------------------------------------------------------------------
+      // Refresh the ctrlpoint buffer with callback values
+      // -----------------------------------------------------------------------
+      ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
+      for (int i=0; i<Nu; ++i) {
+        for (int j=0; j<Nv; ++j) {
+          const int m = i*su + j*sv;
+          const double u = u0 + i*du;
+          const double v = v0 + j*dv;
+
+          std::vector<double> V = cb->second->call2(u, v);
+          ctrlpoint[3*m + 0] = V[0];
+          ctrlpoint[3*m + 1] = V[1];
+          ctrlpoint[3*m + 2] = V[2];
+        }
+      }
     }
-    self->set_data((const double*)A->data, A->shape[0], A->shape[1]);
-
-    return 0;
+    else if (ds != DataSources.end()) {
+      // -----------------------------------------------------------------------
+      // Retrieve data from the DataSources object
+      // -----------------------------------------------------------------------
+      if (ds->second->ndims != 3) {
+        luaL_error(__lua_state, "data source 'control_locations' must "
+                   "have dimension 3");
+      }
+      else if (ds->second->shape[2] != 3) {
+        luaL_error(__lua_state, "data source 'control_locations' must "
+                   "have last dimension of size 3");
+      }
+      else if (ds->second->dtype != ARRAY_TYPE_DOUBLE) {
+        luaL_error(__lua_state, "data source 'control_locations' must "
+                   "have type 'double'");
+      }
+      else { // All good, go ahead and load the data
+	Nu = ds->second->shape[0];
+	Nv = ds->second->shape[1];
+	ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
+	for (int m=0; m<Nu*Nv; ++m) {
+	  ctrlpoint[m] = ((double*) ds->second->data)[m];
+	}
+      }
+    }
+    else {
+      // Return the default value for control points
+    }
+    return ctrlpoint;
   }
 } ;
 
-
-class SurfaceNURBS : public SurfaceRendering
+class SurfaceNURBS : public ParametricDataSource
 {
 private:
   int order;
@@ -522,6 +550,7 @@ public:
     gl_modes.push_back(GL_LIGHT0);
     gl_modes.push_back(GL_BLEND);
     gl_modes.push_back(GL_COLOR_MATERIAL);
+    gl_modes.push_back(GL_AUTO_NORMAL);
 
     Orientation[0] = -90.0;
 
@@ -541,20 +570,20 @@ public:
 private:
   void draw_local()
   {
-    if (surfdata == NULL) return;
+    GLfloat *knots_u = (GLfloat*) malloc((Nu + order)*sizeof(GLfloat));
+    GLfloat *knots_v = (GLfloat*) malloc((Nv + order)*sizeof(GLfloat));
 
-    GLfloat *knots_x = (GLfloat*) malloc((Nx + order)*sizeof(GLfloat));
-    GLfloat *knots_y = (GLfloat*) malloc((Ny + order)*sizeof(GLfloat));
+    for (int i=0; i<Nu+order; ++i) knots_u[i] = i;
+    for (int i=0; i<Nv+order; ++i) knots_v[i] = i;
 
-    for (int i=0; i<Nx+order; ++i) knots_x[i] = i;
-    for (int i=0; i<Ny+order; ++i) knots_y[i] = i;
-
-    const int sx = Ny;
-    const int sy = 1;
+    const int su = Nv;
+    const int sv = 1;
 
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
     GLfloat mat_shininess[] = { 100.0 };
+
+    GLfloat *surfdata = get_control_points();
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -562,18 +591,21 @@ private:
 
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
-                    Nx + order, knots_x, Ny + order, knots_y,
-                    3*sx, 3*sy, surfdata,
+                    Nu + order, knots_u, Nv + order, knots_v,
+                    3*su, 3*sv, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
+
+    // colors not ready yet
+    /*
     gluNurbsSurface(theNurb,
                     Nx + order, knots_x, Ny + order, knots_y,
                     4*sx, 4*sy, colordata,
-		    order, order, GL_MAP2_COLOR_4);
-
+                    order, order, GL_MAP2_COLOR_4);
+    */
     gluEndSurface(theNurb);
 
-    free(knots_x);
-    free(knots_y);
+    free(knots_u);
+    free(knots_v);
   }
 
   static void nurbsError(GLenum errorCode)
@@ -595,6 +627,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
+  LuaCppObject::Register<ParametricDataSource>(L);
 
   return 1;
 }

@@ -36,3 +36,17 @@ window:set_orientation(45,0,0)
 window:set_position(0.0, 0.0, -2)
 window:set_color(0.7, 0.95, 0.95)
 window:render_scene({bounding_box, little_box, surface})
+
+
+local param = luview.ParametricDataSource()
+
+param:set_u_range(0, 1, 32)
+param:set_v_range(0, 1, 32)
+
+param:set_callback("nodes", balloon)
+param:set_data("nodes", nodes_data)
+param:set_data("color", color_data)
+
+
+surface:set_control_points({X, Y, Z}, {X, Y, Z})
+surface:set_colors()

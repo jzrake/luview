@@ -10,6 +10,7 @@ local surface = luview.SurfaceNURBS()
 
 
 
+
 local Nx = 64
 local Ny = 64
 
@@ -46,14 +47,20 @@ end
 
 --surface:set_color(0,1,0)
 surface:set_alpha(0.8)
-surface:set_callback("color_function", color_func)
+--surface:set_callback("color_function", color_func)
 
+function ThePoints(u,v)
+   return u,v,5*(u^4 + u*v^3) * lunum.cos(20*u*v)
+end
+
+surface:set_callback("control_points",ThePoints)
+surface:set_color(1.0,0.5,0.3)
 
 local scene = {bounding_box, surface}
 local time = 0.0
 
 while window:render_scene(scene) == "continue" do
    time = time + 0.05
-   surface:set_data(MakeSurfaceData(time))
+--   surface:set_data(MakeSurfaceData(time))
    collectgarbage()
 end
