@@ -447,8 +447,8 @@ public:
     v0 = -0.5;
     v1 =  0.5;
 
-    Nu = 32;
-    Nv = 32;
+    Nu = 16;
+    Nv = 16;
 
     ctrlpoint = (GLfloat*) malloc(3*Nu*Nv*sizeof(GLfloat));
 
@@ -556,8 +556,8 @@ public:
 
     theNurb = gluNewNurbsRenderer();
     gluNurbsProperty(theNurb, GLU_SAMPLING_METHOD, GLU_DOMAIN_DISTANCE);
-    gluNurbsProperty(theNurb, GLU_U_STEP, 0.1);
-    gluNurbsProperty(theNurb, GLU_V_STEP, 0.1);
+    gluNurbsProperty(theNurb, GLU_U_STEP, 10.0);
+    gluNurbsProperty(theNurb, GLU_V_STEP, 10.0);
 
     gluNurbsProperty(theNurb, GLU_DISPLAY_MODE, GLU_FILL);//GLU_OUTLINE_PATCH);
     gluNurbsCallback(theNurb, GLU_ERROR, (GLvoid (*)()) nurbsError);

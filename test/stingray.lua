@@ -45,19 +45,24 @@ local function color_func(x)
    math.sin(40*x+10)^4
 end
 
---surface:set_color(0,1,0)
+
 surface:set_alpha(0.8)
 --surface:set_callback("color_function", color_func)
 
+local time = 0.0
+
 function ThePoints(u,v)
-   return u,v,5*(u^4 + u*v^3) * lunum.cos(20*u*v)
+   return
+   u,
+   v,
+   5*(u^4 + u*v^3) * lunum.cos(20*u*v) * math.cos(time)
 end
 
 surface:set_callback("control_points",ThePoints)
 surface:set_color(1.0,0.5,0.3)
 
 local scene = {bounding_box, surface}
-local time = 0.0
+
 
 while window:render_scene(scene) == "continue" do
    time = time + 0.05
