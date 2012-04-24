@@ -54,14 +54,19 @@ function ThePoints(u,v)
 end
 
 local ctrl_points_f = luview.ParametricFunctionDataSource()
-ctrl_points_f:set_function(ThePoints)
+ctrl_points_f:set_function(function(u,v)
+			      return
+			      u,
+			      v,
+			      5*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(0.0)
+			   end)
 
 local SurfacePoints = MakeSurfaceData(0.0)
 local ctrl_points_a = luview.ParametricArrayDataSource()
 ctrl_points_a:set_array(SurfacePoints)
 
 
-surface:set_data("control_points", ctrl_points_a)
+surface:set_data("control_points", ctrl_points_f)
 surface:set_alpha(0.8)
 surface:set_color(1.0,0.5,0.3)
 

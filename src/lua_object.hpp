@@ -20,7 +20,8 @@ extern "C" {
 #include "lauxlib.h"
 }
 
-
+#define __REGCXX "LuaCppObject_cxx"
+#define __REGLUA "LuaCppObject_lua"
 
 // ---------------------------------------------------------------------------
 #define STACKDUMP {                                                     \
@@ -63,14 +64,14 @@ class LuaCppObject
   // created and will be deleted by C++ code. These objects are never returned
   // to Lua, and are thus never entered as a user data or receive a metatable.
   // ---------------------------------------------------------------------------
-  LuaCppObject(lua_State *L, int pos) : __refid(make_refid(L, pos)),
+  LuaCppObject(lua_State *L, int pos) : __refid(make_refid(L, pos, __REGCXX)),
 					__lua_state(L),
 					__is_cxx_only(true) { }
 
   virtual ~LuaCppObject()
   {
     if (__is_cxx_only) {
-      unmake_refid(__lua_state, __refid);
+      unmake_refid(__lua_state, __refid, __REGCXX);
     }
   }
 
@@ -85,7 +86,10 @@ class LuaCppObject
     lua_pushstring(L, "v");
     lua_setfield(L, -2, "__mode");
     lua_setmetatable(L, -2);
-    lua_setglobal(L, "LuaCppObject");
+    lua_setglobal(L, __REGLUA);
+
+    lua_newtable(L);
+    lua_setglobal(L, __REGCXX);
   }
   template <class T> static void Register(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -134,32 +138,32 @@ protected:
     }
     return result;
   }
-  static int make_refid(lua_State *L, int pos)
+  static int make_refid(lua_State *L, int pos, const char *reg)
   {
     pos = lua_absindex(L, pos);
 
-    lua_getglobal(L, "LuaCppObject");
+    lua_getglobal(L, reg);
     lua_pushvalue(L, pos);
     int refid = luaL_ref(L, -2);
     lua_pop(L, 1);
-    lua_remove(L, -2); // LuaCppObject
+    lua_remove(L, -2); // registry table
     return refid;
   }
-  static void unmake_refid(lua_State *L, int refid)
+  static void unmake_refid(lua_State *L, int refid, const char *reg)
   {
-    lua_getglobal(L, "LuaCppObject");
+    lua_getglobal(L, reg);
     luaL_unref(L, -1, refid);
     lua_pop(L, 1);
   }
-  static void push_lua_refid(lua_State *L, int refid)
+  static void push_lua_refid(lua_State *L, int refid, const char *reg)
   {
-    lua_getglobal(L, "LuaCppObject");
+    lua_getglobal(L, reg);
     lua_rawgeti(L, -1, refid);
     lua_remove(L, -2);
   }
-  static void push_lua_obj(lua_State *L, LuaCppObject *object)
+  static void push_lua_obj(lua_State *L, LuaCppObject *object, const char *reg)
   {
-    push_lua_refid(L, object->__refid);
+    push_lua_refid(L, object->__refid, reg);
   }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   {
@@ -181,7 +185,7 @@ protected:
     // Register the object with a unique reference id for easy retrieval as a
     // Lua object.
     // -------------------------------------------------------------------------
-    lua_getglobal(L, "LuaCppObject");
+    lua_getglobal(L, __REGLUA);
     lua_pushvalue(L, -2);
     object->__refid = luaL_ref(L, -2);
     object->__lua_state = L;
@@ -296,7 +300,7 @@ protected:
   // ---------------------------------------------------------------------------
   {
     LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
-    unmake_refid(L, object->__refid);
+    unmake_refid(L, object->__refid, __REGLUA);
 
     //    printf("killing object with refid %d...\n", object->__refid);
 

@@ -51,15 +51,32 @@ class CallbackFunction : public LuaCppObject
 public:
   CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
 
-  std::vector<double> call(double x)
+  std::vector<double> call(double u)
+  {
+    double x[1] = {u};
+    return call_n(x, 1);
+  }
+  std::vector<double> call(double u, double v)
+  {
+    double x[2] = {u,v};
+    return call_n(x, 2);
+  }
+  std::vector<double> call(double u, double v, double w)
+  {
+    double x[3] = {u,v,w};
+    return call_n(x, 3);
+  }
+  std::vector<double> call_n(double *x, int narg)
   {
     lua_State *L = __lua_state;
     std::vector<double> res;
 
-    push_lua_refid(L, __refid);
-    lua_pushnumber(L, x);
+    push_lua_refid(L, __refid, __REGCXX);
+    for (int i=0; i<narg; ++i) {
+      lua_pushnumber(L, x[i]);
+    }
 
-    if (lua_pcall(L, 1, LUA_MULTRET, 0) != 0) {
+    if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
       luaL_error(L, lua_tostring(L, -1));
     }
 
@@ -74,29 +91,6 @@ public:
     return res;
   }
 
-  std::vector<double> call2(double u, double v)
-  {
-    lua_State *L = __lua_state;
-    std::vector<double> res;
-
-    push_lua_refid(L, __refid);
-    lua_pushnumber(L, u);
-    lua_pushnumber(L, v);
-
-    if (lua_pcall(L, 2, LUA_MULTRET, 0) != 0) {
-      luaL_error(L, lua_tostring(L, -1));
-    }
-
-    int nret = lua_gettop(L) - 2;
-
-    for (int i=0; i<nret; ++i) {
-      res.push_back(lua_tonumber(L, -1));
-      lua_pop(L, 1);
-    }
-
-    reverse(res.begin(), res.end());
-    return res;
-  }
 } ;
 
 
@@ -136,7 +130,7 @@ protected:
       lua_pushnil(L);
     }
     else {
-      self->push_lua_obj(L, self->callback);
+      self->push_lua_obj(L, self->callback, __REGCXX);
     }
     return 1;
   }
@@ -276,7 +270,7 @@ protected:
       lua_pushnil(L);
     }
     else {
-      self->push_lua_obj(L, val->second);
+      self->push_lua_obj(L, val->second, __REGCXX);
     }
     return 1;
   }
@@ -316,7 +310,7 @@ protected:
       lua_pushnil(L);
     }
     else {
-      self->push_lua_obj(L, val->second); 
+      self->push_lua_obj(L, val->second, __REGLUA); 
     }
     return 1;
   }
@@ -687,7 +681,7 @@ public:
         const double u = u0 + i*du;
         const double v = v0 + j*dv;
 
-        std::vector<double> V = callback->call2(u, v);
+        std::vector<double> V = callback->call(u, v);
         ctrlpoint[3*m + 0] = V[0];
         ctrlpoint[3*m + 1] = V[1];
         ctrlpoint[3*m + 2] = V[2];
