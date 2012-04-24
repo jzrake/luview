@@ -90,7 +90,6 @@ public:
     reverse(res.begin(), res.end());
     return res;
   }
-
 } ;
 
 
@@ -121,7 +120,7 @@ protected:
     AttributeMap attr;
     attr["get_function"] = _get_function_;
     attr["set_function"] = _set_function_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+    RETURN_ATTR_OR_CALL_SUPER(DataSource);
   }
   static int _get_function_(lua_State *L)
   {
@@ -172,12 +171,14 @@ protected:
     AttributeMap attr;
     attr["get_array"] = _get_array_;
     attr["set_array"] = _set_array_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+    RETURN_ATTR_OR_CALL_SUPER(DataSource);
   }
   static int _get_array_(lua_State *L)
   {
-    // Needs to be implemented
-    return 0;
+    ArrayDataSource *self = checkarg<ArrayDataSource>(L, 1);
+    Array B = array_new_copy(self->A, self->A->dtype);
+    lunum_pusharray1(L, &B);
+    return 1;
   }
   static int _set_array_(lua_State *L)
   {
@@ -458,7 +459,6 @@ private:
   {
 
   }
-
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
@@ -743,12 +743,11 @@ private:
 
     const int su = Nv;
     const int sv = 1;
+    GLfloat *surfdata = ds->second->get_data();
 
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
     GLfloat mat_shininess[] = { 100.0 };
-
-    GLfloat *surfdata = ds->second->get_data();
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -759,7 +758,6 @@ private:
                     Nu + order, knots_u, Nv + order, knots_v,
                     3*su, 3*sv, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
-
     // colors not ready yet
     /*
       gluNurbsSurface(theNurb,
@@ -768,7 +766,6 @@ private:
       order, order, GL_MAP2_COLOR_4);
     */
     gluEndSurface(theNurb);
-
     free(knots_u);
     free(knots_v);
   }
