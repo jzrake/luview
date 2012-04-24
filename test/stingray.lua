@@ -46,26 +46,25 @@ local function color_func(x)
 end
 
 
-surface:set_alpha(0.8)
---surface:set_callback("color_function", color_func)
-
-local time = 0.0
-
 function ThePoints(u,v)
    return
    u,
    v,
-   5*(u^4 + u*v^3) * lunum.cos(20*u*v) * math.cos(time)
+   5*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(0.0)
 end
 
-surface:set_callback("control_points",ThePoints)
+local ctrl_points = luview.ParametricFunctionDataSource()
+ctrl_points:set_function(ThePoints)
+
+surface:set_data("control_points", ctrl_points)
+surface:set_alpha(0.8)
 surface:set_color(1.0,0.5,0.3)
 
-local scene = {bounding_box, surface}
 
+local time = 0.0
+local scene = {bounding_box, surface}
 
 while window:render_scene(scene) == "continue" do
    time = time + 0.05
---   surface:set_data(MakeSurfaceData(time))
    collectgarbage()
 end

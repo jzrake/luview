@@ -100,6 +100,101 @@ public:
 } ;
 
 
+class DataSource : public LuaCppObject
+{
+public:
+  virtual GLfloat *get_data() = 0;
+  virtual int get_Nu() { return 0; }
+  virtual int get_Nv() { return 0; }
+} ;
+
+
+class FunctionDataSource : public DataSource
+{
+protected:
+  CallbackFunction *callback;
+
+public:
+  FunctionDataSource() : callback(NULL) { }
+  ~FunctionDataSource()
+  {
+    if (callback) delete callback;
+  }
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["get_function"] = _get_function_;
+    attr["set_function"] = _set_function_;
+    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  }
+  static int _get_function_(lua_State *L)
+  {
+    FunctionDataSource *self = checkarg<FunctionDataSource>(L, 1);
+    if (self->callback == NULL) {
+      lua_pushnil(L);
+    }
+    else {
+      self->push_lua_obj(L, self->callback);
+    }
+    return 1;
+  }
+  static int _set_function_(lua_State *L)
+  // ---------------------------------------------------------------------------
+  // Arguments:
+  //
+  // (1) Lua function or nil
+  //
+  // ---------------------------------------------------------------------------
+  {
+    FunctionDataSource *self = checkarg<FunctionDataSource>(L, 1);
+    if (lua_type(L, 2) == LUA_TFUNCTION) {
+      if (self->callback) delete self->callback;
+      self->callback = new CallbackFunction(L, 2);
+    }
+    else if (lua_type(L, 2) == LUA_TNIL) {
+      delete self->callback;
+      self->callback = NULL;
+    }
+    else {
+      luaL_error(L, "requires either function or nil");
+    }
+    return 0;
+  }
+} ;
+
+
+class ArrayDataSource : public DataSource
+{
+protected:
+  Array *A;
+public:
+  ArrayDataSource() : A(NULL) { }
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["get_array"] = _get_array_;
+    attr["set_array"] = _set_array_;
+    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  }
+  static int _get_array_(lua_State *L)
+  {
+    // Needs to be implemented
+    return 0;
+  }
+  static int _set_array_(lua_State *L)
+  {
+    ArrayDataSource *self = checkarg<ArrayDataSource>(L, 1);
+    self->A = lunum_checkarray1(L, 2);
+    return 0;
+  }
+} ;
+
+
+
 class LuviewTraitedObject : public LuaCppObject
 {
 protected:
@@ -110,9 +205,9 @@ protected:
   double LineWidth;
   double Alpha;
   std::map<std::string, CallbackFunction*> Callbacks;
-  std::map<std::string, Array*> DataSources;
+  std::map<std::string, DataSource*> DataSources;
   typedef std::map<std::string, CallbackFunction*>::iterator EntryCB;
-  typedef std::map<std::string, Array*>::iterator EntryDS;
+  typedef std::map<std::string, DataSource*>::iterator EntryDS;
 
 public:
   LuviewTraitedObject()
@@ -143,7 +238,6 @@ public:
   void set_linewidth(double w);
 
 protected:
-
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
   {
     AttributeMap attr;
@@ -222,10 +316,7 @@ protected:
       lua_pushnil(L);
     }
     else {
-      // copies are necessary for now, since lunum_pusharray1 only registers new
-      // arrays.
-      Array A = array_new_copy(val->second, val->second->dtype);
-      lunum_pusharray1(L, &A);
+      self->push_lua_obj(L, val->second); 
     }
     return 1;
   }
@@ -233,8 +324,7 @@ protected:
   {
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
     const char *name = luaL_checkstring(L, 2);
-    Array *A = lunum_checkarray1(L, 3);
-    self->DataSources[name] = A;
+    self->DataSources[name] = checkarg<DataSource>(L, 3);
     return 0;
   }
 
@@ -287,6 +377,7 @@ public:
       glDisable(gl_modes[i]);
     }
   }
+
 protected:
   virtual void draw_local() = 0;
 } ;
@@ -368,11 +459,10 @@ private:
     case GLFW_KEY_DOWN  : Orientation[0] += 3; break;
     case GLFW_KEY_UP    : Orientation[0] -= 3; break;
     }
-    //    printf("received key: %d\n", key);
   }
   static void CharacterInput(int key, int state)
   {
-    //    printf("received character: %\n", key);
+
   }
 
 
@@ -432,7 +522,7 @@ public:
 
 
 
-class ParametricDataSource : public DrawableObject
+class ParametricArrayDataSource : public ArrayDataSource
 {
 protected:
   GLfloat *ctrlpoint;
@@ -440,7 +530,10 @@ protected:
   int Nu, Nv;
 
 public:
-  ParametricDataSource()
+  int get_Nu() { return Nu; }
+  int get_Nv() { return Nv; }
+
+  ParametricArrayDataSource()
   {
     u0 = -0.5;
     u1 =  0.5;
@@ -472,72 +565,120 @@ public:
       }
     }
   }
-  ~ParametricDataSource()
+  ~ParametricArrayDataSource()
   {
     free(ctrlpoint);
   }
-  virtual void draw_local() { }
-  GLfloat *get_control_points()
+
+  GLfloat *get_data()
+  {
+    // -----------------------------------------------------------------------
+    // Retrieve data from the DataSources object
+    // -----------------------------------------------------------------------
+    if (A->ndims != 3) {
+      luaL_error(__lua_state, "data source 'control_locations' must "
+                 "have dimension 3");
+    }
+    else if (A->shape[2] != 3) {
+      luaL_error(__lua_state, "data source 'control_locations' must "
+                 "have last dimension of size 3");
+    }
+    else if (A->dtype != ARRAY_TYPE_DOUBLE) {
+      luaL_error(__lua_state, "data source 'control_locations' must "
+                 "have type 'double'");
+    }
+    else { // All good, go ahead and load the data
+      Nu = A->shape[0];
+      Nv = A->shape[1];
+      ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
+      for (int m=0; m<Nu*Nv; ++m) {
+        ctrlpoint[m] = ((double*) A->data)[m];
+      }
+    }
+    return ctrlpoint;
+  }
+} ;
+
+
+class ParametricFunctionDataSource : public FunctionDataSource
+{
+protected:
+  GLfloat *ctrlpoint;
+  double u0, u1, v0, v1;
+  int Nu, Nv;
+
+public:
+  int get_Nu() { return Nu; }
+  int get_Nv() { return Nv; }
+
+  ParametricFunctionDataSource()
+  {
+    u0 = -0.5;
+    u1 =  0.5;
+    v0 = -0.5;
+    v1 =  0.5;
+
+    Nu = 16;
+    Nv = 16;
+
+    ctrlpoint = (GLfloat*) malloc(3*Nu*Nv*sizeof(GLfloat));
+
+    const int su = Nv;
+    const int sv = 1;
+    const double du = (u1 - u0) / (Nu - 1);
+    const double dv = (v1 - v0) / (Nv - 1);
+
+    // -------------------------------------------------------------------------
+    // Initialize to a uniform, flat grid
+    // -------------------------------------------------------------------------
+    for (int i=0; i<Nu; ++i) {
+      for (int j=0; j<Nv; ++j) {
+        const int m = i*su + j*sv;
+        const double x = u0 + i*du;
+        const double y = v0 + j*dv;
+        const double z = 0.0;
+        ctrlpoint[3*m + 0] = x;
+        ctrlpoint[3*m + 1] = y;
+        ctrlpoint[3*m + 2] = z;
+      }
+    }
+  }
+  ~ParametricFunctionDataSource()
+  {
+    free(ctrlpoint);
+  }
+
+  GLfloat *get_data()
   {
     const int su = Nv;
     const int sv = 1;
     const double du = (u1 - u0) / (Nu - 1);
     const double dv = (v1 - v0) / (Nv - 1);
 
-    EntryCB cb = Callbacks.find("control_points");
-    EntryDS ds = DataSources.find("control_points");
+    // -----------------------------------------------------------------------
+    // Refresh the ctrlpoint buffer with callback values
+    // -----------------------------------------------------------------------
+    ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
+    for (int i=0; i<Nu; ++i) {
+      for (int j=0; j<Nv; ++j) {
+        const int m = i*su + j*sv;
+        const double u = u0 + i*du;
+        const double v = v0 + j*dv;
 
-    if (cb != Callbacks.end()) {
-      // -----------------------------------------------------------------------
-      // Refresh the ctrlpoint buffer with callback values
-      // -----------------------------------------------------------------------
-      ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-      for (int i=0; i<Nu; ++i) {
-        for (int j=0; j<Nv; ++j) {
-          const int m = i*su + j*sv;
-          const double u = u0 + i*du;
-          const double v = v0 + j*dv;
+        std::vector<double> V = callback->call2(u, v);
+        ctrlpoint[3*m + 0] = V[0];
+        ctrlpoint[3*m + 1] = V[1];
+        ctrlpoint[3*m + 2] = V[2];
+      }
+    }
 
-          std::vector<double> V = cb->second->call2(u, v);
-          ctrlpoint[3*m + 0] = V[0];
-          ctrlpoint[3*m + 1] = V[1];
-          ctrlpoint[3*m + 2] = V[2];
-        }
-      }
-    }
-    else if (ds != DataSources.end()) {
-      // -----------------------------------------------------------------------
-      // Retrieve data from the DataSources object
-      // -----------------------------------------------------------------------
-      if (ds->second->ndims != 3) {
-        luaL_error(__lua_state, "data source 'control_locations' must "
-                   "have dimension 3");
-      }
-      else if (ds->second->shape[2] != 3) {
-        luaL_error(__lua_state, "data source 'control_locations' must "
-                   "have last dimension of size 3");
-      }
-      else if (ds->second->dtype != ARRAY_TYPE_DOUBLE) {
-        luaL_error(__lua_state, "data source 'control_locations' must "
-                   "have type 'double'");
-      }
-      else { // All good, go ahead and load the data
-	Nu = ds->second->shape[0];
-	Nv = ds->second->shape[1];
-	ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-	for (int m=0; m<Nu*Nv; ++m) {
-	  ctrlpoint[m] = ((double*) ds->second->data)[m];
-	}
-      }
-    }
-    else {
-      // Return the default value for control points
-    }
     return ctrlpoint;
   }
 } ;
 
-class SurfaceNURBS : public ParametricDataSource
+
+
+class SurfaceNURBS : public DrawableObject
 {
 private:
   int order;
@@ -570,6 +711,14 @@ public:
 private:
   void draw_local()
   {
+    EntryDS ds = DataSources.find("control_points");
+    if (ds == DataSources.end()) {
+      return;
+    }
+
+    int Nu = ds->second->get_Nu();
+    int Nv = ds->second->get_Nv();
+
     GLfloat *knots_u = (GLfloat*) malloc((Nu + order)*sizeof(GLfloat));
     GLfloat *knots_v = (GLfloat*) malloc((Nv + order)*sizeof(GLfloat));
 
@@ -583,7 +732,7 @@ private:
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
     GLfloat mat_shininess[] = { 100.0 };
 
-    GLfloat *surfdata = get_control_points();
+    GLfloat *surfdata = ds->second->get_data();
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -597,10 +746,10 @@ private:
 
     // colors not ready yet
     /*
-    gluNurbsSurface(theNurb,
-                    Nx + order, knots_x, Ny + order, knots_y,
-                    4*sx, 4*sy, colordata,
-                    order, order, GL_MAP2_COLOR_4);
+      gluNurbsSurface(theNurb,
+      Nx + order, knots_x, Ny + order, knots_y,
+      4*sx, 4*sy, colordata,
+      order, order, GL_MAP2_COLOR_4);
     */
     gluEndSurface(theNurb);
 
@@ -627,8 +776,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
-  LuaCppObject::Register<ParametricDataSource>(L);
+  LuaCppObject::Register<ParametricFunctionDataSource>(L);
+  LuaCppObject::Register<ParametricArrayDataSource>(L);
 
   return 1;
 }
-
