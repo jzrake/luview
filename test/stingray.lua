@@ -11,8 +11,8 @@ local surface = luview.SurfaceNURBS()
 
 
 
-local Nx = 64
-local Ny = 64
+local Nx = 32
+local Ny = 32
 
 local X = lunum.zeros{Nx,Ny}
 local Y = lunum.zeros{Nx,Ny}
@@ -53,10 +53,15 @@ function ThePoints(u,v)
    5*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(0.0)
 end
 
-local ctrl_points = luview.ParametricFunctionDataSource()
-ctrl_points:set_function(ThePoints)
+local ctrl_points_f = luview.ParametricFunctionDataSource()
+ctrl_points_f:set_function(ThePoints)
 
-surface:set_data("control_points", ctrl_points)
+local SurfacePoints = MakeSurfaceData(0.0)
+local ctrl_points_a = luview.ParametricArrayDataSource()
+ctrl_points_a:set_array(SurfacePoints)
+
+
+surface:set_data("control_points", ctrl_points_a)
 surface:set_alpha(0.8)
 surface:set_color(1.0,0.5,0.3)
 

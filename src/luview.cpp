@@ -571,29 +571,51 @@ public:
   }
 
   GLfloat *get_data()
+  // ---------------------------------------------------------------------------
+  // Attempts to use the lunum array belonging to parent ArrayDataSource as a
+  // source for 3d control points.
+  // ---------------------------------------------------------------------------
   {
-    // -----------------------------------------------------------------------
-    // Retrieve data from the DataSources object
-    // -----------------------------------------------------------------------
-    if (A->ndims != 3) {
-      luaL_error(__lua_state, "data source 'control_locations' must "
-                 "have dimension 3");
-    }
-    else if (A->shape[2] != 3) {
-      luaL_error(__lua_state, "data source 'control_locations' must "
-                 "have last dimension of size 3");
-    }
-    else if (A->dtype != ARRAY_TYPE_DOUBLE) {
+    if (A->dtype != ARRAY_TYPE_DOUBLE) {
       luaL_error(__lua_state, "data source 'control_locations' must "
                  "have type 'double'");
     }
-    else { // All good, go ahead and load the data
+    else if (A->ndims == 2) {
       Nu = A->shape[0];
       Nv = A->shape[1];
+
+      const int su = Nv;
+      const int sv = 1;
+      const double du = (u1 - u0) / (Nu - 1);
+      const double dv = (v1 - v0) / (Nv - 1);
+
       ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-      for (int m=0; m<Nu*Nv; ++m) {
-        ctrlpoint[m] = ((double*) A->data)[m];
+      for (int i=0; i<Nu; ++i) {
+	for (int j=0; j<Nv; ++j) {
+	  const int m = i*su + j*sv;
+	  ctrlpoint[3*m + 0] = u0 + i*du;
+	  ctrlpoint[3*m + 1] = v0 + j*dv;
+	  ctrlpoint[3*m + 2] = ((double*) A->data)[m];
+	}
       }
+    }
+    else if (A->ndims == 3) {
+      if (A->shape[2] == 3) {
+	Nu = A->shape[0];
+	Nv = A->shape[1];
+	ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
+	for (int m=0; m<3*Nu*Nv; ++m) {
+	  ctrlpoint[m] = ((double*) A->data)[m];
+	}
+      }
+      else {
+	luaL_error(__lua_state, "data source 'control_locations' must "
+		   "have 3rd dimension of size 3");
+      }
+    }
+    else {
+      luaL_error(__lua_state, "data source 'control_locations' must "
+                 "have dimension 2 or 3");
     }
     return ctrlpoint;
   }
