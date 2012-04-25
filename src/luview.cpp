@@ -430,7 +430,7 @@ public:
     glRotated(Orientation[2], 0, 0, 1);
     glScaled(Scale[0], Scale[1], Scale[2]);
 
-    glColor3dv(Color);
+    glColor4d(Color[0], Color[1], Color[2], Alpha);
     glLineWidth(LineWidth);
 
     this->draw_local();
@@ -901,6 +901,7 @@ public:
     gl_modes.push_back(GL_BLEND);
     gl_modes.push_back(GL_COLOR_MATERIAL);
     gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
 
     Orientation[0] = -90.0;
 
@@ -944,6 +945,7 @@ private:
     const int sv = 1;
     GLfloat *surfdata = cp->second->get_data();
 
+
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
     GLfloat mat_shininess[] = { 100.0 };
@@ -951,6 +953,7 @@ private:
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
 
     gluBeginSurface(theNurb);
     gluNurbsSurface(theNurb,
