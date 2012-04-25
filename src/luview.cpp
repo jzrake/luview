@@ -175,61 +175,6 @@ protected:
 } ;
 
 
-class FunctionDataSource : public DataSource
-{
-protected:
-  CallbackFunction *callback;
-
-public:
-  FunctionDataSource() : callback(NULL) { }
-  ~FunctionDataSource()
-  {
-    if (callback) delete callback;
-  }
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["get_function"] = _get_function_;
-    attr["set_function"] = _set_function_;
-    RETURN_ATTR_OR_CALL_SUPER(DataSource);
-  }
-  static int _get_function_(lua_State *L)
-  {
-    FunctionDataSource *self = checkarg<FunctionDataSource>(L, 1);
-    if (self->callback == NULL) {
-      lua_pushnil(L);
-    }
-    else {
-      self->push_lua_obj(L, self->callback, __REGCXX);
-    }
-    return 1;
-  }
-  static int _set_function_(lua_State *L)
-  // ---------------------------------------------------------------------------
-  // Arguments:
-  //
-  // (1) Lua function or nil
-  //
-  // ---------------------------------------------------------------------------
-  {
-    FunctionDataSource *self = checkarg<FunctionDataSource>(L, 1);
-    if (lua_type(L, 2) == LUA_TFUNCTION) {
-      if (self->callback) delete self->callback;
-      self->callback = new CallbackFunction(L, 2);
-    }
-    else if (lua_type(L, 2) == LUA_TNIL) {
-      delete self->callback;
-      self->callback = NULL;
-    }
-    else {
-      luaL_error(L, "requires either function or nil");
-    }
-    return 0;
-  }
-} ;
-
 
 class LuviewTraitedObject : public LuaCppObject
 {
@@ -627,6 +572,9 @@ private:
 
 class FunctionMapping : public DataSource
 {
+private:
+  std::vector<GLfloat> input_min, input_max;
+
 public:
   virtual int get_num_points(int d)
   {
@@ -661,7 +609,16 @@ public:
     output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
 
     GLfloat *domain = input->get_data();
+    input_max = std::vector<GLfloat>(Nd_domain, -1e16);
+    input_min = std::vector<GLfloat>(Nd_domain, +1e16);
 
+    for (int n=0; n<input->get_size(); ++n) {
+      for (int d=0; d<Nd_domain; ++d) {
+	const GLfloat x = domain[Nd_domain*n + d];
+	if (x < input_min[d]) input_min[d] = x;
+	if (x > input_max[d]) input_max[d] = x;
+      }
+    }
     for (int n=0; n<input->get_size(); ++n) {
 
       // Here we're loading data from the domain data into the argument vector
@@ -672,7 +629,6 @@ public:
 	output[Nd_range*n + d] = Y[d];
       }
     }
-
     return output;
   }
 } ;
