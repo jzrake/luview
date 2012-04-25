@@ -66,6 +66,10 @@ public:
     double x[3] = {u,v,w};
     return call_n(x, 3);
   }
+  std::vector<double> call_n(std::vector<double> X)
+  {
+    return call_n(&X[0], X.size());
+  }
   std::vector<double> call_n(double *x, int narg)
   {
     lua_State *L = __lua_state;
@@ -95,10 +99,75 @@ public:
 
 class DataSource : public LuaCppObject
 {
+protected:
+  DataSource *input;
+  GLfloat *output;
+  CallbackFunction *transform;
+
 public:
+  DataSource() : input(NULL), output(NULL), transform(NULL) { }
+
   virtual GLfloat *get_data() = 0;
-  virtual int get_Nu() { return 0; }
-  virtual int get_Nv() { return 0; }
+  virtual int get_num_points(int d) { return 0; }
+  virtual int get_size() { return 0; }
+  virtual int get_num_components() { return 0; }
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["get_transform"] = _get_transform_;
+    attr["set_transform"] = _set_transform_;
+    attr["get_input"] = _get_input_;
+    attr["set_input"] = _set_input_;
+    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  }
+  static int _get_transform_(lua_State *L)
+  {
+    DataSource *self = checkarg<DataSource>(L, 1);
+    if (self->transform == NULL) {
+      lua_pushnil(L);
+    }
+    else {
+      self->push_lua_obj(L, self->transform, __REGCXX);
+    }
+    return 1;
+  }
+
+  static int _set_transform_(lua_State *L)
+  {
+    DataSource *self = checkarg<DataSource>(L, 1);
+    if (lua_type(L, 2) == LUA_TFUNCTION) {
+      if (self->transform) delete self->transform;
+      self->transform = new CallbackFunction(L, 2);
+    }
+    else if (lua_type(L, 2) == LUA_TNIL) {
+      if (self->transform) delete self->transform;
+      self->transform = NULL;
+    }
+    else {
+      luaL_error(L, "requires either function or nil");
+    }
+    return 0;
+  }
+  static int _get_input_(lua_State *L)
+  {
+    DataSource *self = checkarg<DataSource>(L, 1);
+
+    if (self->input == NULL) {
+      lua_pushnil(L);
+    }
+    else {
+      self->push_lua_obj(L, self->input, __REGLUA); 
+    }
+    return 1;
+  }
+  static int _set_input_(lua_State *L)
+  {
+    DataSource *self = checkarg<DataSource>(L, 1);
+    self->input = checkarg<DataSource>(L, 2);
+    return 0;
+  }
 } ;
 
 
@@ -693,7 +762,131 @@ public:
 } ;
 
 
+class GridSource2D :  public DataSource
+{
+private:
+  GLfloat *output;
+  int Nu, Nv;
+  double u0, u1, v0, v1;
 
+public:
+  GridSource2D() : output(NULL)
+  {
+    u0 = -0.5;
+    u1 =  0.5;
+    v0 = -0.5;
+    v1 =  0.5;
+
+    Nu = 16;
+    Nv = 16;
+
+    init_grid();
+  }
+  ~GridSource2D()
+  {
+    free(output);
+  }
+  GLfloat *get_data() { return output; }
+  virtual int get_num_points(int d)
+  {
+    switch (d) {
+    case 0: return Nu;
+    case 1: return Nv;
+    default: return 0;
+    }
+  }
+  virtual int get_size()
+  {
+    return Nu*Nv;
+  }
+  virtual int get_num_components()
+  {
+    return 2;
+  }
+
+private:
+  void init_grid()
+  // ---------------------------------------------------------------------------
+  // Creates to a uniform cartesian grid
+  // ---------------------------------------------------------------------------
+  {
+    output = (GLfloat*) realloc(output, 2*Nu*Nv*sizeof(GLfloat));
+
+    const int su = Nv;
+    const int sv = 1;
+    const double du = (u1 - u0) / (Nu - 1);
+    const double dv = (v1 - v0) / (Nv - 1);
+
+    for (int i=0; i<Nu; ++i) {
+      for (int j=0; j<Nv; ++j) {
+        const int m = i*su + j*sv;
+        output[2*m + 0] = u0 + i*du;
+        output[2*m + 1] = v0 + j*dv;
+      }
+    }
+  }
+} ;
+
+
+class FunctionMapping : public DataSource
+{
+public:
+  ~FunctionMapping()
+  {
+    if (output) free(output);
+  }
+  virtual int get_num_points(int d)
+  {
+    return input ? input->get_num_points(d) : 0;
+  }
+  virtual int get_size()
+  {
+    return input ? input->get_size() : 0;
+  }
+  virtual int get_num_components()
+  {
+    return transform ? transform->call_n
+      (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
+  }
+
+  GLfloat *get_data()
+  // ---------------------------------------------------------------------------
+  // Refresh the ctrlpoint buffer with callback values
+  // ---------------------------------------------------------------------------
+  {
+    int Nd_domain = input->get_num_components();
+    int Nd_range = this->get_num_components();
+    int nval_output = Nd_range * input->get_size();
+
+    output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
+
+    GLfloat *domain = input->get_data();
+
+    for (int n=0; n<input->get_size(); ++n) {
+
+      // Here we're loading data from the domain data into the argument vector
+      std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
+      std::vector<double> Y = transform->call_n(X);
+
+      for (int d=0; d<Nd_range; ++d) {
+	output[Nd_range*n + d] = Y[d];
+      }
+    }
+
+    return output;
+  }
+} ;
+
+
+
+
+// -----------------------------------------------------------------------------
+//
+// [0,Nu] x [0,Nv] -> R^3 (parametric data source)
+// R^3 -> R (get_scalars from it)
+// R -> R^4 (map scalars through color map)
+//
+// -----------------------------------------------------------------------------
 class SurfaceNURBS : public DrawableObject
 {
 private:
@@ -727,13 +920,19 @@ public:
 private:
   void draw_local()
   {
-    EntryDS ds = DataSources.find("control_points");
-    if (ds == DataSources.end()) {
+    EntryDS cp = DataSources.find("control_points");
+    EntryDS cm = DataSources.find("color_data");
+
+    if (cp == DataSources.end()) {
+      return;
+    }
+    if (cp->second->get_num_components() != 3) {
+      printf("need 3-component input data for control_points\n");
       return;
     }
 
-    int Nu = ds->second->get_Nu();
-    int Nv = ds->second->get_Nv();
+    int Nu = cp->second->get_num_points(0);
+    int Nv = cp->second->get_num_points(1);
 
     GLfloat *knots_u = (GLfloat*) malloc((Nu + order)*sizeof(GLfloat));
     GLfloat *knots_v = (GLfloat*) malloc((Nv + order)*sizeof(GLfloat));
@@ -743,7 +942,7 @@ private:
 
     const int su = Nv;
     const int sv = 1;
-    GLfloat *surfdata = ds->second->get_data();
+    GLfloat *surfdata = cp->second->get_data();
 
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
@@ -758,13 +957,14 @@ private:
                     Nu + order, knots_u, Nv + order, knots_v,
                     3*su, 3*sv, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
-    // colors not ready yet
-    /*
+
+    if (cm != DataSources.end()) {
       gluNurbsSurface(theNurb,
-      Nx + order, knots_x, Ny + order, knots_y,
-      4*sx, 4*sy, colordata,
-      order, order, GL_MAP2_COLOR_4);
-    */
+		      Nu + order, knots_u, Nv + order, knots_v,
+		      4*su, 4*sv, cm->second->get_data(),
+		      order, order, GL_MAP2_COLOR_4);
+    }
+
     gluEndSurface(theNurb);
     free(knots_u);
     free(knots_v);
@@ -791,6 +991,9 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<ParametricFunctionDataSource>(L);
   LuaCppObject::Register<ParametricArrayDataSource>(L);
+  
+  LuaCppObject::Register<FunctionMapping>(L);
+  LuaCppObject::Register<GridSource2D>(L);
 
   return 1;
 }
