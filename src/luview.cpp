@@ -682,6 +682,9 @@ public:
     if (input == NULL) {
       luaL_error(__lua_state, "broken pipeline: missing data source");
     }
+    if (transform == NULL) {
+      luaL_error(__lua_state, "broken pipeline: missing transform");
+    }
 
     int Nd_domain = input->get_num_components();
     int Nd_range = this->get_num_components();
@@ -750,7 +753,7 @@ private:
     }
 
     GLfloat *surfdata = cp->second->get_data();
-    GLfloat *colrdata = cm->second->get_data();
+    GLfloat *colordata = NULL;
 
     if (cp->second->get_num_components() != 3) {
       luaL_error(__lua_state,
@@ -758,10 +761,13 @@ private:
 		 "(x,y,z)");
       return;
     }
-    if (cm->second->get_num_components() != 4) {
-      luaL_error(__lua_state,
-		 "data source 'colors' must provide 4 components (r,g,b,a)");
-      return;
+    if (cm != DataSources.end()) {
+      colordata = cm->second->get_data();
+      if (cm->second->get_num_components() != 4) {
+	luaL_error(__lua_state,
+		   "data source 'colors' must provide 4 components (r,g,b,a)");
+	return;
+      }
     }
 
     int Nu = cp->second->get_num_points(0);
@@ -791,10 +797,10 @@ private:
                     3*su, 3*sv, surfdata,
                     order, order, GL_MAP2_VERTEX_3);
 
-    if (cm != DataSources.end()) {
+    if (colordata) {
       gluNurbsSurface(theNurb,
 		      Nu + order, knots_u, Nv + order, knots_v,
-		      4*su, 4*sv, cm->second->get_data(),
+		      4*su, 4*sv, colordata,
 		      order, order, GL_MAP2_COLOR_4);
     }
 
