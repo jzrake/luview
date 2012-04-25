@@ -66,11 +66,11 @@ public:
     double x[3] = {u,v,w};
     return call_n(x, 3);
   }
-  std::vector<double> call_n(std::vector<double> X)
+  std::vector<double> call_n(std::vector<double> X, LuaCppObject *caller=NULL)
   {
-    return call_n(&X[0], X.size());
+    return call_n(&X[0], X.size(), caller);
   }
-  std::vector<double> call_n(double *x, int narg)
+  std::vector<double> call_n(double *x, int narg, LuaCppObject *caller=NULL)
   {
     lua_State *L = __lua_state;
     std::vector<double> res;
@@ -78,6 +78,14 @@ public:
     push_lua_refid(L, __refid, __REGCXX);
     for (int i=0; i<narg; ++i) {
       lua_pushnumber(L, x[i]);
+    }
+
+    // -------------------------------------------------------------------------
+    // Append the caller as a Lua object to the argument list if it's given
+    // -------------------------------------------------------------------------
+    if (caller != NULL) {
+      push_lua_obj(__lua_state, caller, __REGLUA);
+      ++narg;
     }
 
     if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
@@ -573,7 +581,7 @@ private:
 class FunctionMapping : public DataSource
 {
 private:
-  std::vector<GLfloat> input_min, input_max;
+  std::map<std::string, double> info;
 
 public:
   virtual int get_num_points(int d)
@@ -587,7 +595,7 @@ public:
   virtual int get_num_components()
   {
     return (transform && input) ? transform->call_n
-      (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
+      (std::vector<double>(input->get_num_components(), 0.0), this).size() : 0;
   }
 
   GLfloat *get_data()
@@ -607,29 +615,56 @@ public:
     int nval_output = Nd_range * input->get_size();
 
     output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
-
     GLfloat *domain = input->get_data();
-    input_max = std::vector<GLfloat>(Nd_domain, -1e16);
-    input_min = std::vector<GLfloat>(Nd_domain, +1e16);
 
-    for (int n=0; n<input->get_size(); ++n) {
-      for (int d=0; d<Nd_domain; ++d) {
+    // -------------------------------------------------------------------------
+    // Set up info dictionary
+    // -------------------------------------------------------------------------
+    for (int d=0; d<Nd_domain; ++d) {
+      double &xmax = info[K("max", d)];
+      double &xmin = info[K("min", d)];
+      xmin = +1e16;
+      xmax = -1e16;
+      for (int n=0; n<input->get_size(); ++n) {
 	const GLfloat x = domain[Nd_domain*n + d];
-	if (x < input_min[d]) input_min[d] = x;
-	if (x > input_max[d]) input_max[d] = x;
+	if (x > xmax) xmax = x;
+	if (x > xmin) xmin = x;
       }
     }
+
     for (int n=0; n<input->get_size(); ++n) {
 
       // Here we're loading data from the domain data into the argument vector
       std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
-      std::vector<double> Y = transform->call_n(X);
+      std::vector<double> Y = transform->call_n(X, this);
 
       for (int d=0; d<Nd_range; ++d) {
 	output[Nd_range*n + d] = Y[d];
       }
     }
     return output;
+  }
+private:
+  std::string K(const char *s, int d) {
+    char res[256];
+    sprintf(res, "%s%d", s, d);
+    return res;
+  }
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["get_info"] = _get_info_;
+    RETURN_ATTR_OR_CALL_SUPER(DataSource);
+  }
+  static int _get_info_(lua_State *L)
+  {
+    FunctionMapping *self = checkarg<FunctionMapping>(L, 1);
+    const char *key = luaL_checkstring(L, 2);
+    std::map<std::string, double>::iterator val = self->info.find(key);
+    if (val == self->info.end()) lua_pushnil(L);
+    else lua_pushnumber(L, val->second);
+    return 1;
   }
 } ;
 

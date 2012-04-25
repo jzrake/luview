@@ -18,7 +18,8 @@ ctrlpnt:set_transform(function(u,v) return u,v,-4*u^2+v^2 end)
 
 
 local function normalize_input(f)
-   local function g(x,y,z)
+   local function g(x,y,z,caller)
+      print(caller:get_info("max3"))
       return f(x,y,z)
    end
    return g
