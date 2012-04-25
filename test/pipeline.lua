@@ -7,14 +7,18 @@ local lunum = require 'lunum'
 local window = luview.Window()
 local box = luview.BoundingBox()
 local grid2d = luview.GridSource2D()
-local ctrlpnt = luview.FunctionMapping()
 local surface = luview.SurfaceNURBS()
-
+local ctrlpnt = luview.FunctionMapping()
+local scolors = luview.FunctionMapping()
 
 ctrlpnt:set_input(grid2d)
 ctrlpnt:set_transform(function(u,v) return u, v, -4*u^2+v^2 end)
 
+scolors:set_input(ctrlpnt)
+scolors:set_transform(function(x,y,z) return 5*z,2*z,z,0.7 end)
+
 surface:set_data("control_points", ctrlpnt)
+surface:set_data("colors", scolors)
 surface:set_alpha(0.8)
 surface:set_color(1.0, 0.5, 0.3)
 

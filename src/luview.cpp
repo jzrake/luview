@@ -743,16 +743,24 @@ private:
   void draw_local()
   {
     EntryDS cp = DataSources.find("control_points");
-    EntryDS cm = DataSources.find("color_data");
+    EntryDS cm = DataSources.find("colors");
 
     if (cp == DataSources.end()) {
       return;
     }
 
     GLfloat *surfdata = cp->second->get_data();
+    GLfloat *colrdata = cm->second->get_data();
+
     if (cp->second->get_num_components() != 3) {
       luaL_error(__lua_state,
-		 "data source 'control_points' must provide 3-components");
+		 "data source 'control_points' must provide 3 components "
+		 "(x,y,z)");
+      return;
+    }
+    if (cm->second->get_num_components() != 4) {
+      luaL_error(__lua_state,
+		 "data source 'colors' must provide 4 components (r,g,b,a)");
       return;
     }
 
