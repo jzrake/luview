@@ -585,182 +585,6 @@ public:
 
 
 
-class ParametricArrayDataSource : public ArrayDataSource
-{
-protected:
-  GLfloat *ctrlpoint;
-  double u0, u1, v0, v1;
-  int Nu, Nv;
-
-public:
-  int get_Nu() { return Nu; }
-  int get_Nv() { return Nv; }
-
-  ParametricArrayDataSource()
-  {
-    u0 = -0.5;
-    u1 =  0.5;
-    v0 = -0.5;
-    v1 =  0.5;
-
-    Nu = 16;
-    Nv = 16;
-
-    ctrlpoint = (GLfloat*) malloc(3*Nu*Nv*sizeof(GLfloat));
-
-    const int su = Nv;
-    const int sv = 1;
-    const double du = (u1 - u0) / (Nu - 1);
-    const double dv = (v1 - v0) / (Nv - 1);
-
-    // -------------------------------------------------------------------------
-    // Initialize to a uniform, flat grid
-    // -------------------------------------------------------------------------
-    for (int i=0; i<Nu; ++i) {
-      for (int j=0; j<Nv; ++j) {
-        const int m = i*su + j*sv;
-        const double x = u0 + i*du;
-        const double y = v0 + j*dv;
-        const double z = 0.0;
-        ctrlpoint[3*m + 0] = x;
-        ctrlpoint[3*m + 1] = y;
-        ctrlpoint[3*m + 2] = z;
-      }
-    }
-  }
-  ~ParametricArrayDataSource()
-  {
-    free(ctrlpoint);
-  }
-
-  GLfloat *get_data()
-  // ---------------------------------------------------------------------------
-  // Attempts to use the lunum array belonging to parent ArrayDataSource as a
-  // source for 3d control points.
-  // ---------------------------------------------------------------------------
-  {
-    if (A->dtype != ARRAY_TYPE_DOUBLE) {
-      luaL_error(__lua_state, "data source 'control_locations' must "
-                 "have type 'double'");
-    }
-    else if (A->ndims == 2) {
-      Nu = A->shape[0];
-      Nv = A->shape[1];
-
-      const int su = Nv;
-      const int sv = 1;
-      const double du = (u1 - u0) / (Nu - 1);
-      const double dv = (v1 - v0) / (Nv - 1);
-
-      ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-      for (int i=0; i<Nu; ++i) {
-	for (int j=0; j<Nv; ++j) {
-	  const int m = i*su + j*sv;
-	  ctrlpoint[3*m + 0] = u0 + i*du;
-	  ctrlpoint[3*m + 1] = v0 + j*dv;
-	  ctrlpoint[3*m + 2] = ((double*) A->data)[m];
-	}
-      }
-    }
-    else if (A->ndims == 3) {
-      if (A->shape[2] == 3) {
-	Nu = A->shape[0];
-	Nv = A->shape[1];
-	ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-	for (int m=0; m<3*Nu*Nv; ++m) {
-	  ctrlpoint[m] = ((double*) A->data)[m];
-	}
-      }
-      else {
-	luaL_error(__lua_state, "data source 'control_locations' must "
-		   "have 3rd dimension of size 3");
-      }
-    }
-    else {
-      luaL_error(__lua_state, "data source 'control_locations' must "
-                 "have dimension 2 or 3");
-    }
-    return ctrlpoint;
-  }
-} ;
-
-
-class ParametricFunctionDataSource : public FunctionDataSource
-{
-protected:
-  GLfloat *ctrlpoint;
-  double u0, u1, v0, v1;
-  int Nu, Nv;
-
-public:
-  int get_Nu() { return Nu; }
-  int get_Nv() { return Nv; }
-
-  ParametricFunctionDataSource()
-  {
-    u0 = -0.5;
-    u1 =  0.5;
-    v0 = -0.5;
-    v1 =  0.5;
-
-    Nu = 16;
-    Nv = 16;
-
-    ctrlpoint = (GLfloat*) malloc(3*Nu*Nv*sizeof(GLfloat));
-
-    const int su = Nv;
-    const int sv = 1;
-    const double du = (u1 - u0) / (Nu - 1);
-    const double dv = (v1 - v0) / (Nv - 1);
-
-    // -------------------------------------------------------------------------
-    // Initialize to a uniform, flat grid
-    // -------------------------------------------------------------------------
-    for (int i=0; i<Nu; ++i) {
-      for (int j=0; j<Nv; ++j) {
-        const int m = i*su + j*sv;
-        const double x = u0 + i*du;
-        const double y = v0 + j*dv;
-        const double z = 0.0;
-        ctrlpoint[3*m + 0] = x;
-        ctrlpoint[3*m + 1] = y;
-        ctrlpoint[3*m + 2] = z;
-      }
-    }
-  }
-  ~ParametricFunctionDataSource()
-  {
-    free(ctrlpoint);
-  }
-
-  GLfloat *get_data()
-  {
-    const int su = Nv;
-    const int sv = 1;
-    const double du = (u1 - u0) / (Nu - 1);
-    const double dv = (v1 - v0) / (Nv - 1);
-
-    // -----------------------------------------------------------------------
-    // Refresh the ctrlpoint buffer with callback values
-    // -----------------------------------------------------------------------
-    ctrlpoint = (GLfloat*) realloc(ctrlpoint, 3*Nu*Nv*sizeof(GLfloat));
-    for (int i=0; i<Nu; ++i) {
-      for (int j=0; j<Nv; ++j) {
-        const int m = i*su + j*sv;
-        const double u = u0 + i*du;
-        const double v = v0 + j*dv;
-
-        std::vector<double> V = callback->call(u, v);
-        ctrlpoint[3*m + 0] = V[0];
-        ctrlpoint[3*m + 1] = V[1];
-        ctrlpoint[3*m + 2] = V[2];
-      }
-    }
-
-    return ctrlpoint;
-  }
-} ;
-
 
 class GridSource2D :  public DataSource
 {
@@ -845,15 +669,19 @@ public:
   }
   virtual int get_num_components()
   {
-    return transform ? transform->call_n
+    return (transform && input) ? transform->call_n
       (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
   }
 
   GLfloat *get_data()
   // ---------------------------------------------------------------------------
-  // Refresh the ctrlpoint buffer with callback values
+  // Refresh the output buffer with callback results
   // ---------------------------------------------------------------------------
   {
+    if (input == NULL) {
+      luaL_error(__lua_state, "broken pipeline: missing data source");
+    }
+
     int Nd_domain = input->get_num_components();
     int Nd_range = this->get_num_components();
     int nval_output = Nd_range * input->get_size();
@@ -927,8 +755,11 @@ private:
     if (cp == DataSources.end()) {
       return;
     }
+
+    GLfloat *surfdata = cp->second->get_data();
     if (cp->second->get_num_components() != 3) {
-      printf("need 3-component input data for control_points\n");
+      luaL_error(__lua_state,
+		 "data source 'control_points' must provide 3-components");
       return;
     }
 
@@ -943,8 +774,6 @@ private:
 
     const int su = Nv;
     const int sv = 1;
-    GLfloat *surfdata = cp->second->get_data();
-
 
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
@@ -992,11 +821,9 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
-  LuaCppObject::Register<ParametricFunctionDataSource>(L);
-  LuaCppObject::Register<ParametricArrayDataSource>(L);
-  
-  LuaCppObject::Register<FunctionMapping>(L);
+
   LuaCppObject::Register<GridSource2D>(L);
+  LuaCppObject::Register<FunctionMapping>(L);
 
   return 1;
 }
