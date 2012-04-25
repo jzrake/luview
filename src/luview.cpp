@@ -106,6 +106,10 @@ protected:
 
 public:
   DataSource() : input(NULL), output(NULL), transform(NULL) { }
+  ~DataSource()
+  {
+    if (output) free(output);
+  }
 
   virtual GLfloat *get_data() = 0;
   virtual int get_num_points(int d) { return 0; }
@@ -225,38 +229,6 @@ protected:
     return 0;
   }
 } ;
-
-
-class ArrayDataSource : public DataSource
-{
-protected:
-  Array *A;
-public:
-  ArrayDataSource() : A(NULL) { }
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["get_array"] = _get_array_;
-    attr["set_array"] = _set_array_;
-    RETURN_ATTR_OR_CALL_SUPER(DataSource);
-  }
-  static int _get_array_(lua_State *L)
-  {
-    ArrayDataSource *self = checkarg<ArrayDataSource>(L, 1);
-    Array B = array_new_copy(self->A, self->A->dtype);
-    lunum_pusharray1(L, &B);
-    return 1;
-  }
-  static int _set_array_(lua_State *L)
-  {
-    ArrayDataSource *self = checkarg<ArrayDataSource>(L, 1);
-    self->A = lunum_checkarray1(L, 2);
-    return 0;
-  }
-} ;
-
 
 
 class LuviewTraitedObject : public LuaCppObject
@@ -656,10 +628,6 @@ private:
 class FunctionMapping : public DataSource
 {
 public:
-  ~FunctionMapping()
-  {
-    if (output) free(output);
-  }
   virtual int get_num_points(int d)
   {
     return input ? input->get_num_points(d) : 0;

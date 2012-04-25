@@ -12,10 +12,10 @@ local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
 
 ctrlpnt:set_input(grid2d)
-ctrlpnt:set_transform(function(u,v) return u, v, -4*u^2+v^2 end)
+ctrlpnt:set_transform(function(u,v) return u,v,-4*u^2+v^2 end)
 
 scolors:set_input(ctrlpnt)
-scolors:set_transform(function(x,y,z) return 5*z,2*z,z,0.7 end)
+scolors:set_transform(function(x,y,z) return 5*z,2*x,y,0.7 end)
 
 surface:set_data("control_points", ctrlpnt)
 surface:set_data("colors", scolors)
@@ -27,7 +27,7 @@ box:set_color(0.5, 0.9, 0.9)
 
 local cycle = 0
 while window:render_scene({box, surface}) == "continue" do
-   local t = cycle * 0.01
+   local t = cycle * 0.02
    ctrlpnt:set_transform(function(u,v) return
 			    u,
 			    v,
