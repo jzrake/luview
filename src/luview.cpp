@@ -458,6 +458,7 @@ public:
              WindowHeight(768)
   {
     Orientation[0] = 9.0;
+    Position[2] = -2.0;
     this->start_window();
   }
   virtual ~Window() { }
@@ -707,14 +708,6 @@ public:
 
 
 
-
-// -----------------------------------------------------------------------------
-//
-// [0,Nu] x [0,Nv] -> R^3 (parametric data source)
-// R^3 -> R (get_scalars from it)
-// R -> R^4 (map scalars through color map)
-//
-// -----------------------------------------------------------------------------
 class SurfaceNURBS : public DrawableObject
 {
 private:
