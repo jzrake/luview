@@ -22,7 +22,7 @@ local function normalize_input(f)
       if caller ~= nil then
 	 local zmin=caller:get_info("min2")
 	 local zmax=caller:get_info("max2")
-	 z = 6*(z - zmin)
+	 z = (z - zmin) / (zmax - zmin)
       end
       return f(x,y,z)
    end
@@ -31,7 +31,7 @@ end
 
 local time = 0.0
 local function stingray(u,v)
-   return u, v, 5*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(time)
+   return u, v, 6*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(time)
 end
 
 local function cmap1(x,y,z)
@@ -39,8 +39,9 @@ local function cmap1(x,y,z)
 end
 
 local function cmap2(x,y,z)
-   local b = 6
-   return math.exp(-(z-0.1)^b), math.exp(-(z-0.5)^b), math.exp(-(z-0.9)^b), 0.8
+   local a = 100.0
+   local b = 2
+   return math.exp(-a*(z-0.3)^b), math.exp(-a*(z-0.5)^b), math.exp(-a*(z-0.7)^b), 0.8
 end
 
 ctrlpnt:set_input(grid2d)
@@ -60,7 +61,7 @@ box:set_color(0.5, 0.9, 0.9)
 
 local cycle = 0
 while window:render_scene({box, surface}) == "continue" do
-   time = time + 0.01
+   time = time + 0.05
    ctrlpnt:set_transform(stingray)
    cycle = cycle + 1
 end
