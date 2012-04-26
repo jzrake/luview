@@ -595,7 +595,7 @@ public:
   virtual int get_num_components()
   {
     return (transform && input) ? transform->call_n
-      (std::vector<double>(input->get_num_components(), 0.0), this).size() : 0;
+      (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
   }
 
   GLfloat *get_data()
@@ -628,7 +628,7 @@ public:
       for (int n=0; n<input->get_size(); ++n) {
 	const GLfloat x = domain[Nd_domain*n + d];
 	if (x > xmax) xmax = x;
-	if (x > xmin) xmin = x;
+	if (x < xmin) xmin = x;
       }
     }
 
@@ -660,10 +660,16 @@ protected:
   static int _get_info_(lua_State *L)
   {
     FunctionMapping *self = checkarg<FunctionMapping>(L, 1);
-    const char *key = luaL_checkstring(L, 2);
+    std::string key = luaL_checkstring(L, 2);
     std::map<std::string, double>::iterator val = self->info.find(key);
-    if (val == self->info.end()) lua_pushnil(L);
-    else lua_pushnumber(L, val->second);
+
+    if (val != self->info.end()) {
+      lua_pushnumber(L, val->second);
+    }
+    else {
+      lua_pushnil(L);
+    }
+
     return 1;
   }
 } ;
