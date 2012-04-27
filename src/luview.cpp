@@ -123,6 +123,7 @@ public:
   virtual int get_num_points(int d) { return 0; }
   virtual int get_size() { return 0; }
   virtual int get_num_components() { return 0; }
+  virtual int get_num_dimensions() { return 0; }
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
@@ -545,14 +546,9 @@ public:
     default: return 0;
     }
   }
-  virtual int get_size()
-  {
-    return Nu*Nv;
-  }
-  virtual int get_num_components()
-  {
-    return 2;
-  }
+  virtual int get_size() { return Nu*Nv; }
+  virtual int get_num_components() { return 2; }
+  virtual int get_num_dimensions() { return 2; }
 
 private:
   void init_grid()
@@ -578,6 +574,64 @@ private:
 } ;
 
 
+class PointsSource :  public DataSource
+{
+private:
+  GLfloat *output;
+  int Np, Nc;
+
+public:
+  PointsSource() : output(NULL)
+  {
+    Np = 0;
+    Nc = 0;
+  }
+  ~PointsSource()
+  {
+    if (output) free(output);
+  }
+  GLfloat *get_data() { return output; }
+  virtual int get_num_points(int d)
+  {
+    switch (d) {
+    case 0: return Np;
+    default: return 0;
+    }
+  }
+  virtual int get_size() { return Np; }
+  virtual int get_num_components() { return Nc; }
+  virtual int get_num_dimensions() { return 1; }
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["set_points"] = _set_points_;
+    RETURN_ATTR_OR_CALL_SUPER(DataSource);
+  }
+  static int _set_points_(lua_State *L)
+  {
+    PointsSource *self = checkarg<PointsSource>(L, 1);
+    Array *A = lunum_checkarray1(L, 2);
+
+    if (A->ndims != 2) {
+      luaL_error(L, "array must have dimension 2");
+    }
+    else if (A->dtype != ARRAY_TYPE_DOUBLE) {
+      luaL_error(L, "array must have type 'double'");
+    }
+
+    int Nt = A->shape[0]*A->shape[1];
+    self->Np = A->shape[0];
+    self->Nc = A->shape[1];
+    self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
+    for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
+
+    return 0;
+  }
+} ;
+
+
 class FunctionMapping : public DataSource
 {
 private:
@@ -596,6 +650,10 @@ public:
   {
     return (transform && input) ? transform->call_n
       (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
+  }
+  virtual int get_num_dimensions()
+  {
+    return input ? input->get_num_components() : 0;
   }
 
   GLfloat *get_data()
@@ -720,18 +778,25 @@ private:
     GLfloat *surfdata = cp->second->get_data();
     GLfloat *colordata = NULL;
 
+
+    if (cp->second->get_num_dimensions() != 2) {
+      luaL_error(__lua_state,
+		 "data source 'control_points' must have dimension 2");
+    }
     if (cp->second->get_num_components() != 3) {
       luaL_error(__lua_state,
 		 "data source 'control_points' must provide 3 components "
 		 "(x,y,z)");
-      return;
+    }
+    if (cp->second->get_num_dimensions() != 2) {
+      luaL_error(__lua_state,
+		 "data source 'colors' must have dimension 2");
     }
     if (cm != DataSources.end()) {
       colordata = cm->second->get_data();
       if (cm->second->get_num_components() != 4) {
 	luaL_error(__lua_state,
 		   "data source 'colors' must provide 4 components (r,g,b,a)");
-	return;
       }
     }
 
@@ -783,6 +848,65 @@ private:
 
 
 
+class PointsEnsemble : public DrawableObject
+{
+private:
+
+public:
+  PointsEnsemble()
+  {
+    Orientation[0] = -90.0;
+  }
+
+private:
+  void draw_local()
+  {
+    EntryDS cp = DataSources.find("control_points");
+    EntryDS cm = DataSources.find("colors");
+
+    if (cp == DataSources.end()) {
+      return;
+    }
+
+    GLfloat *pointdata = cp->second->get_data();
+    GLfloat *colordata = NULL;
+
+    if (cp->second->get_num_dimensions() != 1) {
+      luaL_error(__lua_state,
+		 "data source 'control_points' must be a list of points");
+    }
+    if (cp->second->get_num_components() != 3) {
+      luaL_error(__lua_state,
+		 "data source 'control_points' must provide 3 components "
+		 "(x,y,z)");
+    }
+    if (cp->second->get_num_dimensions() != 1) {
+      luaL_error(__lua_state,
+		 "data source 'colors' must be a list of colors");
+    }
+    if (cm != DataSources.end()) {
+      colordata = cm->second->get_data();
+      if (cm->second->get_num_components() != 4) {
+	luaL_error(__lua_state,
+		   "data source 'colors' must provide 4 components (r,g,b,a)");
+      }
+    }
+    int Np = cp->second->get_num_points(0);
+
+    glPointSize(5.0);
+    glBegin(GL_POINTS);
+    for (int i=0; i<Np; ++i) {
+      if (colordata) {
+	glColor4fv(colordata + 4*i);
+      }
+      glVertex3fv(pointdata + 3*i);
+    }
+    glEnd();
+  }
+} ;
+
+
+
 
 
 extern "C" int luaopen_luview(lua_State *L)
@@ -793,8 +917,10 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
+  LuaCppObject::Register<PointsEnsemble>(L);
 
   LuaCppObject::Register<GridSource2D>(L);
+  LuaCppObject::Register<PointsSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
 
   return 1;
