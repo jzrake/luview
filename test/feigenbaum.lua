@@ -41,7 +41,7 @@ pntens:set_position(-0.5, -0.5, 0.5)
 pntens:set_linewidth(64.0)
 pntens:set_alpha(0.2)
 
-window:set_color(0.2, 0.2, 0.2)
+window:set_color(0.2, 0.2, 0.1)
 box:set_color(0.5, 0.9, 0.9)
 
 while window:render_scene({box, pntens}) == "continue" do end
