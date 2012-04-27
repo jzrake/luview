@@ -74,9 +74,9 @@ ifeq ($(UNAME), Linux)
 SO     = $(CC) -O -shared
 AR     = ar rcu
 CLIBS  = -lm -ldl
-ARCH_LUA  = linum
+ARCH_LUA  = "linux -ULUA_USE_READLINE"
 ARCH_GLFW = x11
-GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw
+GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw -L$(PWD)/lib
 endif
 
 ifeq ($(UNAME), Darwin)
@@ -101,6 +101,7 @@ export GLFW_HOME
 export SO
 export AR
 export CLIBS
+export GL_L
 # -------------------------------------------------
 
 
