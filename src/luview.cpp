@@ -866,7 +866,7 @@ public:
     gl_modes.push_back(GL_TEXTURE_2D);
 
     Orientation[0] = -90.0;
-    //    glGenTextures(1, &texture);
+    glGenTextures(1, &texture);
   }
   ~PointsEnsemble()
   {
