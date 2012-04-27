@@ -860,6 +860,8 @@ private:
 public:
   PointsEnsemble()
   {
+    gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_POINT_SPRITE);
     Orientation[0] = -90.0;
   }
 
@@ -898,11 +900,52 @@ private:
       }
     }
 
+
+    const GLint texWidth = 256;
+    const GLint texHeight = 256;
+    const float texHalfWidth = 128.0f;
+    const float texHalfHeight = 128.0f;
+
+
+    unsigned char* pData = new unsigned char[texWidth*texHeight*4];
+    for (int y=0; y<texHeight; ++y) {
+      for (int x=0; x<texWidth; ++x) {
+        int offs = (x + y*texWidth) * 4;
+        float xoffs = ((float)x - texHalfWidth) / texHalfWidth;
+        float yoffs = ((float)y - texHalfWidth) / texHalfHeight;
+        float alpha = 1.0f - std::sqrt(xoffs*xoffs + yoffs*yoffs);
+        if (alpha < 0.0f) alpha = 0.0f;
+        pData[offs + 0] = 255;
+        pData[offs + 1] = 0;
+        pData[offs + 2] = 0;
+        pData[offs + 3] = 255.0f * alpha;
+      }
+    }
+    GLuint texture_name;
+
+    glGenTextures(1, &texture_name);
+    glActiveTexture(GL_TEXTURE0);
+    glEnable(GL_TEXTURE_2D);
+    glBindTexture(GL_TEXTURE_2D, texture_name);
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA, GL_UNSIGNED_BYTE, pData);
+    glEnable(GL_POINT_SPRITE);
+    glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
+    glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+
+    glPointSize(32.0f);
+    //    glDeleteTextures(1, &texture_name);
+
+    delete [] pData;
+
     int Np = cp->second->get_num_points(0);
     GLuint *ind = (GLuint*) malloc(Np*sizeof(GLuint));
     for (int n=0; n<Np; ++n) ind[n] = n;
 
-    glPointSize(5.0);
+    //    glPointSize(5.0);
 
     glEnableClientState(GL_VERTEX_ARRAY);
     if (colordata) glEnableClientState(GL_COLOR_ARRAY);
@@ -940,3 +983,26 @@ extern "C" int luaopen_luview(lua_State *L)
 
   return 1;
 }
+
+
+
+
+/*
+  GLfloat quadratic[3] = {0.01f, 0.0f, 0.01f};
+  GLfloat maxsize; // 63.375 on my mac
+
+  glGetFloatv(GL_POINT_SIZE_MAX, &maxsize);
+
+  glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, quadratic);
+  glPointParameterf(GL_POINT_FADE_THRESHOLD_SIZE_ARB, 60.0f);
+  glPointParameterf(GL_POINT_SIZE_MIN, 1.0f);
+  glPointParameterf(GL_POINT_SIZE_MAX, maxsize);
+
+
+  //    glPointSize(50.0);
+  glBegin(GL_POINTS);
+  glColor4d(0.5, 0.5, 0.0, 0.6);
+  glVertex3d(0.5, 0.5, 0.5);
+  glEnd();
+*/
+

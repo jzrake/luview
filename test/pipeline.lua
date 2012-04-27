@@ -36,7 +36,7 @@ for i=0,Npnt-1 do
    clrdata[{i,0}] = 0.5
    clrdata[{i,1}] = 0.5
    clrdata[{i,2}] = 0.5
-   clrdata[{i,3}] = 1.0
+   clrdata[{i,3}] = 0.9
 end
 
 points:set_points(pntdata)
