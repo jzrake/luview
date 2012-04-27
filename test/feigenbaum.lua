@@ -44,4 +44,12 @@ pntens:set_alpha(0.2)
 window:set_color(0.2, 0.2, 0.1)
 box:set_color(0.5, 0.9, 0.9)
 
-while window:render_scene({box, pntens}) == "continue" do end
+local status = "continue"
+local key = ''
+
+while status == "continue" do
+   status, key = window:render_scene({box, pntens})
+   if key == 'F' then
+      print "you pressed F"
+   end
+end

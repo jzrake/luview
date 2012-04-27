@@ -377,11 +377,12 @@ class Window : public LuviewTraitedObject
 {
 private:
   double WindowWidth, WindowHeight;
+  int character_input;
   static Window *CurrentWindow;
 
 public:
   Window() : WindowWidth(1024),
-             WindowHeight(768)
+             WindowHeight(768), character_input(0)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
@@ -413,6 +414,7 @@ private:
 
   const char *render_scene(std::vector<DrawableObject*> &actors)
   {
+    character_input = ' ';
     CurrentWindow = this;
     glClearColor(Color[0], Color[1], Color[2], 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -421,6 +423,7 @@ private:
     glTranslated(Position[0], Position[1], Position[2]);
     glRotated(Orientation[0], 1, 0, 0);
     glRotated(Orientation[1], 0, 1, 0);
+    glScaled(Scale[0], Scale[1], Scale[2]);
 
     for (std::vector<DrawableObject*>::iterator a=actors.begin();
          a!=actors.end(); ++a) {
@@ -453,7 +456,23 @@ private:
   }
   static void CharacterInput(int key, int state)
   {
+    double *Position = CurrentWindow->Position;
+    double *Scale = CurrentWindow->Scale;
 
+    switch (key) {
+    case 'a': Position[0] += 0.1; break;
+    case 'd': Position[0] -= 0.1; break;
+
+    case 'f': Position[1] += 0.1; break;
+    case 'r': Position[1] -= 0.1; break;
+
+    case 'w': Position[2] += 0.1; break;
+    case 's': Position[2] -= 0.1; break;
+
+    case 'Z': for (int i=0; i<3; ++i) Scale[i] *= 1.05; break;
+    case 'z': for (int i=0; i<3; ++i) Scale[i] /= 1.05; break;
+    }
+    CurrentWindow->character_input = key;
   }
 
 protected:
@@ -476,7 +495,8 @@ protected:
     }
 
     lua_pushstring(L, self->render_scene(actors));
-    return 1;
+    lua_pushlstring(L, (char*)&self->character_input, 1);
+    return 2;
   }
 } ;
 Window *Window::CurrentWindow;
@@ -653,7 +673,7 @@ public:
   }
   virtual int get_num_dimensions()
   {
-    return input ? input->get_num_components() : 0;
+    return input ? input->get_num_dimensions() : 0;
   }
 
   GLfloat *get_data()
@@ -793,15 +813,16 @@ private:
                  "data source 'control_points' must provide 3 components "
                  "(x,y,z)");
     }
-    if (cp->second->get_num_dimensions() != 2) {
-      luaL_error(__lua_state,
-                 "data source 'colors' must have dimension 2");
-    }
+
     if (cm != DataSources.end()) {
       colordata = cm->second->get_data();
       if (cm->second->get_num_components() != 4) {
         luaL_error(__lua_state,
                    "data source 'colors' must provide 4 components (r,g,b,a)");
+      }
+      if (cm->second->get_num_dimensions() != 2) {
+        luaL_error(__lua_state,
+                   "data source 'colors' must be a 2d array of colors");
       }
     }
 
@@ -941,7 +962,6 @@ private:
     for (int n=0; n<Np; ++n) ind[n] = n;
 
     load_tex_data();
-
     glPointSize(LineWidth);
     glEnableClientState(GL_VERTEX_ARRAY);
     if (colordata) glEnableClientState(GL_COLOR_ARRAY);
@@ -975,26 +995,4 @@ extern "C" int luaopen_luview(lua_State *L)
 
   return 1;
 }
-
-
-
-
-/*
-  GLfloat quadratic[3] = {0.01f, 0.0f, 0.01f};
-  GLfloat maxsize; // 63.375 on my mac
-
-  glGetFloatv(GL_POINT_SIZE_MAX, &maxsize);
-
-  glPointParameterfv(GL_POINT_DISTANCE_ATTENUATION, quadratic);
-  glPointParameterf(GL_POINT_FADE_THRESHOLD_SIZE_ARB, 60.0f);
-  glPointParameterf(GL_POINT_SIZE_MIN, 1.0f);
-  glPointParameterf(GL_POINT_SIZE_MAX, maxsize);
-
-
-  //    glPointSize(50.0);
-  glBegin(GL_POINTS);
-  glColor4d(0.5, 0.5, 0.0, 0.6);
-  glVertex3d(0.5, 0.5, 0.5);
-  glEnd();
-*/
 
