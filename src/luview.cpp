@@ -676,6 +676,11 @@ protected:
 
 
 
+class PointEnsemble : public DrawableObject
+{
+
+} ;
+
 class SurfaceNURBS : public DrawableObject
 {
 private:
