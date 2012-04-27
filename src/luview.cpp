@@ -872,18 +872,18 @@ public:
     const float texHalfWidth = 128.0f;
     const float texHalfHeight = 128.0f;
 
-    unsigned char *data = new unsigned char[texWidth*texHeight*4];
+    unsigned char *data = new unsigned char[texWidth*texHeight];
     for (int y=0; y<texHeight; ++y) {
       for (int x=0; x<texWidth; ++x) {
-        int offs = (x + y*texWidth) * 4;
+        int offs = (x + y*texWidth) * 1;
         float xoffs = ((float)x - texHalfWidth) / texHalfWidth;
         float yoffs = ((float)y - texHalfWidth) / texHalfHeight;
         float alpha = 1.0 - sqrt(xoffs*xoffs + yoffs*yoffs);
         if (alpha < 0.0f) alpha = 0.0f;
-        data[offs + 0] = 128;
-        data[offs + 1] = 128;
-        data[offs + 2] = 255;
-        data[offs + 3] = 255.0f * alpha;
+	//        data[offs + 0] = 128;
+	//        data[offs + 1] = 128;
+	//        data[offs + 2] = 255;
+        data[offs] = 255.0f * alpha;
       }
     }
 
@@ -891,7 +891,7 @@ public:
     glActiveTexture(GL_TEXTURE0);
 
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, texWidth, texHeight, 0, GL_RGBA,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, texWidth, texHeight, 0, GL_ALPHA,
 		 GL_UNSIGNED_BYTE, data);
 
     glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
