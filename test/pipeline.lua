@@ -33,10 +33,10 @@ for i=0,Npnt-1 do
    pntdata[{i,1}] = xn[i+2]
    pntdata[{i,2}] = xn[i+3]
 
-   clrdata[{i,0}] = 0.9
-   clrdata[{i,1}] = 0.5
-   clrdata[{i,2}] = 0.0
-   clrdata[{i,3}] = 0.9
+   clrdata[{i,0}] = xn[i+1]
+   clrdata[{i,1}] = xn[i+2]
+   clrdata[{i,2}] = xn[i+3]
+   clrdata[{i,3}] = 0.0
 end
 
 points:set_points(pntdata)
@@ -45,6 +45,8 @@ colors:set_points(clrdata)
 pntens:set_data("control_points", points)
 pntens:set_data("colors", colors)
 pntens:set_position(-0.5, -0.5, 0.5)
+pntens:set_linewidth(64.0)
+pntens:set_alpha(0.2)
 
 local function normalize_input(f)
    local function g(x,y,z,caller)

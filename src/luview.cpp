@@ -866,32 +866,31 @@ public:
     gl_modes.push_back(GL_TEXTURE_2D);
 
     Orientation[0] = -90.0;
+    //    glGenTextures(1, &texture);
+  }
+  ~PointsEnsemble()
+  {
+    glDeleteTextures(1, &texture);
+  }
 
-    const GLint texWidth = 256;
-    const GLint texHeight = 256;
-    const float texHalfWidth = 128.0f;
-    const float texHalfHeight = 128.0f;
+private:
+  void load_tex_data()
+  {
+    int N = 64;
+    double del = 2.0 / N;
+    unsigned char *data = new unsigned char[N*N];
 
-    unsigned char *data = new unsigned char[texWidth*texHeight];
-    for (int y=0; y<texHeight; ++y) {
-      for (int x=0; x<texWidth; ++x) {
-        int offs = (x + y*texWidth) * 1;
-        float xoffs = ((float)x - texHalfWidth) / texHalfWidth;
-        float yoffs = ((float)y - texHalfWidth) / texHalfHeight;
-        float alpha = 1.0 - sqrt(xoffs*xoffs + yoffs*yoffs);
-        if (alpha < 0.0f) alpha = 0.0f;
-	//        data[offs + 0] = 128;
-	//        data[offs + 1] = 128;
-	//        data[offs + 2] = 255;
-        data[offs] = 255.0f * alpha;
+    for (int i=0; i<N; ++i) {
+      for (int j=0; j<N; ++j) {
+        int offs = i + j*N;
+        double x = (i - N/2) * del;
+	double y = (j - N/2) * del;
+        double a = 1.0 - hypot(x, y);
+        data[offs] = 255 * Alpha * (a > 0.0 ? a : 0.0);
       }
     }
-
-    glGenTextures(1, &texture);
-    glActiveTexture(GL_TEXTURE0);
-
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, texWidth, texHeight, 0, GL_ALPHA,
+    glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, N, N, 0, GL_ALPHA,
 		 GL_UNSIGNED_BYTE, data);
 
     glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
@@ -903,12 +902,6 @@ public:
 
     delete [] data;
   }
-  ~PointsEnsemble()
-  {
-    glDeleteTextures(1, &texture);
-  }
-
-private:
   void draw_local()
   {
     EntryDS cp = DataSources.find("control_points");
@@ -947,17 +940,14 @@ private:
     GLuint *ind = (GLuint*) malloc(Np*sizeof(GLuint));
     for (int n=0; n<Np; ++n) ind[n] = n;
 
-    glPointSize(32);
+    load_tex_data();
 
+    glPointSize(LineWidth);
     glEnableClientState(GL_VERTEX_ARRAY);
     if (colordata) glEnableClientState(GL_COLOR_ARRAY);
-
-    if (colordata) {
-      glColorPointer(4, GL_FLOAT, 4*sizeof(GLfloat), colordata);
-    }
+    if (colordata) glColorPointer(4, GL_FLOAT, 4*sizeof(GLfloat), colordata);
     glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), pointdata);
     glDrawElements(GL_POINTS, Np, GL_UNSIGNED_INT, ind);
-
     glDisableClientState(GL_VERTEX_ARRAY);
     if (colordata) glDisableClientState(GL_COLOR_ARRAY);
 
