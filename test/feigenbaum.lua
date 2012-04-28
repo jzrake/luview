@@ -12,7 +12,7 @@ local pntens = luview.PointsEnsemble()
 
 
 local function make_data(lam)
-   local Npnt = 200
+   local Npnt = 800
    local pntdata = lunum.zeros{Npnt,3}
 
    local xn = { }
@@ -27,6 +27,7 @@ local function make_data(lam)
       pntdata[{i,1}] = xn[i+2]
       pntdata[{i,2}] = xn[i+3]
    end
+   collectgarbage()
    return pntdata
 end
 
@@ -50,7 +51,7 @@ pntens:set_position(-0.5, -0.5, 0.5)
 pntens:set_linewidth(64.0)
 pntens:set_alpha(0.1)
 
-window:set_color(0.2, 0.2, 0.1)
+window:set_color(0.05, 0.1, 0.1)
 box:set_color(0.5, 0.9, 0.9)
 
 local status = "continue"
