@@ -7,7 +7,7 @@
 #include <vector>
 #include <algorithm>
 
-#include "lua_object.hpp"
+#include "luview.hpp"
 
 extern "C" {
 #define LUNUM_API_NOCOMPLEX
@@ -18,359 +18,267 @@ extern "C" {
 
 
 
-// ---------------------------------------------------------------------------
-#define GETSET_TRAITS_D1(prop)                                          \
-  static int _get_##prop##_(lua_State *L) {                             \
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __get_vec__(L, &self->prop, 1);                              \
-  }                                                                     \
-  static int _set_##prop##_(lua_State *L) {                             \
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __set_vec__(L, &self->prop, 1);                              \
-  }                                                                     \
-  // ---------------------------------------------------------------------------
-#define GETSET_TRAITS_D3(prop)                                          \
-  static int _get_##prop##_(lua_State *L) {                             \
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __get_vec__(L, self->prop, 3);                               \
-  }                                                                     \
-  static int _set_##prop##_(lua_State *L) {                             \
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __set_vec__(L, self->prop, 3);                               \
-  }                                                                     \
-  // ---------------------------------------------------------------------------
 
+CallbackFunction::CallbackFunction(lua_State *L, int pos) :
+  LuaCppObject(L, pos) { }
 
-
-class CallbackFunction : public LuaCppObject
+std::vector<double> CallbackFunction::call(double u)
 {
-public:
-  CallbackFunction(lua_State *L, int pos) : LuaCppObject(L, pos) { }
-
-  std::vector<double> call(double u)
-  {
-    double x[1] = {u};
-    return call_n(x, 1);
-  }
-  std::vector<double> call(double u, double v)
-  {
-    double x[2] = {u,v};
-    return call_n(x, 2);
-  }
-  std::vector<double> call(double u, double v, double w)
-  {
-    double x[3] = {u,v,w};
-    return call_n(x, 3);
-  }
-  std::vector<double> call_n(std::vector<double> X, LuaCppObject *caller=NULL)
-  {
-    return call_n(&X[0], X.size(), caller);
-  }
-  std::vector<double> call_n(double *x, int narg, LuaCppObject *caller=NULL)
-  {
-    lua_State *L = __lua_state;
-    std::vector<double> res;
-
-    push_lua_refid(L, __refid, __REGCXX);
-    for (int i=0; i<narg; ++i) {
-      lua_pushnumber(L, x[i]);
-    }
-
-    // -------------------------------------------------------------------------
-    // Append the caller as a Lua object to the argument list if it's given
-    // -------------------------------------------------------------------------
-    if (caller != NULL) {
-      push_lua_obj(__lua_state, caller, __REGLUA);
-      ++narg;
-    }
-
-    if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
-      luaL_error(L, lua_tostring(L, -1));
-    }
-
-    int nret = lua_gettop(L) - 2;
-
-    for (int i=0; i<nret; ++i) {
-      res.push_back(lua_tonumber(L, -1));
-      lua_pop(L, 1);
-    }
-
-    reverse(res.begin(), res.end());
-    return res;
-  }
-} ;
-
-
-class DataSource : public LuaCppObject
+  double x[1] = {u};
+  return call_n(x, 1);
+}
+std::vector<double> CallbackFunction::call(double u, double v)
 {
-protected:
-  DataSource *input;
-  GLfloat *output;
-  CallbackFunction *transform;
-
-public:
-  DataSource() : input(NULL), output(NULL), transform(NULL) { }
-  ~DataSource()
-  {
-    if (output) free(output);
-  }
-
-  virtual GLfloat *get_data() = 0;
-  virtual int get_num_points(int d) { return 0; }
-  virtual int get_size() { return 0; }
-  virtual int get_num_components() { return 0; }
-  virtual int get_num_dimensions() { return 0; }
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["get_transform"] = _get_transform_;
-    attr["set_transform"] = _set_transform_;
-    attr["get_input"] = _get_input_;
-    attr["set_input"] = _set_input_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
-  }
-  static int _get_transform_(lua_State *L)
-  {
-    DataSource *self = checkarg<DataSource>(L, 1);
-    if (self->transform == NULL) {
-      lua_pushnil(L);
-    }
-    else {
-      self->push_lua_obj(L, self->transform, __REGCXX);
-    }
-    return 1;
-  }
-
-  static int _set_transform_(lua_State *L)
-  {
-    DataSource *self = checkarg<DataSource>(L, 1);
-    if (lua_type(L, 2) == LUA_TFUNCTION) {
-      if (self->transform) delete self->transform;
-      self->transform = new CallbackFunction(L, 2);
-    }
-    else if (lua_type(L, 2) == LUA_TNIL) {
-      if (self->transform) delete self->transform;
-      self->transform = NULL;
-    }
-    else {
-      luaL_error(L, "requires either function or nil");
-    }
-    return 0;
-  }
-  static int _get_input_(lua_State *L)
-  {
-    DataSource *self = checkarg<DataSource>(L, 1);
-
-    if (self->input == NULL) {
-      lua_pushnil(L);
-    }
-    else {
-      self->push_lua_obj(L, self->input, __REGLUA);
-    }
-    return 1;
-  }
-  static int _set_input_(lua_State *L)
-  {
-    DataSource *self = checkarg<DataSource>(L, 1);
-    self->input = checkarg<DataSource>(L, 2);
-    return 0;
-  }
-} ;
-
-
-
-class LuviewTraitedObject : public LuaCppObject
+  double x[2] = {u,v};
+  return call_n(x, 2);
+}
+std::vector<double> CallbackFunction::call(double u, double v, double w)
 {
-protected:
-  double Position[3];
-  double Orientation[3];
-  double Color[3];
-  double Scale[3];
-  double LineWidth;
-  double Alpha;
-  std::map<std::string, CallbackFunction*> Callbacks;
-  std::map<std::string, DataSource*> DataSources;
-  typedef std::map<std::string, CallbackFunction*>::iterator EntryCB;
-  typedef std::map<std::string, DataSource*>::iterator EntryDS;
-
-public:
-  LuviewTraitedObject()
-  {
-    Position[0] = 0.0;
-    Position[1] = 0.0;
-    Position[2] = 0.0;
-
-    Orientation[0] = 0.0;
-    Orientation[1] = 0.0;
-    Orientation[2] = 0.0;
-
-    Color[0] = 1.0;
-    Color[1] = 1.0;
-    Color[2] = 1.0;
-
-    Scale[0] = 1.0;
-    Scale[1] = 1.0;
-    Scale[2] = 1.0;
-
-    Alpha = 0.9;
-    LineWidth = 1.0;
+  double x[3] = {u,v,w};
+  return call_n(x, 3);
+}
+std::vector<double> CallbackFunction::call_n(std::vector<double> X,
+                                             LuaCppObject *caller)
+{
+  return call_n(&X[0], X.size(), caller);
+}
+std::vector<double> CallbackFunction::call_n(double *x, int narg,
+                                             LuaCppObject *caller)
+{
+  lua_State *L = __lua_state;
+  std::vector<double> res;
+  push_lua_refid(L, __refid, __REGCXX);
+  for (int i=0; i<narg; ++i) {
+    lua_pushnumber(L, x[i]);
   }
-  void set_position(double x, double y, double z);
-  void set_orientation(double x, double y, double z);
-  void set_color(double x, double y, double z);
-  void set_scale(double x, double y, double z);
-  void set_linewidth(double w);
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["get_position"] = _get_Position_;
-    attr["set_position"] = _set_Position_;
-    attr["get_orientation"] = _get_Orientation_;
-    attr["set_orientation"] = _set_Orientation_;
-    attr["get_color"] = _get_Color_;
-    attr["set_color"] = _set_Color_;
-    attr["get_scale"] = _get_Scale_;
-    attr["set_scale"] = _set_Scale_;
-    attr["get_linewidth"] = _get_LineWidth_;
-    attr["set_linewidth"] = _set_LineWidth_;
-    attr["get_alpha"] = _get_Alpha_;
-    attr["set_alpha"] = _set_Alpha_;
-    attr["get_callback"] = _get_Callback_;
-    attr["set_callback"] = _set_Callback_;
-    attr["get_data"] = _get_DataSource_;
-    attr["set_data"] = _set_DataSource_;
-    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
-  }
-  GETSET_TRAITS_D3(Position);
-  GETSET_TRAITS_D3(Orientation);
-  GETSET_TRAITS_D3(Color);
-  GETSET_TRAITS_D3(Scale);
-  GETSET_TRAITS_D1(LineWidth);
-  GETSET_TRAITS_D1(Alpha);
-
-  static int _get_Callback_(lua_State *L)
-  {
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-    EntryCB val = self->Callbacks.find(name);
-
-    if (val == self->Callbacks.end()) {
-      lua_pushnil(L);
-    }
-    else {
-      self->push_lua_obj(L, val->second, __REGCXX);
-    }
-    return 1;
-  }
-  static int _set_Callback_(lua_State *L)
   // ---------------------------------------------------------------------------
-  // Arguments:
-  //
-  // (1) Lua function or nil
-  //
+  // Append the caller as a Lua object to the argument list if it's given
   // ---------------------------------------------------------------------------
-  {
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-    EntryCB val = self->Callbacks.find(name);
-
-    if (lua_type(L, 3) == LUA_TFUNCTION) {
-      if (val == self->Callbacks.end()) delete self->Callbacks[name];
-      self->Callbacks[name] = new CallbackFunction(L, 3);
-    }
-    else if (lua_type(L, 3) == LUA_TNIL && (val == self->Callbacks.end())) {
-      delete self->Callbacks[name];
-      self->Callbacks.erase(val);
-    }
-    else {
-      luaL_error(L, "requires either function or nil");
-    }
-    return 0;
+  if (caller != NULL) {
+    push_lua_obj(__lua_state, caller, __REGLUA);
+    ++narg;
   }
-  static int _get_DataSource_(lua_State *L)
-  {
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-
-    EntryDS val = self->DataSources.find(name);
-
-    if (val == self->DataSources.end()) {
-      lua_pushnil(L);
-    }
-    else {
-      self->push_lua_obj(L, val->second, __REGLUA);
-    }
-    return 1;
+  if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
+    luaL_error(L, lua_tostring(L, -1));
   }
-  static int _set_DataSource_(lua_State *L)
-  {
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-    self->DataSources[name] = checkarg<DataSource>(L, 3);
-    return 0;
+  int nret = lua_gettop(L) - 2;
+  for (int i=0; i<nret; ++i) {
+    res.push_back(lua_tonumber(L, -1));
+    lua_pop(L, 1);
   }
-
-  static int __get_vec__(lua_State *L, double *v, int n)
-  {
-    for (int i=0; i<n; ++i) lua_pushnumber(L, v[i]);
-    return n;
-  }
-  static int __set_vec__(lua_State *L, double *v, int n)
-  {
-    for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, i+1);
-    return 0;
-  }
-} ;
+  reverse(res.begin(), res.end());
+  return res;
+}
 
 
 
-class DrawableObject : public LuviewTraitedObject
+
+DataSource::DataSource() : input(NULL), output(NULL), transform(NULL) { }
+DataSource::~DataSource()
 {
-protected:
-  std::vector<int> gl_modes;
+  if (output) free(output);
+}
 
-public:
-  DrawableObject()
-  {
-    gl_modes.push_back(GL_DEPTH_TEST);
+DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["get_transform"] = _get_transform_;
+  attr["set_transform"] = _set_transform_;
+  attr["get_input"] = _get_input_;
+  attr["set_input"] = _set_input_;
+  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+}
+int DataSource::_get_transform_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  if (self->transform == NULL) {
+    lua_pushnil(L);
   }
-  virtual void draw()
-  {
-    for (unsigned int i=0; i<gl_modes.size(); ++i) {
-      glEnable(gl_modes[i]);
-    }
+  else {
+    self->push_lua_obj(L, self->transform, __REGCXX);
+  }
+  return 1;
+}
+int DataSource::_set_transform_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  if (lua_type(L, 2) == LUA_TFUNCTION) {
+    if (self->transform) delete self->transform;
+    self->transform = new CallbackFunction(L, 2);
+  }
+  else if (lua_type(L, 2) == LUA_TNIL) {
+    if (self->transform) delete self->transform;
+    self->transform = NULL;
+  }
+  else {
+    luaL_error(L, "requires either function or nil");
+  }
+  return 0;
+}
+int DataSource::_get_input_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
 
-    glPushMatrix();
+  if (self->input == NULL) {
+    lua_pushnil(L);
+  }
+  else {
+    self->push_lua_obj(L, self->input, __REGLUA);
+  }
+  return 1;
+}
+int DataSource::_set_input_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  self->input = checkarg<DataSource>(L, 2);
+  return 0;
+}
 
-    glTranslated(Position[0], Position[1], Position[2]);
-    glRotated(Orientation[0], 1, 0, 0);
-    glRotated(Orientation[1], 0, 1, 0);
-    glRotated(Orientation[2], 0, 0, 1);
-    glScaled(Scale[0], Scale[1], Scale[2]);
 
-    glColor4d(Color[0], Color[1], Color[2], Alpha);
-    glLineWidth(LineWidth);
 
-    this->draw_local();
+LuviewTraitedObject::LuviewTraitedObject()
+{
+  Position[0] = 0.0;
+  Position[1] = 0.0;
+  Position[2] = 0.0;
 
-    glPopMatrix();
+  Orientation[0] = 0.0;
+  Orientation[1] = 0.0;
+  Orientation[2] = 0.0;
 
-    for (unsigned int i=0; i<gl_modes.size(); ++i) {
-      glDisable(gl_modes[i]);
-    }
+  Color[0] = 1.0;
+  Color[1] = 1.0;
+  Color[2] = 1.0;
+
+  Scale[0] = 1.0;
+  Scale[1] = 1.0;
+  Scale[2] = 1.0;
+
+  Alpha = 0.9;
+  LineWidth = 1.0;
+}
+LuviewTraitedObject::LuaInstanceMethod LuviewTraitedObject::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["get_position"] = _get_Position_;
+  attr["set_position"] = _set_Position_;
+  attr["get_orientation"] = _get_Orientation_;
+  attr["set_orientation"] = _set_Orientation_;
+  attr["get_color"] = _get_Color_;
+  attr["set_color"] = _set_Color_;
+  attr["get_scale"] = _get_Scale_;
+  attr["set_scale"] = _set_Scale_;
+  attr["get_linewidth"] = _get_LineWidth_;
+  attr["set_linewidth"] = _set_LineWidth_;
+  attr["get_alpha"] = _get_Alpha_;
+  attr["set_alpha"] = _set_Alpha_;
+  attr["get_callback"] = _get_Callback_;
+  attr["set_callback"] = _set_Callback_;
+  attr["get_data"] = _get_DataSource_;
+  attr["set_data"] = _set_DataSource_;
+  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+}
+
+int LuviewTraitedObject::_get_Callback_(lua_State *L)
+{
+  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+  const char *name = luaL_checkstring(L, 2);
+  EntryCB val = self->Callbacks.find(name);
+
+  if (val == self->Callbacks.end()) {
+    lua_pushnil(L);
+  }
+  else {
+    self->push_lua_obj(L, val->second, __REGCXX);
+  }
+  return 1;
+}
+int LuviewTraitedObject::_set_Callback_(lua_State *L)
+{
+  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+  const char *name = luaL_checkstring(L, 2);
+  EntryCB val = self->Callbacks.find(name);
+
+  if (lua_type(L, 3) == LUA_TFUNCTION) {
+    if (val == self->Callbacks.end()) delete self->Callbacks[name];
+    self->Callbacks[name] = new CallbackFunction(L, 3);
+  }
+  else if (lua_type(L, 3) == LUA_TNIL && (val == self->Callbacks.end())) {
+    delete self->Callbacks[name];
+    self->Callbacks.erase(val);
+  }
+  else {
+    luaL_error(L, "requires either function or nil");
+  }
+  return 0;
+}
+int LuviewTraitedObject::_get_DataSource_(lua_State *L)
+{
+  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+  const char *name = luaL_checkstring(L, 2);
+
+  EntryDS val = self->DataSources.find(name);
+
+  if (val == self->DataSources.end()) {
+    lua_pushnil(L);
+  }
+  else {
+    self->push_lua_obj(L, val->second, __REGLUA);
+  }
+  return 1;
+}
+int LuviewTraitedObject::_set_DataSource_(lua_State *L)
+{
+  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+  const char *name = luaL_checkstring(L, 2);
+  self->DataSources[name] = checkarg<DataSource>(L, 3);
+  return 0;
+}
+
+int LuviewTraitedObject::__get_vec__(lua_State *L, double *v, int n)
+{
+  for (int i=0; i<n; ++i) lua_pushnumber(L, v[i]);
+  return n;
+}
+int LuviewTraitedObject::__set_vec__(lua_State *L, double *v, int n)
+{
+  for (int i=0; i<n; ++i) v[i] = luaL_checknumber(L, i+1);
+  return 0;
+}
+
+
+
+DrawableObject::DrawableObject()
+{
+  gl_modes.push_back(GL_DEPTH_TEST);
+}
+void DrawableObject::draw()
+{
+  for (unsigned int i=0; i<gl_modes.size(); ++i) {
+    glEnable(gl_modes[i]);
   }
 
-protected:
-  virtual void draw_local() = 0;
-} ;
+  glPushMatrix();
+
+  glTranslated(Position[0], Position[1], Position[2]);
+  glRotated(Orientation[0], 1, 0, 0);
+  glRotated(Orientation[1], 0, 1, 0);
+  glRotated(Orientation[2], 0, 0, 1);
+  glScaled(Scale[0], Scale[1], Scale[2]);
+
+  glColor4d(Color[0], Color[1], Color[2], Alpha);
+  glLineWidth(LineWidth);
+
+  this->draw_local();
+
+  glPopMatrix();
+
+  for (unsigned int i=0; i<gl_modes.size(); ++i) {
+    glDisable(gl_modes[i]);
+  }
+}
+
 
 
 class Window : public LuviewTraitedObject
@@ -594,170 +502,155 @@ private:
 } ;
 
 
-class PointsSource :  public DataSource
+PointsSource::PointsSource() : output(NULL)
 {
-private:
-  GLfloat *output;
-  int Np, Nc;
-
-public:
-  PointsSource() : output(NULL)
-  {
-    Np = 0;
-    Nc = 0;
-  }
-  ~PointsSource()
-  {
-    if (output) free(output);
-  }
-  GLfloat *get_data() { return output; }
-  virtual int get_num_points(int d)
-  {
-    switch (d) {
-    case 0: return Np;
-    default: return 0;
-    }
-  }
-  virtual int get_size() { return Np; }
-  virtual int get_num_components() { return Nc; }
-  virtual int get_num_dimensions() { return 1; }
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["set_points"] = _set_points_;
-    RETURN_ATTR_OR_CALL_SUPER(DataSource);
-  }
-  static int _set_points_(lua_State *L)
-  {
-    PointsSource *self = checkarg<PointsSource>(L, 1);
-    Array *A = lunum_checkarray1(L, 2);
-
-    if (A->ndims != 2) {
-      luaL_error(L, "array must have dimension 2");
-    }
-    else if (A->dtype != ARRAY_TYPE_DOUBLE) {
-      luaL_error(L, "array must have type 'double'");
-    }
-
-    int Nt = A->shape[0]*A->shape[1];
-    self->Np = A->shape[0];
-    self->Nc = A->shape[1];
-    self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
-    for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
-
-    return 0;
-  }
-} ;
-
-
-class FunctionMapping : public DataSource
+  Np = 0;
+  Nc = 0;
+}
+PointsSource::~PointsSource()
 {
-private:
-  std::map<std::string, double> info;
+  if (output) free(output);
+}
+GLfloat *PointsSource::get_data() { return output; }
+int PointsSource::get_num_points(int d)
+{
+  switch (d) {
+  case 0: return Np;
+  default: return 0;
+  }
+}
+int PointsSource::get_size() { return Np; }
+int PointsSource::get_num_components() { return Nc; }
+int PointsSource::get_num_dimensions() { return 1; }
 
-public:
-  virtual int get_num_points(int d)
-  {
-    return input ? input->get_num_points(d) : 0;
+PointsSource::LuaInstanceMethod PointsSource::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_points"] = _set_points_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+}
+int PointsSource::_set_points_(lua_State *L)
+{
+  PointsSource *self = checkarg<PointsSource>(L, 1);
+  Array *A = lunum_checkarray1(L, 2);
+
+  if (A->ndims != 2) {
+    luaL_error(L, "array must have dimension 2");
   }
-  virtual int get_size()
-  {
-    return input ? input->get_size() : 0;
-  }
-  virtual int get_num_components()
-  {
-    return (transform && input) ? transform->call_n
-      (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
-  }
-  virtual int get_num_dimensions()
-  {
-    return input ? input->get_num_dimensions() : 0;
+  else if (A->dtype != ARRAY_TYPE_DOUBLE) {
+    luaL_error(L, "array must have type 'double'");
   }
 
-  GLfloat *get_data()
+  int Nt = A->shape[0]*A->shape[1];
+  self->Np = A->shape[0];
+  self->Nc = A->shape[1];
+  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
+  for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
+
+  return 0;
+}
+
+
+
+
+int FunctionMapping::get_num_points(int d)
+{
+  return input ? input->get_num_points(d) : 0;
+}
+int FunctionMapping::get_size()
+{
+  return input ? input->get_size() : 0;
+}
+int FunctionMapping::get_num_components()
+{
+  return (transform && input) ? transform->call_n
+    (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
+}
+int FunctionMapping::get_num_dimensions()
+{
+  return input ? input->get_num_dimensions() : 0;
+}
+
+GLfloat *FunctionMapping::get_data()
+// -----------------------------------------------------------------------------
+// Refresh the output buffer with callback results
+// -----------------------------------------------------------------------------
+{
+  if (input == NULL) {
+    luaL_error(__lua_state, "broken pipeline: missing data source");
+  }
+  if (transform == NULL) {
+    luaL_error(__lua_state, "broken pipeline: missing transform");
+  }
+
+  int Nd_domain = input->get_num_components();
+  int Nd_range = this->get_num_components();
+  int nval_output = Nd_range * input->get_size();
+
+  output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
+  GLfloat *domain = input->get_data();
+
   // ---------------------------------------------------------------------------
-  // Refresh the output buffer with callback results
+  // Set up info dictionary
   // ---------------------------------------------------------------------------
-  {
-    if (input == NULL) {
-      luaL_error(__lua_state, "broken pipeline: missing data source");
-    }
-    if (transform == NULL) {
-      luaL_error(__lua_state, "broken pipeline: missing transform");
-    }
-
-    int Nd_domain = input->get_num_components();
-    int Nd_range = this->get_num_components();
-    int nval_output = Nd_range * input->get_size();
-
-    output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
-    GLfloat *domain = input->get_data();
-
-    // -------------------------------------------------------------------------
-    // Set up info dictionary
-    // -------------------------------------------------------------------------
-    for (int d=0; d<Nd_domain; ++d) {
-      double &xmax = info[K("max", d)];
-      double &xmin = info[K("min", d)];
-      xmin = +1e16;
-      xmax = -1e16;
-      for (int n=0; n<input->get_size(); ++n) {
-        const GLfloat x = domain[Nd_domain*n + d];
-        if (x > xmax) xmax = x;
-        if (x < xmin) xmin = x;
-      }
-    }
-
+  for (int d=0; d<Nd_domain; ++d) {
+    double &xmax = info[K("max", d)];
+    double &xmin = info[K("min", d)];
+    xmin = +1e16;
+    xmax = -1e16;
     for (int n=0; n<input->get_size(); ++n) {
-
-      // Here we're loading data from the domain data into the argument vector
-      std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
-      std::vector<double> Y = transform->call_n(X, this);
-
-      for (int d=0; d<Nd_range; ++d) {
-        output[Nd_range*n + d] = Y[d];
-      }
+      const GLfloat x = domain[Nd_domain*n + d];
+      if (x > xmax) xmax = x;
+      if (x < xmin) xmin = x;
     }
-    return output;
   }
-private:
-  std::string K(const char *s, int d) {
-    char res[256];
-    sprintf(res, "%s%d", s, d);
-    return res;
-  }
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["get_info"] = _get_info_;
-    RETURN_ATTR_OR_CALL_SUPER(DataSource);
-  }
-  static int _get_info_(lua_State *L)
-  {
-    FunctionMapping *self = checkarg<FunctionMapping>(L, 1);
-    std::string key = luaL_checkstring(L, 2);
-    std::map<std::string, double>::iterator val = self->info.find(key);
 
-    if (val != self->info.end()) {
-      lua_pushnumber(L, val->second);
+  for (int n=0; n<input->get_size(); ++n) {
+
+    // Here we're loading data from the domain data into the argument vector
+    std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
+    std::vector<double> Y = transform->call_n(X, this);
+
+    for (int d=0; d<Nd_range; ++d) {
+      output[Nd_range*n + d] = Y[d];
     }
-    else {
-      lua_pushnil(L);
-    }
-
-    return 1;
   }
-} ;
-
-
-
-class PointEnsemble : public DrawableObject
+  return output;
+}
+std::string FunctionMapping::K(const char *s, int d)
 {
+  char res[256];
+  sprintf(res, "%s%d", s, d);
+  return res;
+}
 
-} ;
+FunctionMapping::LuaInstanceMethod FunctionMapping::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["get_info"] = _get_info_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+}
+int FunctionMapping::_get_info_(lua_State *L)
+{
+  FunctionMapping *self = checkarg<FunctionMapping>(L, 1);
+  std::string key = luaL_checkstring(L, 2);
+  std::map<std::string, double>::iterator val = self->info.find(key);
+
+  if (val != self->info.end()) {
+    lua_pushnumber(L, val->second);
+  }
+  else {
+    lua_pushnil(L);
+  }
+
+  return 1;
+}
+
+
+
+
 
 class SurfaceNURBS : public DrawableObject
 {
@@ -905,14 +798,14 @@ private:
       for (int j=0; j<N; ++j) {
         int offs = i + j*N;
         double x = (i - N/2) * del;
-	double y = (j - N/2) * del;
+        double y = (j - N/2) * del;
         double a = 1.0 - hypot(x, y);
         data[offs] = 255 * Alpha * (a > 0.0 ? a : 0.0);
       }
     }
     glBindTexture(GL_TEXTURE_2D, texture);
     glTexImage2D(GL_TEXTURE_2D, 0, GL_ALPHA, N, N, 0, GL_ALPHA,
-		 GL_UNSIGNED_BYTE, data);
+                 GL_UNSIGNED_BYTE, data);
 
     glTexEnvi(GL_POINT_SPRITE, GL_COORD_REPLACE, GL_TRUE);
     glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
