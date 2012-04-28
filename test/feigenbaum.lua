@@ -7,49 +7,64 @@ local lunum = require 'lunum'
 local window = luview.Window()
 local box = luview.BoundingBox()
 local points = luview.PointsSource()
-local colors = luview.PointsSource()
+local colors = luview.FunctionMapping()
 local pntens = luview.PointsEnsemble()
 
-local Npnt = 200
-local pntdata = lunum.zeros{Npnt,3}
-local clrdata = lunum.zeros{Npnt,4}
 
-local xn = { }
-xn[1] = 0.5
+local function make_data(lam)
+   local Npnt = 200
+   local pntdata = lunum.zeros{Npnt,3}
 
-for n=1,Npnt+10 do
-   xn[n+1] = 3.999 * xn[n] * (1 - xn[n])
+   local xn = { }
+   xn[1] = 0.5
+
+   for n=1,Npnt+10 do
+      xn[n+1] = lam * xn[n] * (1 - xn[n])
+   end
+
+   for i=0,Npnt-1 do
+      pntdata[{i,0}] = xn[i+1]
+      pntdata[{i,1}] = xn[i+2]
+      pntdata[{i,2}] = xn[i+3]
+   end
+   return pntdata
 end
 
-for i=0,Npnt-1 do
-   pntdata[{i,0}] = xn[i+1]
-   pntdata[{i,1}] = xn[i+2]
-   pntdata[{i,2}] = xn[i+3]
-
-   clrdata[{i,0}] = xn[i+1]
-   clrdata[{i,1}] = xn[i+2]
-   clrdata[{i,2}] = xn[i+3]
-   clrdata[{i,3}] = 0.0
+local function cmap1(x,y,z)
+   return z,z,z,0.9
+end
+local function cmap2(x,y,z)
+   local a = 100.0
+   local b = 2
+   return math.exp(-a*(z-0.3)^b), math.exp(-a*(z-0.5)^b), math.exp(-a*(z-0.7)^b), 1.0
 end
 
-points:set_points(pntdata)
-colors:set_points(clrdata)
+
+points:set_points(make_data(3.8))
+colors:set_input(points)
+colors:set_transform(cmap2)
 
 pntens:set_data("control_points", points)
 pntens:set_data("colors", colors)
 pntens:set_position(-0.5, -0.5, 0.5)
 pntens:set_linewidth(64.0)
-pntens:set_alpha(0.2)
+pntens:set_alpha(0.1)
 
 window:set_color(0.2, 0.2, 0.1)
 box:set_color(0.5, 0.9, 0.9)
 
 local status = "continue"
 local key = ''
+local lambda = 3.6
 
 while status == "continue" do
    status, key = window:render_scene({box, pntens})
-   if key == 'F' then
-      print "you pressed F"
+   if key == 'l' then
+      lambda = lambda - 0.01
+      points:set_points(make_data(lambda))
+   end
+   if key == 'L' then
+      lambda = lambda + 0.01
+      points:set_points(make_data(lambda))
    end
 end
