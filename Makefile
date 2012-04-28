@@ -76,7 +76,7 @@ AR     = ar rcu
 CLIBS  = -lm -ldl
 ARCH_LUA  = linum
 ARCH_GLFW = x11
-GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw
+GL_L      = -lXrandr -lX11 -lGLU -lGL
 endif
 
 ifeq ($(UNAME), Darwin)
@@ -85,7 +85,7 @@ AR     = ar rcu
 CLIBS  =
 ARCH_LUA  = macosx
 ARCH_GLFW = cocoa
-GL_L      = -framework OpenGL -framework Cocoa -lglfw
+GL_L      = -framework OpenGL -framework Cocoa
 endif
 
 
