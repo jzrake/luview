@@ -315,4 +315,4 @@ protected:
   }
 } ;
 
-#endif __LuaCppObject_Hpp__
+#endif // __LuaCppObject_Hpp__

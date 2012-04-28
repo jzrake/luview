@@ -74,9 +74,9 @@ ifeq ($(UNAME), Linux)
 SO     = $(CC) -O -shared
 AR     = ar rcu
 CLIBS  = -lm -ldl
-ARCH_LUA  = "linux -ULUA_USE_READLINE"
+ARCH_LUA  = linux
 ARCH_GLFW = x11
-GL_L      = -lXrandr -lX11 -lGLU -lGL -lglfw -L$(PWD)/lib
+GL_L      = -lXrandr -lX11 -lGLU -lGL
 endif
 
 ifeq ($(UNAME), Darwin)
@@ -85,7 +85,7 @@ AR     = ar rcu
 CLIBS  =
 ARCH_LUA  = macosx
 ARCH_GLFW = cocoa
-GL_L      = -framework OpenGL -framework Cocoa -lglfw
+GL_L      = -framework OpenGL -framework Cocoa
 endif
 
 
@@ -149,7 +149,7 @@ config :
 LUA_VERSION  = lua-5.2.0
 GLFW_VERSION = glfw-2.7.2
 LUNUM_BRANCH = luview
-LUNUM_GIT    = git@github.com:jzrake/lunum.git
+LUNUM_GIT    = git://github.com/jzrake/lunum.git
 SERVE_SRC    = http://zrake.webfactional.com/media
 
 $(LUNUM_A) :
