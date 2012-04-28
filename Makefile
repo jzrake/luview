@@ -74,7 +74,7 @@ ifeq ($(UNAME), Linux)
 SO     = $(CC) -O -shared
 AR     = ar rcu
 CLIBS  = -lm -ldl
-ARCH_LUA  = linum
+ARCH_LUA  = linux
 ARCH_GLFW = x11
 GL_L      = -lXrandr -lX11 -lGLU -lGL
 endif
@@ -101,6 +101,7 @@ export GLFW_HOME
 export SO
 export AR
 export CLIBS
+export GL_L
 # -------------------------------------------------
 
 
@@ -148,7 +149,7 @@ config :
 LUA_VERSION  = lua-5.2.0
 GLFW_VERSION = glfw-2.7.2
 LUNUM_BRANCH = luview
-LUNUM_GIT    = git@github.com:jzrake/lunum.git
+LUNUM_GIT    = git://github.com/jzrake/lunum.git
 SERVE_SRC    = http://zrake.webfactional.com/media
 
 $(LUNUM_A) :

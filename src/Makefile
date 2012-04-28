@@ -1,5 +1,5 @@
 
-GL_L = -framework OpenGL -framework Cocoa
+
 
 LUA = ../bin/lua
 
