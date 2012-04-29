@@ -178,6 +178,8 @@ public:
   Tesselation3D();
 protected:
   void draw_local();
+private:
+  void compute_normal(double *u, double *v, double *w, double *n);
 } ;
 
 
