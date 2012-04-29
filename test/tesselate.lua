@@ -15,4 +15,4 @@ tess:set_alpha(0.3)
 tess:set_linewidth(8.0)
 tess:set_scale(0.8, 0.8, 0.8)
 
-while window:render_scene({tess, box, surface}) == "continue" do end
+while window:render_scene({tess, box}) == "continue" do end

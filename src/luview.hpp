@@ -176,10 +176,24 @@ class Tesselation3D : public DrawableObject
   double *pointlist;
 public:
   Tesselation3D();
+  ~Tesselation3D();
 protected:
   void draw_local();
 private:
   void compute_normal(double *u, double *v, double *w, double *n);
+} ;
+
+
+class ShaderExample : public DrawableObject
+{
+public:
+  ShaderExample();
+  ~ShaderExample();
+protected:
+  void draw_local();
+private:
+  void printShaderInfoLog(GLuint obj);
+  void printProgramInfoLog(GLuint obj);
 } ;
 
 

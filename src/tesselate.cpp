@@ -28,13 +28,10 @@
  */
 
 
-#include <iostream>
-
-#define NUMBER_TRIALS 1 // try >30 with valgrind to observe crash
 #define TETLIBRARY
 #include "tetgen.h"
-
 #include "luview.hpp"
+
 
 Tesselation3D::Tesselation3D()
 {
@@ -79,6 +76,11 @@ Tesselation3D::Tesselation3D()
   pointlist[3*n + 1] = +0.5;
   pointlist[3*n + 2] =  0.0;
 }
+Tesselation3D::~Tesselation3D()
+{
+  delete [] pointlist;
+}
+
 void Tesselation3D::draw_local()
 {
   tetgenio inp, out;
@@ -121,6 +123,7 @@ void Tesselation3D::draw_local()
   }
   glEnd();
 
+  /*
   glBegin(GL_LINES);
   for (int n=0; n<out.numberofedges; ++n) {
     int n0 = out.edgelist[2*n + 0];
@@ -132,7 +135,7 @@ void Tesselation3D::draw_local()
   }
   glEnd();
 
-  /*
+
     glBegin(GL_LINES);
     for (int n=0; n<out.numberofvedges; ++n) {
     tetgenio::voroedge e = out.vedgelist[n];

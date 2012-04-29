@@ -324,6 +324,7 @@ private:
   {
     character_input = ' ';
     CurrentWindow = this;
+
     glClearColor(Color[0], Color[1], Color[2], 0.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
@@ -886,6 +887,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<PointsSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
   LuaCppObject::Register<Tesselation3D>(L);
+  LuaCppObject::Register<ShaderExample>(L);
 
   return 1;
 }

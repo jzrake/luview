@@ -2,6 +2,8 @@
 
 
 LUA = ../bin/lua
+LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
+OBJ = luview.o tesselate.o shader.o
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
@@ -14,10 +16,10 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 %.lc : %.lua
 	$(LUA) bin2c.lua +$< > $@
 
-$(LUVIEW_A)  : luview.o tesselate.o ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
+$(LUVIEW_A)  : $(LIB) $(OBJ)
 	$(AR) $@ $?
 
-$(LUVIEW_SO) : luview.o tesselate.o ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
+$(LUVIEW_SO) : $(LIB) $(OBJ)
 	$(SO) -o $(LUVIEW_SO) $^ $(GL_L)
 
 clean :

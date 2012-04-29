@@ -32,6 +32,12 @@ local function stingray(u,v)
    return u, v, 6*(u^4 + u*v^3) * math.cos(20*u*v) * math.cos(time)
 end
 
+local function eggcrate(u,v)
+   local sin = math.sin
+   local cos = math.cos
+   return u, v, 0.2 * math.sin(20*u) * cos(20*v)
+end
+
 local function cmap1(x,y,z)
    return z,z,z,0.9
 end
@@ -50,7 +56,6 @@ scolors:set_transform(normalize_input(cmap2))
 
 surface:set_data("control_points", ctrlpnt)
 surface:set_data("colors", scolors)
-surface:set_alpha(0.8)
 surface:set_color(1.0, 0.5, 0.3)
 
 
@@ -60,6 +65,5 @@ box:set_color(0.5, 0.9, 0.9)
 local cycle = 0
 while window:render_scene({box, surface}) == "continue" do
    time = time + 0.05
-   ctrlpnt:set_transform(stingray)
    cycle = cycle + 1
 end
