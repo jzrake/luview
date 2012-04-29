@@ -170,4 +170,11 @@ protected:
 } ;
 
 
+class Tesselation3D : public DrawableObject
+{
+protected:
+  void draw_local();
+} ;
+
+
 #endif // __LuviewObjects_HEADER__

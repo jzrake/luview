@@ -14,12 +14,10 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 %.lc : %.lua
 	$(LUA) bin2c.lua +$< > $@
 
-types.o : proxy.lc
-
-$(LUVIEW_A)  : luview.o ../lib/libglfw.a ../lib/liblunum.a
+$(LUVIEW_A)  : luview.o tesselate.o ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
 	$(AR) $@ $?
 
-$(LUVIEW_SO) : luview.o ../lib/libglfw.a ../lib/liblunum.a
+$(LUVIEW_SO) : luview.o tesselate.o ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
 	$(SO) -o $(LUVIEW_SO) $^ $(GL_L)
 
 clean :

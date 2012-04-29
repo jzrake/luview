@@ -15,8 +15,6 @@ local scolors = luview.FunctionMapping()
 
 
 
-
-
 local function normalize_input(f)
    local function g(x,y,z,caller)
       if caller ~= nil then

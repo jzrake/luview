@@ -885,6 +885,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<PointsSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
+  LuaCppObject::Register<Tesselation3D>(L);
 
   return 1;
 }
