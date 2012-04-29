@@ -172,6 +172,10 @@ protected:
 
 class Tesselation3D : public DrawableObject
 {
+  int Np;
+  double *pointlist;
+public:
+  Tesselation3D();
 protected:
   void draw_local();
 } ;
