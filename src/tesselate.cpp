@@ -44,14 +44,40 @@ Tesselation3D::Tesselation3D()
   gl_modes.push_back(GL_COLOR_MATERIAL);
   gl_modes.push_back(GL_NORMALIZE);
 
-  Np = 5;
+  Np = 6;
   pointlist = new double[Np * 3];
 
-  for (int n=0; n<Np; ++n) {
-    pointlist[3*n + 0] = 0.5 - 1.0*rand() / RAND_MAX;
-    pointlist[3*n + 1] = 0.5 - 1.0*rand() / RAND_MAX;
-    pointlist[3*n + 2] = 0.5 - 1.0*rand() / RAND_MAX;
-  }
+  int n;
+
+  n=0;
+  pointlist[3*n + 0] = -0.5;
+  pointlist[3*n + 1] = -0.5;
+  pointlist[3*n + 2] = -0.5;
+
+  n=1;
+  pointlist[3*n + 0] = -0.5;
+  pointlist[3*n + 1] = -0.5;
+  pointlist[3*n + 2] = +0.5;
+
+  n=2;
+  pointlist[3*n + 0] = -0.5;
+  pointlist[3*n + 1] = +0.5;
+  pointlist[3*n + 2] = -0.5;
+
+  n=3;
+  pointlist[3*n + 0] = -0.5;
+  pointlist[3*n + 1] = +0.5;
+  pointlist[3*n + 2] = +0.5;
+
+  n=4;
+  pointlist[3*n + 0] = +0.5;
+  pointlist[3*n + 1] = -0.5;
+  pointlist[3*n + 2] =  0.0;
+
+  n=5;
+  pointlist[3*n + 0] = +0.5;
+  pointlist[3*n + 1] = +0.5;
+  pointlist[3*n + 2] =  0.0;
 }
 void Tesselation3D::draw_local()
 {
@@ -69,14 +95,14 @@ void Tesselation3D::draw_local()
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("veeQ", &inp, &out);
 
-  GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
-  GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
-  GLfloat mat_shininess[] = { 100.0 };
 
-  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+  GLfloat mat_diffuse[] = { 0.2, 0.2, 0.2, 0.4 };
+  GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.4 };
+  GLfloat mat_shininess[] = { 64.0 };
+
+  glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_diffuse);
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
   glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
-
 
   glBegin(GL_TRIANGLES);
   for (int n=0; n<out.numberoftrifaces; ++n) {
