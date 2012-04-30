@@ -251,7 +251,7 @@ int LuviewTraitedObject::__set_vec__(lua_State *L, double *v, int n)
 
 DrawableObject::DrawableObject() : shader(NULL)
 {
-  //  gl_modes.push_back(GL_DEPTH_TEST);
+  gl_modes.push_back(GL_DEPTH_TEST);
 }
 void DrawableObject::draw()
 {

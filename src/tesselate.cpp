@@ -35,8 +35,8 @@
 
 Tesselation3D::Tesselation3D()
 {
-  //  gl_modes.push_back(GL_LIGHTING);
-  //  gl_modes.push_back(GL_LIGHT0);
+  gl_modes.push_back(GL_LIGHTING);
+  gl_modes.push_back(GL_LIGHT0);
   gl_modes.push_back(GL_NORMALIZE);
   gl_modes.push_back(GL_BLEND);
   gl_modes.push_back(GL_COLOR_MATERIAL);
@@ -203,6 +203,8 @@ void Tesselation3D::draw_local()
     }
     glEnd();
 
+    if (shader) shader->deactivate();
+    glColor4d(0, 0, 0, 1);
     glBegin(GL_LINES);
     for (int n=0; n<out.numberofedges; ++n) {
       int n0 = out.edgelist[2*n + 0];

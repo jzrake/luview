@@ -13,7 +13,7 @@ box:set_color(0.5, 0.9, 0.9)
 tess:set_color(0.2, 0.8, 0.2)
 tess:set_alpha(0.5)
 tess:set_linewidth(1.0)
-
+tess:set_scale(0.3, 0.3, 0.3)
 
 local vert_fname = "/Users/jzrake/Work/luview/shaders/lambertian.vert"
 local frag_fname = "/Users/jzrake/Work/luview/shaders/lambertian.frag"
