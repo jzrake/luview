@@ -249,7 +249,7 @@ int LuviewTraitedObject::__set_vec__(lua_State *L, double *v, int n)
 
 
 
-DrawableObject::DrawableObject()
+DrawableObject::DrawableObject() : shader(NULL)
 {
   gl_modes.push_back(GL_DEPTH_TEST);
 }
@@ -258,6 +258,7 @@ void DrawableObject::draw()
   for (unsigned int i=0; i<gl_modes.size(); ++i) {
     glEnable(gl_modes[i]);
   }
+  if (shader) shader->activate();
 
   glPushMatrix();
 
@@ -277,8 +278,32 @@ void DrawableObject::draw()
   for (unsigned int i=0; i<gl_modes.size(); ++i) {
     glDisable(gl_modes[i]);
   }
+  if (shader) shader->deactivate();
 }
 
+
+
+DrawableObject::LuaInstanceMethod DrawableObject::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["get_shader"] = _get_shader_;
+  attr["set_shader"] = _set_shader_;
+  RETURN_ATTR_OR_CALL_SUPER(LuviewTraitedObject);
+}
+int DrawableObject::_get_shader_(lua_State *L)
+{
+  DrawableObject *self = checkarg<DrawableObject>(L, 1);
+  push_lua_obj(L, self->shader, __REGLUA);
+  return 1;
+}
+int DrawableObject::_set_shader_(lua_State *L)
+{
+  DrawableObject *self = checkarg<DrawableObject>(L, 1);
+  ShaderProgram *shader = checkarg<ShaderProgram>(L, 2);
+  self->shader = shader;
+  return 0;
+}
 
 
 class Window : public LuviewTraitedObject
@@ -887,7 +912,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<PointsSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
   LuaCppObject::Register<Tesselation3D>(L);
-  LuaCppObject::Register<ShaderExample>(L);
+  LuaCppObject::Register<ShaderProgram>(L);
 
   return 1;
 }

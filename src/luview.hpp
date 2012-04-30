@@ -156,10 +156,35 @@ protected:
 } ;
 
 
+class ShaderProgram : public LuaCppObject
+{
+private:
+  GLuint vert, frag, prog;
+
+public:
+  ShaderProgram();
+  ~ShaderProgram();
+
+  void set_program(const char *vert_src, const char *frag_src);
+  void unset_program();
+  void activate();
+  void deactivate();
+
+private:
+  void printShaderInfoLog(GLuint obj);
+  void printProgramInfoLog(GLuint obj);
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_program_(lua_State *L);
+} ;
+
+
 class DrawableObject : public LuviewTraitedObject
 {
 protected:
   std::vector<int> gl_modes;
+  ShaderProgram *shader;
 
 public:
   DrawableObject();
@@ -167,6 +192,11 @@ public:
 
 protected:
   virtual void draw_local() = 0;
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _get_shader_(lua_State *L);
+  static int _set_shader_(lua_State *L);
 } ;
 
 
@@ -183,18 +213,6 @@ private:
   void compute_normal(double *u, double *v, double *w, double *n);
 } ;
 
-
-class ShaderExample : public DrawableObject
-{
-public:
-  ShaderExample();
-  ~ShaderExample();
-protected:
-  void draw_local();
-private:
-  void printShaderInfoLog(GLuint obj);
-  void printProgramInfoLog(GLuint obj);
-} ;
 
 
 #endif // __LuviewObjects_HEADER__

@@ -100,7 +100,7 @@ class LuaCppObject
     lua_pushcfunction(L, newobj<T>);
     lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
   }
-  template <class T> static void RegisterWithConstructor(lua_State *L)
+  template <class T> static void RegisterCC(lua_State *L)
   {
     lua_pushcfunction(L, T::__new__);
     lua_setfield(L, -2, demangle(typeid(T).name()).c_str());

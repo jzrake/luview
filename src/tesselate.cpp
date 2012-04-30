@@ -41,9 +41,14 @@ Tesselation3D::Tesselation3D()
   gl_modes.push_back(GL_COLOR_MATERIAL);
   gl_modes.push_back(GL_NORMALIZE);
 
-  Np = 6;
+  Np = 36;
   pointlist = new double[Np * 3];
-
+  for (int n=0; n<Np; ++n) {
+    pointlist[3*n + 0] = 0.5 - 1.0*rand() / RAND_MAX;
+    pointlist[3*n + 1] = 0.5 - 1.0*rand() / RAND_MAX;
+    pointlist[3*n + 2] = 0.5 - 1.0*rand() / RAND_MAX;
+  }
+  /*
   int n;
 
   n=0;
@@ -75,6 +80,7 @@ Tesselation3D::Tesselation3D()
   pointlist[3*n + 0] = +0.5;
   pointlist[3*n + 1] = +0.5;
   pointlist[3*n + 2] =  0.0;
+  */
 }
 Tesselation3D::~Tesselation3D()
 {
@@ -96,15 +102,21 @@ void Tesselation3D::draw_local()
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("veeQ", &inp, &out);
+  /*
+  glBegin(GL_TRIANGLES);
+  glVertex3d(1.5, 0.0, 0.0);
+  glVertex3d(1.0, 0.5, 0.0);
+  glVertex3d(1.0,-0.5, 0.0);
 
+  glVertex3d(1.5, 0.0, 0.5);
+  glVertex3d(1.0, 0.5, 0.5);
+  glVertex3d(1.0,-0.5, 0.5);
 
-  GLfloat mat_diffuse[] = { 0.2, 0.2, 0.2, 0.4 };
-  GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.4 };
-  GLfloat mat_shininess[] = { 64.0 };
-
-  glMaterialfv(GL_FRONT, GL_AMBIENT_AND_DIFFUSE, mat_diffuse);
-  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-  glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+  glVertex3d(1.5, 0.0,-0.5);
+  glVertex3d(1.0, 0.5,-0.5);
+  glVertex3d(1.0,-0.5,-0.5);
+  glEnd();
+  */
 
   glBegin(GL_TRIANGLES);
   for (int n=0; n<out.numberoftrifaces; ++n) {
@@ -114,28 +126,30 @@ void Tesselation3D::draw_local()
     REAL *u = &out.pointlist[3*n0];
     REAL *v = &out.pointlist[3*n1];
     REAL *w = &out.pointlist[3*n2];
-    REAL n[3];
-    compute_normal(u, v, w, n);
-    glNormal3dv(n);
+    REAL normal[3];
+    compute_normal(u, v, w, normal);
+    glNormal3dv(normal);
     glVertex3dv(u);
     glVertex3dv(v);
     glVertex3dv(w);
   }
   glEnd();
 
-  /*
+
   glBegin(GL_LINES);
   for (int n=0; n<out.numberofedges; ++n) {
     int n0 = out.edgelist[2*n + 0];
     int n1 = out.edgelist[2*n + 1];
     REAL *u = &out.pointlist[3*n0];
     REAL *v = &out.pointlist[3*n1];
+    REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
+    glNormal3dv(normal);
     glVertex3dv(u);
     glVertex3dv(v);
   }
   glEnd();
 
-
+  /*
     glBegin(GL_LINES);
     for (int n=0; n<out.numberofvedges; ++n) {
     tetgenio::voroedge e = out.vedgelist[n];
