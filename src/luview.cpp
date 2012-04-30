@@ -252,6 +252,16 @@ int LuviewTraitedObject::__set_vec__(lua_State *L, double *v, int n)
 DrawableObject::DrawableObject() : shader(NULL)
 {
   gl_modes.push_back(GL_DEPTH_TEST);
+
+  GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+  GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+  GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+  GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+
+  glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+  glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 void DrawableObject::draw()
 {
@@ -772,16 +782,6 @@ private:
 
     const int su = Nv;
     const int sv = 1;
-
-    GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
-    GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
-
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };

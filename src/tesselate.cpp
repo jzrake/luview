@@ -41,120 +41,52 @@ Tesselation3D::Tesselation3D()
   gl_modes.push_back(GL_BLEND);
   gl_modes.push_back(GL_COLOR_MATERIAL);
 
-  Np = 20;
+  Np = 8;
   pointlist = new double[Np * 3];
 
   int n;
-  double phi = (1.0 + sqrt(5.0)) / 2.0;
 
-  n=0;
-  pointlist[3*n + 0] =-1.0;
-  pointlist[3*n + 1] =-1.0;
+  n = 0;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] = 1.0;
+  pointlist[3*n + 2] = 0.0;
+
+  n = 1;
+  pointlist[3*n + 0] =-0.5;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] = 0.0;
+
+  n = 2;
+  pointlist[3*n + 0] =+0.5;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] = 0.0;
+
+  n = 3;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] = 0.25;
+  pointlist[3*n + 2] = 1.0;
+
+  n = 4;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] = 0.25;
   pointlist[3*n + 2] =-1.0;
 
-  n=1;
-  pointlist[3*n + 0] =-1.0;
-  pointlist[3*n + 1] =-1.0;
-  pointlist[3*n + 2] =+1.0;
-
-  n=2;
-  pointlist[3*n + 0] =-1.0;
-  pointlist[3*n + 1] =+1.0;
+  n = 5;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] =-0.25;
   pointlist[3*n + 2] =-1.0;
 
-  n=3;
-  pointlist[3*n + 0] =-1.0;
-  pointlist[3*n + 1] =+1.0;
-  pointlist[3*n + 2] =+1.0;
-
-  n=4;
-  pointlist[3*n + 0] =+1.0;
-  pointlist[3*n + 1] =-1.0;
+  n = 6;
+  pointlist[3*n + 0] =-0.5;
+  pointlist[3*n + 1] = 0.25;
   pointlist[3*n + 2] =-1.0;
 
-  n=5;
-  pointlist[3*n + 0] =+1.0;
-  pointlist[3*n + 1] =-1.0;
-  pointlist[3*n + 2] =+1.0;
-
-  n=6;
-  pointlist[3*n + 0] =+1.0;
-  pointlist[3*n + 1] =+1.0;
+  n = 7;
+  pointlist[3*n + 0] =+0.5;
+  pointlist[3*n + 1] = 0.25;
   pointlist[3*n + 2] =-1.0;
-
-  n=7;
-  pointlist[3*n + 0] =+1.0;
-  pointlist[3*n + 1] =+1.0;
-  pointlist[3*n + 2] =+1.0;
-
-  n=8;
-  pointlist[3*n + 0] = 0.0;
-  pointlist[3*n + 1] =-1.0/phi;
-  pointlist[3*n + 2] =-phi;
-
-  n=9;
-  pointlist[3*n + 0] = 0.0;
-  pointlist[3*n + 1] =-1.0/phi;
-  pointlist[3*n + 2] =+phi;
-
-  n=10;
-  pointlist[3*n + 0] = 0.0;
-  pointlist[3*n + 1] =+1.0/phi;
-  pointlist[3*n + 2] =-phi;
-
-  n=11;
-  pointlist[3*n + 0] = 0.0;
-  pointlist[3*n + 1] =+1.0/phi;
-  pointlist[3*n + 2] =+phi;
-
-  n=12;
-  pointlist[3*n + 2] = 0.0;
-  pointlist[3*n + 0] =-1.0/phi;
-  pointlist[3*n + 1] =-phi;
-
-  n=13;
-  pointlist[3*n + 2] = 0.0;
-  pointlist[3*n + 0] =-1.0/phi;
-  pointlist[3*n + 1] =+phi;
-
-  n=14;
-  pointlist[3*n + 2] = 0.0;
-  pointlist[3*n + 0] =+1.0/phi;
-  pointlist[3*n + 1] =-phi;
-
-  n=15;
-  pointlist[3*n + 2] = 0.0;
-  pointlist[3*n + 0] =+1.0/phi;
-  pointlist[3*n + 1] =+phi;
-
-  n=16;
-  pointlist[3*n + 1] = 0.0;
-  pointlist[3*n + 2] =-1.0/phi;
-  pointlist[3*n + 0] =-phi;
-
-  n=17;
-  pointlist[3*n + 1] = 0.0;
-  pointlist[3*n + 2] =-1.0/phi;
-  pointlist[3*n + 0] =+phi;
-
-  n=18;
-  pointlist[3*n + 1] = 0.0;
-  pointlist[3*n + 2] =+1.0/phi;
-  pointlist[3*n + 0] =-phi;
-
-  n=19;
-  pointlist[3*n + 1] = 0.0;
-  pointlist[3*n + 2] =+1.0/phi;
-  pointlist[3*n + 0] =+phi;
-
-  /*
-    for (int n=0; n<Np; ++n) {
-    pointlist[3*n + 0] = 0.5 - 1.0*rand() / RAND_MAX;
-    pointlist[3*n + 1] = 0.5 - 1.0*rand() / RAND_MAX;
-    pointlist[3*n + 2] = 0.5 - 1.0*rand() / RAND_MAX;
-    }
-  */
 }
+
 Tesselation3D::~Tesselation3D()
 {
   delete [] pointlist;
@@ -162,7 +94,8 @@ Tesselation3D::~Tesselation3D()
 
 void Tesselation3D::draw_local()
 {
-  int delaunay = 1;
+  int delaunay = 0;
+  int voronoi = 1;
   tetgenio inp, out;
 
   inp.initialize();
@@ -172,20 +105,14 @@ void Tesselation3D::draw_local()
   inp.pointlist = new double[inp.numberofpoints * 3];
   memcpy(inp.pointlist, pointlist, Np*3*sizeof(double));
 
+  // z: number indices from zero
   // v: generate voronoi
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
-  tetrahedralize("veeQ", &inp, &out);
-
-  GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
-  GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
-  GLfloat mat_shininess[] = { 100.0 };
-
-  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
-  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
-  glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+  tetrahedralize("zveeQ", &inp, &out);
 
   if (delaunay) {
+    /*
     glBegin(GL_TRIANGLES);
     for (int n=0; n<out.numberoftrifaces; ++n) {
       int n0 = out.trifacelist[3*n + 0];
@@ -202,9 +129,8 @@ void Tesselation3D::draw_local()
       glVertex3dv(w);
     }
     glEnd();
+    */
 
-    if (shader) shader->deactivate();
-    glColor4d(0, 0, 0, 1);
     glBegin(GL_LINES);
     for (int n=0; n<out.numberofedges; ++n) {
       int n0 = out.edgelist[2*n + 0];
@@ -219,8 +145,8 @@ void Tesselation3D::draw_local()
     glEnd();
   }
 
-  else {
-    /*
+  if (voronoi) {
+
     for (int n=0; n<out.numberofvfacets; ++n) {
       tetgenio::vorofacet &f = out.vfacetlist[n];
       std::vector<REAL*> verts;
@@ -229,14 +155,14 @@ void Tesselation3D::draw_local()
         int eindex = f.elist[m+1];
         int vindex = out.vedgelist[eindex].v1;
         if (out.vedgelist[eindex].v2 == -1) {
-          printf("skipping ray\n");
-          continue;
+	  //          printf("skipping ray\n");
+	  continue;
         }
         verts.push_back(&out.vpointlist[3*vindex]);
       }
       if (verts.size() < 3) {
-        //      printf("skipping facet with %ld vertices\n", verts.size());
-        continue;
+	//	printf("skipping facet with %ld vertices\n", verts.size());
+	continue;
       }
 
       REAL normal[3];
@@ -249,20 +175,41 @@ void Tesselation3D::draw_local()
       }
       glEnd();
     }
-    */
+
 
     glBegin(GL_LINES);
     for (int n=0; n<out.numberofvedges; ++n) {
       tetgenio::voroedge &e = out.vedgelist[n];
-      if (e.v2 == -1) continue; // -1 indicates ray
-      REAL *u = &out.vpointlist[3*e.v1];
-      REAL *v = &out.vpointlist[3*e.v2];
-      REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
-      glNormal3dv(normal);
-      glVertex3dv(u);
-      glVertex3dv(v);
+      if (e.v2 == -1) {
+	REAL *u = &out.vpointlist[3*e.v1];
+	REAL v[3] = {u[0] + e.vnormal[0], u[1] + e.vnormal[1], u[2] + e.vnormal[2]};
+	REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
+
+	glNormal3dv(normal);
+	glVertex3dv(u);
+	glVertex3dv(v);
+      }
+      else {
+	REAL *u = &out.vpointlist[3*e.v1];
+	REAL *v = &out.vpointlist[3*e.v2];
+	REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
+
+	glNormal3dv(normal);
+	glVertex3dv(u);
+	glVertex3dv(v);
+      }
     }
     glEnd();
+
+    /*
+    glPointSize(10.0);
+    glColor3d(0,0,1);
+    glBegin(GL_POINTS);
+    for (int n=0; n<out.numberofvpoints; ++n) {
+      glVertex3dv(&out.vpointlist[3*n]);
+    }
+    glEnd();
+    */
   }
 }
 
@@ -380,3 +327,106 @@ void Tesselation3D::compute_normal(double *u, double *v, double *w, double *n)
   pointlist[3*n + 1] =+0.5;
   pointlist[3*n + 2] =+0.5;
 */
+\
+  /*
+  double phi = (1.0 + sqrt(5.0)) / 2.0;
+  n=0;
+  pointlist[3*n + 0] =-1.0;
+  pointlist[3*n + 1] =-1.0;
+  pointlist[3*n + 2] =-1.0;
+
+  n=1;
+  pointlist[3*n + 0] =-1.0;
+  pointlist[3*n + 1] =-1.0;
+  pointlist[3*n + 2] =+1.0;
+
+  n=2;
+  pointlist[3*n + 0] =-1.0;
+  pointlist[3*n + 1] =+1.0;
+  pointlist[3*n + 2] =-1.0;
+
+  n=3;
+  pointlist[3*n + 0] =-1.0;
+  pointlist[3*n + 1] =+1.0;
+  pointlist[3*n + 2] =+1.0;
+
+  n=4;
+  pointlist[3*n + 0] =+1.0;
+  pointlist[3*n + 1] =-1.0;
+  pointlist[3*n + 2] =-1.0;
+
+  n=5;
+  pointlist[3*n + 0] =+1.0;
+  pointlist[3*n + 1] =-1.0;
+  pointlist[3*n + 2] =+1.0;
+
+  n=6;
+  pointlist[3*n + 0] =+1.0;
+  pointlist[3*n + 1] =+1.0;
+  pointlist[3*n + 2] =-1.0;
+
+  n=7;
+  pointlist[3*n + 0] =+1.0;
+  pointlist[3*n + 1] =+1.0;
+  pointlist[3*n + 2] =+1.0;
+
+  n=8;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] =-1.0/phi;
+  pointlist[3*n + 2] =-phi;
+
+  n=9;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] =-1.0/phi;
+  pointlist[3*n + 2] =+phi;
+
+  n=10;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] =+1.0/phi;
+  pointlist[3*n + 2] =-phi;
+
+  n=11;
+  pointlist[3*n + 0] = 0.0;
+  pointlist[3*n + 1] =+1.0/phi;
+  pointlist[3*n + 2] =+phi;
+
+  n=12;
+  pointlist[3*n + 2] = 0.0;
+  pointlist[3*n + 0] =-1.0/phi;
+  pointlist[3*n + 1] =-phi;
+
+  n=13;
+  pointlist[3*n + 2] = 0.0;
+  pointlist[3*n + 0] =-1.0/phi;
+  pointlist[3*n + 1] =+phi;
+
+  n=14;
+  pointlist[3*n + 2] = 0.0;
+  pointlist[3*n + 0] =+1.0/phi;
+  pointlist[3*n + 1] =-phi;
+
+  n=15;
+  pointlist[3*n + 2] = 0.0;
+  pointlist[3*n + 0] =+1.0/phi;
+  pointlist[3*n + 1] =+phi;
+
+  n=16;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] =-1.0/phi;
+  pointlist[3*n + 0] =-phi;
+
+  n=17;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] =-1.0/phi;
+  pointlist[3*n + 0] =+phi;
+
+  n=18;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] =+1.0/phi;
+  pointlist[3*n + 0] =-phi;
+
+  n=19;
+  pointlist[3*n + 1] = 0.0;
+  pointlist[3*n + 2] =+1.0/phi;
+  pointlist[3*n + 0] =+phi;
+  */
