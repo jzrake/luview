@@ -314,8 +314,8 @@ private:
   static Window *CurrentWindow;
 
 public:
-  Window() : WindowWidth(1024),
-             WindowHeight(768), character_input(0)
+  Window() : WindowWidth(1200),
+             WindowHeight(1024), character_input(0)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
@@ -525,6 +525,22 @@ private:
       }
     }
   }
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["set_num_points"] = _set_num_points_;
+    RETURN_ATTR_OR_CALL_SUPER(DataSource);
+  }
+  static int _set_num_points_(lua_State *L)
+  {
+    GridSource2D *self = checkarg<GridSource2D>(L, 1);
+    self->Nu = luaL_checkinteger(L, 2);
+    self->Nv = luaL_checkinteger(L, 3);
+    self->init_grid();
+    return 0;
+  }
 } ;
 
 
@@ -685,7 +701,7 @@ private:
   GLUnurbsObj *theNurb;
 
 public:
-  SurfaceNURBS() : order(3)
+  SurfaceNURBS() : order(5)
   {
     gl_modes.push_back(GL_LIGHTING);
     gl_modes.push_back(GL_LIGHT0);
@@ -757,9 +773,19 @@ private:
     const int su = Nv;
     const int sv = 1;
 
+    GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+    GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
+
     GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
     GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
-    GLfloat mat_shininess[] = { 100.0 };
+    GLfloat mat_shininess[] = { 128.0 };
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
@@ -893,7 +919,6 @@ private:
     free(ind);
   }
 } ;
-
 
 
 

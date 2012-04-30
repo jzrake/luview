@@ -1,8 +1,9 @@
 
 
+
 local luview = require 'luview'
 local lunum = require 'lunum'
-
+local utils = require 'test.utils'
 
 local window = luview.Window()
 local box = luview.BoundingBox()
@@ -10,22 +11,9 @@ local grid2d = luview.GridSource2D()
 local surface = luview.SurfaceNURBS()
 local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
+local shader = luview.ShaderProgram()
+utils.load_shader("lambertian", shader)
 
-
-
-
-
-local function normalize_input(f)
-   local function g(x,y,z,caller)
-      if caller ~= nil then
-	 local zmin=caller:get_info("min2")
-	 local zmax=caller:get_info("max2")
-	 z = (z - zmin) / (zmax - zmin)
-      end
-      return f(x,y,z)
-   end
-   return g
-end
 
 local time = 0.0
 local function stingray(u,v)
@@ -52,12 +40,12 @@ ctrlpnt:set_input(grid2d)
 ctrlpnt:set_transform(stingray)
 
 scolors:set_input(ctrlpnt)
-scolors:set_transform(normalize_input(cmap2))
+scolors:set_transform(utils.normalize_input(cmap2))
 
 surface:set_data("control_points", ctrlpnt)
 surface:set_data("colors", scolors)
 surface:set_color(1.0, 0.5, 0.3)
-
+--surface:set_shader(shader)
 
 window:set_color(0.2, 0.2, 0.2)
 box:set_color(0.5, 0.9, 0.9)
