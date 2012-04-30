@@ -1,29 +1,23 @@
 #include <list>
+#include <vector>
 #include <stdlib.h>
 #include <stdio.h>
 #include <math.h>
-
-//You should make a "read data file" function
-//This function will then be called when you press a number 
-//to get a new type of data 
-
-
-//Fix the way the camera works
-
-
-//be able to toggle Delaunay on and off
 
 //lines or boxes should have opacity, or perhaps depth of how far out they are drawn
 
 //The code should take arguments for what data file it will be reading from
 
+//Delaunay should have cuts, and both delaunay and point showing need to be made FAST
 
-//Make isosurfaces for densities
+//This defines these keywords as numbers, useful for data readin
+enum{VOL,RHO,VXX,VYY,VZZ,PPP};
 
+#define DIR_BIN "outputNewestest.bin"
+#define NUMVAR 10 //The number of variables we will load in.
 
-#define PLOT_VALUE Q[3] 
-#define COLORBAR 3
-#define DIR_BIN "outputBIG.bin"
+double PLOT_VALUE = 1;
+double COLORBAR = 3;
 
 void InitGraphics(int argc, char **argv);
 void get_rgb( double , float * , float * , float * , int );
@@ -34,18 +28,15 @@ float * pointdata;
 
 double minval, maxval;
 
-struct Cell;
+//struct Cell;
 
 
 struct Cell{
-
-   int Id;
    double x[3];
    std::list<struct Cell *> myFriends;
-   double theta;
-   double value;
+   double v[NUMVAR];
    bool Bc;
-
+   double color[3];
 };
 
 struct Cell * theCells;
@@ -54,34 +45,13 @@ int * Cell0;
 int * Cell1;
 
 
-bool compare_cell( Cell * A, Cell * B ){
-   return( A->theta < B->theta );
-}
-
-
-int countlines(char * filename){
-   FILE *pFile = fopen(filename, "r");
-   int lines=0;
-   char c;
-   while ((c = fgetc(pFile)) != EOF){
-      if (c == '\n') ++lines;
-   }
-   fclose(pFile);
-   return(lines);
-}
-
-
-
-
-
 int main(int argc, char **argv) 
 {
 
    FILE *pFile;
-   
    pFile = fopen(DIR_BIN,"rb");
 
-//first three numbers in the file
+   //first three numbers in the file
    fread( &Nq , sizeof(int) , 1 , pFile ); //NUmber of doubles per cell
    fread( &Nc , sizeof(int) , 1 , pFile ); //Number of cells
    fread( &Nf , sizeof(int) , 1 , pFile ); //number of faces
@@ -91,37 +61,25 @@ int main(int argc, char **argv)
    Cell1 = (int *) malloc( Nf*sizeof(int) );//new int[Nf];
   
    printf("Stage 1 Complete, Nq = %d Nc = %d Nf = %d\n",Nq,Nc,Nf);
-      maxval = -HUGE_VAL;
-      minval = HUGE_VAL;
 
    int j = 0;
    while( j<Nc ){
       double Q[Nq];
       int bc;
-      double x,y,z,rho, Pp, vx, vy, vz,Vol;
 
       fread(  Q , sizeof(double) , Nq , pFile);
       fread( &bc, sizeof(int)    , 1  , pFile);
-//No matter how many vaiables we have, we take 7. More will be ignored, less will segfault 
-//The first three gets x,y,z data
+
+      //Load in the spacial data
       theCells[j].x[0]   = Q[0];
       theCells[j].x[1]   = Q[1];
       theCells[j].x[2]   = Q[2];
-
-      rho = Q[3];
-      vx  = Q[4];
-      vy  = Q[5];
-      vz  = Q[6];
-      Pp  = Q[7];
-
-      Vol = Q[Nq-1];
-
-//connected to a DEFINE statement earlier on which you use to choose what your going to plot
-      theCells[j].value = PLOT_VALUE;
-
-
-      if( maxval < theCells[j].value ) maxval = theCells[j].value;
-      if( minval > theCells[j].value ) minval = theCells[j].value;
+      //Load in the volume
+      theCells[j].v[0] = Q[Nq-1]; //Vol
+      //Load in the data in the data file
+      for(int i=1 ; i<Nq-2 ; ++i ){
+         theCells[j].v[i]  = Q[i+2]; 
+      }
 
 
       theCells[j].Bc = false;
@@ -203,10 +161,13 @@ int window;
 #include <GL/glut.h>
 
 static void DrawGLScene();
+static void Recolor();
+static void ChangeDraw();
 static void ResizeGLScene(int Width, int Height);
 static void MousePressed(int button, int state, int x, int y);
 static void KeyPressed(unsigned char key, int x, int y);
 static void SpecialKeyPressed(int key, int x, int y);
+
 
 static int WindowID;
 static int WindowWidth    = 768;
@@ -230,6 +191,7 @@ double DensityWidth;
 int Delaunay;
 double CUT;
 double WIDTH;
+int varC;
 
 void InitGraphics(int argc, char **argv)
 {
@@ -247,7 +209,6 @@ void InitGraphics(int argc, char **argv)
  glutSpecialFunc       (SpecialKeyPressed);
  glutMouseFunc         (MousePressed);
 
-
  glClearColor(0.2, 0.2, 0.1, 0.0);
  glClearDepth(1.0);
  glDepthFunc(GL_LESS);
@@ -260,6 +221,7 @@ void InitGraphics(int argc, char **argv)
 0.1f, 100.0f);
  glMatrixMode(GL_MODELVIEW);
  glEnable(GL_BLEND);
+// glutTimerFunc(33, timerCB, 33);  
 
 
  if (FullScreenMode) {
@@ -271,130 +233,126 @@ DensityWidth = 1.1;
 Delaunay = 0;
 CUT = .1;
 WIDTH = .01;
+varC = 1;
+
+Recolor();
+glutMainLoop();
 
 
- glutMainLoop();
+
 }
 
-/*
+
+std::vector<double>Lecol;
+std::vector<double>Lepos;
+
+static void Recolor()
+{
+   maxval = -HUGE_VAL;
+   minval = HUGE_VAL;
+
+        float rrr,ggg,bbb;
+int j = 0;
+while (j<Nc){
+      if( maxval < theCells[j].v[varC] ) maxval = theCells[j].v[varC];
+      if( minval > theCells[j].v[varC] ) minval = theCells[j].v[varC];
+
+
+      double val = (theCells[j].v[varC] - minval)/(maxval -minval);
+      if( val > 1.0 ) val = 1.0;
+      if( val < 0.0 ) val = 0.0;
+
+get_rgb( val , &rrr , &ggg , &bbb , COLORBAR );
+theCells[j].color[0] =rrr;
+theCells[j].color[1] =ggg;
+theCells[j].color[2] =bbb;
+j++;
+
+
+    glColorPointer(3, GL_DOUBLE, sizeof(struct Cell),&(theCells[0].color));
+    glVertexPointer(3, GL_DOUBLE, sizeof(struct Cell),&(theCells[0].x));
+}
+
+ChangeDraw();
+}
+
+std::vector<unsigned int>ind;
+std::vector<unsigned int>dind;
+static void ChangeDraw()
+{
+
+ind.clear();
+dind.clear();
+
+int i;
+ //   	double v0 = .5*(theCells[i0].v[varC]-DensityCut)/DensityWidth+.5;
+//    	double v1 = .5*(theCells[i1].v[varC]-DensityCut)/DensityWidth+.5;
+//    	double vv = .5*(v0+v1);
+
+if(Delaunay){
+for(i = 0; i < Nf; ++i ){
+    	int i0 = Cell0[i];
+    	int i1 = Cell1[i];
+    if( !(theCells[i0].Bc)  && !(theCells[i1].Bc) &&
+      ( fabs(theCells[i0].v[varC]-DensityCut) < DensityWidth) &&
+      ( fabs(theCells[i1].v[varC]-DensityCut) < DensityWidth) &&
+      ( fabs(theCells[i0].x[2]-CUT) < WIDTH || 
+	fabs(theCells[i0].x[1]-CUT) < WIDTH || 
+	fabs(theCells[i0].x[0]-CUT) < WIDTH ) &&
+      ( fabs(theCells[i1].x[2]-CUT) < WIDTH || 
+	fabs(theCells[i1].x[1]-CUT) < WIDTH || 
+	fabs(theCells[i1].x[0]-CUT) < WIDTH ) )
+        {
+	dind.push_back(Cell0[i]);
+ 	dind.push_back(Cell1[i]);
+	}
+}
+}
+
+
+if(!Delaunay){
+for(i = 0; i < NumberToDraw; ++i ){
+    if( !(theCells[i].Bc)  &&
+      ( fabs(theCells[i].v[varC]-DensityCut) < DensityWidth) &&
+      ( fabs(theCells[i].x[2]-CUT) < WIDTH || 
+	fabs(theCells[i].x[1]-CUT) < WIDTH || 
+	fabs(theCells[i].x[0]-CUT) < WIDTH ) )
+	{ ind.push_back(i);}
+}
+}
+
+}
+//End of ChangeDraw Function
+
+
+
 
 // The main drawing function. //
-static void DrawBetterGLScene()
-{
-//load all of points into pointdata and colors into colordata
-
-std::vector <GLuint> ind;   
-for( n = 0; n < NumberToDraw; ++n ){
-      if( !(theCells[n].Bc)  &&
-          ( fabs(theCells[n].value-DensityCut) < DensityWidth) &&
-          (fabs(theCells[n].x[2]-CUT) < WIDTH || fabs(theCells[n].x[1]-CUT) < WIDTH || fabs(theCells[n].x[0]-CUT) < WIDTH ) )
-{ ind.push_back(n);}}
-
-    glPointSize(5.0);
-
-    glEnableClientState(GL_VERTEX_ARRAY);
-    if (colordata) glEnableClientState(GL_COLOR_ARRAY);
-
-    if (colordata) {
-      glColorPointer(4, GL_FLOAT, 4*sizeof(GLfloat), colordata);
-    }
-    glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), pointdata);
-    glDrawElements(GL_POINTS, ind.size(), GL_UNSIGNED_INT, ind);
-
-    glDisableClientState(GL_VERTEX_ARRAY);
-    if (colordata) glDisableClientState(GL_COLOR_ARRAY);
-
-    free(ind);
-
-
-
-
-
-}*/
-
-
 static void DrawGLScene()
 {
-
  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
  glLoadIdentity();
  glTranslatef(-xTranslate, -yTranslate, -zTranslate);
-
  glRotatef(RotationAngleX, 1, 0, 0);
  glRotatef(RotationAngleY, 0, 1, 0);
 
 
-/////////////////////////
 
- glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-   int k;
-//Normally < Nc
-   for( k = 0; k < NumberToDraw; ++k ){
-      if( !(theCells[k].Bc)  && 
-          ( fabs(theCells[k].value-DensityCut) < DensityWidth) &&
-          (fabs(theCells[k].x[2]-CUT) < WIDTH || fabs(theCells[k].x[1]-CUT) < WIDTH || fabs(theCells[k].x[0]-CUT) < WIDTH ) ){
+//    glPointSize(3);
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_COLOR_ARRAY);
 
-      double val = (theCells[k].value - minval)/(maxval -minval);
-      if( val > 1.0 ) val = 1.0;
-      if( val < 0.0 ) val = 0.0;
-
-      float rrr,ggg,bbb;
-      get_rgb( val , &rrr , &ggg , &bbb , COLORBAR );
-      glColor3f( rrr , ggg , bbb );
-
-      double particleRadius = .005;
-
-      glPushMatrix();
-      glTranslatef (theCells[k].x[0], theCells[k].x[1], theCells[k].x[2]);
-      glutSolidCube(particleRadius);
-     // glutSolidSphere(particleRadius, 3, 3); //last two #'s are resolution
-      glPopMatrix();
-     }  
+if(!Delaunay){
+    glDrawElements(GL_POINTS, ind.size(), GL_UNSIGNED_INT, &ind[0] );
 }
-
-/////if 3d Box
-
- //glColor3d(0.6, 0.3, 0.3);
-// glLineWidth(3.0);
-// glutWireCube(2.0);
-
-/////if Delaunay //Nf
-      for(int f=0 ; f<Nf; ++f ){
-	
-	int i0 = Cell0[f];
-	int i1 = Cell1[f];
-	double x0 =theCells[i0].x[0];
-	double y0 =theCells[i0].x[1];
-	double z0 =theCells[i0].x[2];
-	double x1 =theCells[i1].x[0];
-	double y1 =theCells[i1].x[1];
-	double z1 =theCells[i1].x[2];
-
 if(Delaunay){
-        if( theCells[i0].Bc == 0 && theCells[i1].Bc == 0 ){	
-       //  double zc = theCells[k].x[2];
-      //   std::list<struct Cell *>::iterator cp;
-      //   cp = theCells[k].myFriends.begin();
-    //     while( cp != theCells[k].myFriends.end() ){
-            glColor3f( 0.0 , 0.0 , 1 );//1.0 , 0.0 );
-            glLineWidth( .001 );//2.0f );
-            glBegin(GL_LINES);
-            glVertex3f( x0 , y0 , z0 );
-            glVertex3f( x1 , y1 , z1  );
-            glEnd();
-    //        ++cp;
-        }
-      }
-      }
-
-
-
-
- glFlush();
- glutSwapBuffers();
-
+    glDrawElements(GL_LINES, dind.size(), GL_UNSIGNED_INT, &dind[0] );
 }
+    glDisableClientState(GL_VERTEX_ARRAY);
+    glDisableClientState(GL_COLOR_ARRAY);
 
+ glutSwapBuffers();
+}
 
 
 void ResizeGLScene(int Width, int Height)
@@ -455,26 +413,33 @@ void KeyPressed(unsigned char key, int x, int y)
  else if (key == 'f') {
  yTranslate -= .1;
  }
+
  else if (key == 'm') {
- if (NumberToDraw * 2 <= Nc){NumberToDraw*=2 ;}
+ if (NumberToDraw * 2 <= Nc){NumberToDraw*=2 ;
+ChangeDraw();}
  }   
  else if (key == 'l') {
  NumberToDraw = NumberToDraw / 2;
+ChangeDraw();
  }   
 
 
 //Density Cuts
  else if (key == 'P') { 
  DensityCut *=1.1;
+ChangeDraw();
  }   
  else if (key == 'p') {
  DensityCut /=1.1;
+ChangeDraw();
  }   
  else if (key == 'O') { 
  DensityWidth *=1.1;
+ChangeDraw();
  }   
  else if (key == 'o') {
  DensityWidth /=1.1;
+ChangeDraw();
 }
 
 
@@ -483,23 +448,52 @@ void KeyPressed(unsigned char key, int x, int y)
  else if (key == 'D') { 
  if(Delaunay){Delaunay=0;}
  else{Delaunay=1;}
+ChangeDraw();
  }   
 
 
 //Spacial Cuts
  else if (key == 'C') {
  CUT += .01;
+ChangeDraw();
  }   
  else if (key == 'c') {
  CUT -= .01;
+ChangeDraw();
  }   
  else if (key == 'V') {
  WIDTH += .01;
+ChangeDraw();
  }   
  else if (key == 'v') {
  WIDTH -= .01;
+ChangeDraw();
  }   
 
+//ColorBar
+
+ else if (key == '[') {
+ COLORBAR += 1;
+Recolor();
+ }   
+ else if (key == ']') {
+ COLORBAR -= 1;
+Recolor();
+}
+
+
+
+//number keys for variables
+ else if (key == '0'){varC = 0; Recolor();}   
+ else if (key == '1'){varC = 1; Recolor();}   
+ else if (key == '2'){varC = 2; Recolor();}   
+ else if (key == '3'){varC = 3; Recolor();}   
+ else if (key == '4'){varC = 4; Recolor();}   
+ else if (key == '5'){varC = 5; Recolor();}   
+ else if (key == '6'){varC = 6; Recolor();}   
+ else if (key == '7'){varC = 7; Recolor();}   
+ else if (key == '8'){varC = 8; Recolor();}   
+ else if (key == '9'){varC = 9; Recolor();}   
 
  else if (key == 'F') {
    if (FullScreenMode) {
