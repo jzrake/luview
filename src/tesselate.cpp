@@ -33,6 +33,34 @@
 #include "luview.hpp"
 
 
+static void draw_cylinder(double *x0, double *x1, double rad0, double rad1)
+{
+  double r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
+  double mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+  r[0] /= mag;
+  r[1] /= mag;
+  r[2] /= mag;
+
+  double a[3], zhat[3] = { 0, 0, 1 };
+  a[0] = zhat[1]*r[2] - zhat[2]*r[1];
+  a[1] = zhat[2]*r[0] - zhat[0]*r[2];
+  a[2] = zhat[0]*r[1] - zhat[1]*r[0];
+
+  double angle = acos(r[2]) * 180.0 / M_PI;
+  //  printf("rotating by %f around (%f %f %f)\n", angle, a[0], a[1], a[2]);
+
+  glPushMatrix();
+  glTranslated(x0[0], x0[1], x0[2]);
+  glRotated(angle, a[0], a[1], a[2]);
+
+  GLUquadric *quad = gluNewQuadric();
+  gluCylinder(quad, rad0, rad1, mag, 10, 1);
+  gluDeleteQuadric(quad);
+
+  glPopMatrix();
+}
+
+
 Tesselation3D::Tesselation3D()
 {
   gl_modes.push_back(GL_LIGHTING);
@@ -183,33 +211,30 @@ void Tesselation3D::draw_local()
       if (e.v2 == -1) {
 	REAL *u = &out.vpointlist[3*e.v1];
 	REAL v[3] = {u[0] + e.vnormal[0], u[1] + e.vnormal[1], u[2] + e.vnormal[2]};
-	REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
 
+	/*
+	REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
 	glNormal3dv(normal);
 	glVertex3dv(u);
 	glVertex3dv(v);
+	*/
+
+	draw_cylinder(u, v, 0.02, 0.02);
       }
       else {
 	REAL *u = &out.vpointlist[3*e.v1];
 	REAL *v = &out.vpointlist[3*e.v2];
+	/*
 	REAL normal[3] = {u[0]-v[0], u[1]-v[1], u[2]-v[2]};
-
 	glNormal3dv(normal);
 	glVertex3dv(u);
 	glVertex3dv(v);
+	*/
+	draw_cylinder(u, v, 0.02, 0.02);
       }
     }
     glEnd();
 
-    /*
-    glPointSize(10.0);
-    glColor3d(0,0,1);
-    glBegin(GL_POINTS);
-    for (int n=0; n<out.numberofvpoints; ++n) {
-      glVertex3dv(&out.vpointlist[3*n]);
-    }
-    glEnd();
-    */
   }
 }
 
@@ -327,7 +352,7 @@ void Tesselation3D::compute_normal(double *u, double *v, double *w, double *n)
   pointlist[3*n + 1] =+0.5;
   pointlist[3*n + 2] =+0.5;
 */
-\
+
   /*
   double phi = (1.0 + sqrt(5.0)) / 2.0;
   n=0;

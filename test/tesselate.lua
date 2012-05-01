@@ -12,7 +12,7 @@ window:set_color(0.2, 0.2, 0.2)
 tess:set_color(0.2, 0.8, 0.2)
 tess:set_alpha(0.4)
 tess:set_linewidth(5.0)
-tess:set_scale(0.3, 0.3, 0.3)
+
 
 local shade = luview.ShaderProgram()
 utils.load_shader("lambertian", shade)
