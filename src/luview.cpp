@@ -967,10 +967,19 @@ private:
 
     int Np = cp->second->get_size(); // should return the number of segments
 
+    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
+    GLfloat mat_shininess[] = { 128.0 };
+
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
+
     for (int n=0; n<Np; ++n) {
       GLfloat *u = &verts[3*indices[2*n + 0]];
       GLfloat *v = &verts[3*indices[2*n + 1]];
-      draw_cylinder<GLfloat>(u, v, 0.03, 0.03);
+      draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
     }
   }
   template <class T> void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
@@ -993,7 +1002,7 @@ private:
     glRotated(angle, a[0], a[1], a[2]);
 
     GLUquadric *quad = gluNewQuadric();
-    gluCylinder(quad, rad0, rad1, mag, 6, 1);
+    gluCylinder(quad, rad0, rad1, mag, 72, 1);
     gluDeleteQuadric(quad);
 
     glPopMatrix();
