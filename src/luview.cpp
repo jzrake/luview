@@ -975,10 +975,25 @@ private:
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-    for (int n=0; n<Np; ++n) {
-      GLfloat *u = &verts[3*indices[2*n + 0]];
-      GLfloat *v = &verts[3*indices[2*n + 1]];
-      draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
+    int cyl=1;
+    if (cyl) {
+      for (int n=0; n<Np; ++n) {
+	GLfloat *u = &verts[3*indices[2*n + 0]];
+	GLfloat *v = &verts[3*indices[2*n + 1]];
+	draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
+      }
+    }
+    else {
+      glBegin(GL_LINES);
+      for (int n=0; n<Np; ++n) {
+	GLfloat *u = &verts[3*indices[2*n + 0]];
+	GLfloat *v = &verts[3*indices[2*n + 1]];
+	GLfloat n[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
+	glVertex3fv(u);
+	glVertex3fv(v);
+	glNormal3fv(n);
+      }
+      glEnd();
     }
   }
   template <class T> void draw_cylinder(T *x0, T *x1, T rad0, T rad1)

@@ -32,10 +32,22 @@
 #include "tetgen.h"
 #include "luview.hpp"
 
+static tetgenio inp, out;
 
 Tesselation3D::Tesselation3D()
 {
+  inp.initialize();
+  out.initialize();
 
+  //  inp.load_plc("/Users/jzrake/Work/luview/data/hinge", tetgenbehavior::MESH);
+  //  inp.load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
+  inp.load_node("/Users/jzrake/Work/luview/data/brain");
+
+  // z: number indices from zero
+  // v: generate voronoi
+  // Q: quiet
+  // ee: generate edges (NOTE: e -> subedges breaks)
+  tetrahedralize("zveeQ", &inp, &out);
 }
 
 Tesselation3D::~Tesselation3D()
@@ -61,7 +73,7 @@ GLfloat *Tesselation3D::get_data()
   if (!input) {
     return NULL;
   }
-  tetgenio inp, out;
+  /*
   inp.initialize();
   out.initialize();
 
@@ -76,6 +88,7 @@ GLfloat *Tesselation3D::get_data()
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("zveeQ", &inp, &out);
+  */
 
   // super returns these on get_size() and get_indices
   Np = out.numberofedges;
