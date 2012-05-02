@@ -72,11 +72,19 @@ std::vector<double> CallbackFunction::call_n(double *x, int narg,
 
 
 
-
-DataSource::DataSource() : input(NULL), output(NULL), transform(NULL) { }
+DataSource::DataSource(lua_State *L, int pos) : LuaCppObject(L, pos),
+						input(NULL),
+						output(NULL),
+						indices(NULL),
+						transform(NULL) { }
+DataSource::DataSource() : input(NULL),
+			   output(NULL),
+			   indices(NULL),
+			   transform(NULL) { }
 DataSource::~DataSource()
 {
   if (output) free(output);
+  if (indices) free(indices);
 }
 
 DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
@@ -480,12 +488,11 @@ public:
 class GridSource2D :  public DataSource
 {
 private:
-  GLfloat *output;
   int Nu, Nv;
   double u0, u1, v0, v1;
 
 public:
-  GridSource2D() : output(NULL)
+  GridSource2D()
   {
     u0 = -0.5;
     u1 =  0.5;
@@ -497,11 +504,7 @@ public:
 
     init_grid();
   }
-  ~GridSource2D()
-  {
-    free(output);
-  }
-  GLfloat *get_data() { return output; }
+
   virtual int get_num_points(int d)
   {
     switch (d) {
@@ -554,16 +557,14 @@ protected:
 } ;
 
 
-PointsSource::PointsSource() : output(NULL)
+
+PointsSource::PointsSource(lua_State *L, int pos) : DataSource(L, pos) { }
+PointsSource::PointsSource()
 {
   Np = 0;
   Nc = 0;
 }
-PointsSource::~PointsSource()
-{
-  if (output) free(output);
-}
-GLfloat *PointsSource::get_data() { return output; }
+
 int PointsSource::get_num_points(int d)
 {
   switch (d) {
@@ -922,6 +923,83 @@ private:
 
 
 
+class SegmentsEnsemble : public DrawableObject
+{
+public:
+  SegmentsEnsemble()
+  {
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_COLOR_MATERIAL);
+    gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
+  }
+private:
+  void draw_local()
+  {
+    EntryDS cp = DataSources.find("vertices");
+
+    if (cp == DataSources.end()) {
+      return;
+    }
+
+    if (cp->second->get_num_dimensions() != 1) {
+      luaL_error(__lua_state,
+                 "data source 'vertices' must be a list of points");
+    }
+    if (cp->second->get_num_components() != 3) {
+      printf("%d\n", cp->second->get_num_components());
+      luaL_error(__lua_state,
+                 "data source 'vertices' must provide 3 components "
+                 "(x,y,z)");
+    }
+
+    GLfloat *verts = cp->second->get_data();
+    GLuint *indices = cp->second->get_indices();
+
+    if (!verts) {
+      luaL_error(__lua_state, "data source 'vertices' returned no vertices");
+    }
+    if (!indices) {
+      luaL_error(__lua_state, "data source 'vertices' returned no indices");
+    }
+
+    int Np = cp->second->get_size(); // should return the number of segments
+
+    for (int n=0; n<Np; ++n) {
+      GLfloat *u = &verts[3*indices[2*n + 0]];
+      GLfloat *v = &verts[3*indices[2*n + 1]];
+      draw_cylinder<GLfloat>(u, v, 0.03, 0.03);
+    }
+  }
+  template <class T> void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
+  {
+    T r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
+    T mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+    r[0] /= mag;
+    r[1] /= mag;
+    r[2] /= mag;
+
+    T a[3], zhat[3] = { 0, 0, 1 };
+    a[0] = zhat[1]*r[2] - zhat[2]*r[1];
+    a[1] = zhat[2]*r[0] - zhat[0]*r[2];
+    a[2] = zhat[0]*r[1] - zhat[1]*r[0];
+
+    T angle = acos(r[2]) * 180.0 / M_PI;
+
+    glPushMatrix();
+    glTranslated(x0[0], x0[1], x0[2]);
+    glRotated(angle, a[0], a[1], a[2]);
+
+    GLUquadric *quad = gluNewQuadric();
+    gluCylinder(quad, rad0, rad1, mag, 6, 1);
+    gluDeleteQuadric(quad);
+
+    glPopMatrix();
+  }
+} ;
+
 
 extern "C" int luaopen_luview(lua_State *L)
 {
@@ -938,6 +1016,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<FunctionMapping>(L);
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);
+  LuaCppObject::Register<SegmentsEnsemble>(L);
 
   return 1;
 }
