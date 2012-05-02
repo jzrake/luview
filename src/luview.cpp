@@ -975,7 +975,6 @@ private:
     glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
     glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-
     for (int n=0; n<Np; ++n) {
       GLfloat *u = &verts[3*indices[2*n + 0]];
       GLfloat *v = &verts[3*indices[2*n + 1]];

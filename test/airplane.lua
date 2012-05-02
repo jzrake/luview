@@ -62,7 +62,7 @@ segments:set_data("vertices", tess)
 segments:set_shader(shade)
 segments:set_alpha(1.0)
 segments:set_color(0.7, 0.8, 0.9)
-segments:set_linewidth(2.0)
+segments:set_linewidth(0.5)
 segments:set_scale(0.5, 0.5, 0.75)
 
 window:set_color(0.2, 0.2, 0.2)

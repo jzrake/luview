@@ -88,10 +88,6 @@ GLfloat *Tesselation3D::get_data()
   for (int n=0; n<3*out.numberofpoints; ++n) {
     output[n] = out.pointlist[n];
   }
-
-  delete [] inp.pointlist;
-  inp.pointlist = NULL;
-
   return output;
 }
 
