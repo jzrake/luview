@@ -14,10 +14,9 @@
 #include <stdlib.h>
 #include <math.h>
 
-void get_rgb( double val , float * rp , float * gp , float * bp , int COLORBAR ){
+void get_rgb( double val , float * rp , float * gp , float * bp , int COLORBAR){
    
    double rrr,ggg,bbb;
-
    if( COLORBAR == 0 ){
       double nexp = 8.0;
       rrr = exp(-nexp*pow(val-5./6.,2.0)) + .25*exp(-nexp*pow(val+1./6.,2.0));
