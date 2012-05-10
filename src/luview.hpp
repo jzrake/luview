@@ -28,12 +28,15 @@ class DataSource : public LuaCppObject
 protected:
   DataSource *input;
   GLfloat *output;
+  GLuint *indices;
   CallbackFunction *transform;
 
 public:
+  DataSource(lua_State *L, int pos);
   DataSource();
   ~DataSource();
-  virtual GLfloat *get_data() = 0;
+  virtual GLfloat *get_data() { return output; }
+  virtual GLuint *get_indices() { return indices; }
   virtual int get_num_points(int d) = 0;
   virtual int get_size() = 0;
   virtual int get_num_components() = 0;
@@ -71,15 +74,12 @@ protected:
 
 class PointsSource :  public DataSource
 {
-private:
-  GLfloat *output;
+protected:
   int Np, Nc;
 
 public:
+  PointsSource(lua_State *L, int pos);
   PointsSource();
-  ~PointsSource();
-
-  GLfloat *get_data();
 
   int get_num_points(int d);
   int get_size();
@@ -89,6 +89,23 @@ public:
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_points_(lua_State *L);
+} ;
+
+
+class Tesselation3D : public PointsSource
+{
+public:
+  Tesselation3D();
+  ~Tesselation3D();
+
+  int get_num_points(int d);
+  int get_size();
+  int get_num_components();
+  int get_num_dimensions();
+
+  GLfloat *get_data();
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
 } ;
 
 
@@ -199,19 +216,6 @@ protected:
   static int _set_shader_(lua_State *L);
 } ;
 
-
-class Tesselation3D : public DrawableObject
-{
-  int Np;
-  double *pointlist;
-public:
-  Tesselation3D();
-  ~Tesselation3D();
-protected:
-  void draw_local();
-private:
-  void compute_normal(double *u, double *v, double *w, double *n);
-} ;
 
 
 

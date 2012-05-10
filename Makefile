@@ -131,7 +131,8 @@ H2 = numarray.h
 
 HEADERS = \
 	$(INSTALL_TOP)/include/$(H1) \
-	$(INSTALL_TOP)/include/$(H2)
+	$(INSTALL_TOP)/include/$(H2) \
+	$(INSTALL_TOP)/include/$(H3)
 
 config : 
 	@echo "CC           = $(CC)"
