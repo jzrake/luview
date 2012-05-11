@@ -11,6 +11,7 @@ local grid2d = luview.GridSource2D()
 local surface = luview.SurfaceNURBS()
 local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
+local image_src = luview.MultiImageSource()
 local image = luview.ImagePlane()
 local shader = luview.ShaderProgram()
 utils.load_shader("lambertian", shader)
@@ -37,6 +38,8 @@ local function cmap2(x,y,z)
    return math.exp(-a*(z-0.3)^b), math.exp(-a*(z-0.5)^b), math.exp(-a*(z-0.7)^b), 0.8
 end
 
+local rho = lunum.fromfile("/Users/jzrake/Work/luview/rho.bin"):reshape{1024,1024}
+image_src:set_array(rho)
 
 grid2d:set_num_points(128, 128)
 ctrlpnt:set_input(grid2d)

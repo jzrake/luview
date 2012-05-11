@@ -92,6 +92,25 @@ protected:
 } ;
 
 
+class MultiImageSource :  public DataSource
+{
+protected:
+  int Nx, Ny, Nc;
+
+public:
+  MultiImageSource();
+
+  int get_num_points(int d);
+  int get_size();
+  int get_num_components();
+  int get_num_dimensions();
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_array_(lua_State *L);
+} ;
+
+
 class Tesselation3D : public PointsSource
 {
 public:

@@ -605,6 +605,62 @@ int PointsSource::_set_points_(lua_State *L)
 }
 
 
+MultiImageSource::MultiImageSource()
+{
+  Nx = 0;
+  Ny = 0;
+  Nc = 0;
+}
+
+int MultiImageSource::get_num_points(int d)
+{
+  switch (d) {
+  case 0: return Nx;
+  case 1: return Ny;
+  default: return 0;
+  }
+}
+int MultiImageSource::get_size() { return Nx*Ny; }
+int MultiImageSource::get_num_components() { return Nc; }
+int MultiImageSource::get_num_dimensions() { return 2; }
+
+MultiImageSource::LuaInstanceMethod MultiImageSource::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_array"] = _set_array_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+}
+int MultiImageSource::_set_array_(lua_State *L)
+{
+  MultiImageSource *self = checkarg<MultiImageSource>(L, 1);
+  Array *A = lunum_checkarray1(L, 2);
+
+  if (A->dtype != ARRAY_TYPE_DOUBLE) {
+    luaL_error(L, "array must have type 'double'");
+  }
+  if (A->ndims == 2) {
+    self->Nx = A->shape[0];
+    self->Ny = A->shape[1];
+    self->Nc = 1;
+  }
+  else if (A->ndims == 3) {
+    self->Nx = A->shape[0];
+    self->Ny = A->shape[1];
+    self->Nc = A->shape[2];
+  }
+  else {
+    luaL_error(L, "array must have dimension 2 or 3");
+  }
+
+  int Nt = self->Nx * self->Ny * self->Nc;
+  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
+  for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
+
+  return 0;
+}
+
+
 
 
 int FunctionMapping::get_num_points(int d)
@@ -1109,6 +1165,7 @@ extern "C" int luaopen_luview(lua_State *L)
 
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<PointsSource>(L);
+  LuaCppObject::Register<MultiImageSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);

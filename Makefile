@@ -149,7 +149,7 @@ config :
 
 LUA_VERSION  = lua-5.2.0
 GLFW_VERSION = glfw-2.7.2
-LUNUM_BRANCH = luview
+LUNUM_BRANCH = master
 LUNUM_GIT    = git://github.com/jzrake/lunum.git
 SERVE_SRC    = http://zrake.webfactional.com/media
 
