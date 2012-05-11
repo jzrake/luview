@@ -94,6 +94,7 @@ DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
   attr["set_transform"] = _set_transform_;
   attr["get_input"] = _get_input_;
   attr["set_input"] = _set_input_;
+  attr["get_info"] = _get_info_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 int DataSource::_get_transform_(lua_State *L)
@@ -141,6 +142,28 @@ int DataSource::_set_input_(lua_State *L)
   self->input = checkarg<DataSource>(L, 2);
   return 0;
 }
+int DataSource::_get_info_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  std::string key = luaL_checkstring(L, 2);
+  std::map<std::string, double>::iterator val = self->info.find(key);
+
+  if (val != self->info.end()) {
+    lua_pushnumber(L, val->second);
+  }
+  else {
+    lua_pushnil(L);
+  }
+
+  return 1;
+}
+std::string DataSource::K(const char *s, int d)
+{
+  char res[256];
+  sprintf(res, "%s%d", s, d);
+  return res;
+}
+
 
 
 
@@ -657,6 +680,21 @@ int MultiImageSource::_set_array_(lua_State *L)
   self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
   for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
 
+  // ---------------------------------------------------------------------------
+  // Set up info dictionary
+  // ---------------------------------------------------------------------------
+  for (int d=0; d<self->Nc; ++d) {
+    double &xmax = self->info[self->K("max", d)];
+    double &xmin = self->info[self->K("min", d)];
+    xmin = +1e16;
+    xmax = -1e16;
+    for (int n=0; n<self->Nx*self->Ny; ++n) {
+      const GLfloat x = self->output[self->Nc*n + d];
+      if (x > xmax) xmax = x;
+      if (x < xmin) xmin = x;
+    }
+  }
+
   return 0;
 }
 
@@ -727,38 +765,6 @@ GLfloat *FunctionMapping::get_data()
   }
   return output;
 }
-std::string FunctionMapping::K(const char *s, int d)
-{
-  char res[256];
-  sprintf(res, "%s%d", s, d);
-  return res;
-}
-
-FunctionMapping::LuaInstanceMethod FunctionMapping::__getattr__
-(std::string &method_name)
-{
-  AttributeMap attr;
-  attr["get_info"] = _get_info_;
-  RETURN_ATTR_OR_CALL_SUPER(DataSource);
-}
-int FunctionMapping::_get_info_(lua_State *L)
-{
-  FunctionMapping *self = checkarg<FunctionMapping>(L, 1);
-  std::string key = luaL_checkstring(L, 2);
-  std::map<std::string, double>::iterator val = self->info.find(key);
-
-  if (val != self->info.end()) {
-    lua_pushnumber(L, val->second);
-  }
-  else {
-    lua_pushnil(L);
-  }
-
-  return 1;
-}
-
-
-
 
 
 class SurfaceNURBS : public DrawableObject

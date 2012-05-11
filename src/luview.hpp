@@ -30,6 +30,7 @@ protected:
   GLfloat *output;
   GLuint *indices;
   CallbackFunction *transform;
+  std::map<std::string, double> info;
 
 public:
   DataSource(lua_State *L, int pos);
@@ -48,27 +49,21 @@ protected:
   static int _set_transform_(lua_State *L);
   static int _get_input_(lua_State *L);
   static int _set_input_(lua_State *L);
+  static int _get_info_(lua_State *L);
+
+protected:
+  std::string K(const char *s, int d);
 } ;
 
 
 class FunctionMapping : public DataSource
 {
-private:
-  std::map<std::string, double> info;
-
 public:
   int get_num_points(int d);
   int get_size();
   int get_num_components();
   int get_num_dimensions();
   GLfloat *get_data();
-
-private:
-  std::string K(const char *s, int d);
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _get_info_(lua_State *L);
 } ;
 
 
