@@ -40,10 +40,10 @@ local actors = { image }
 
 while status == "continue" do
    status, key = window:render_scene(actors)
-   if tonumber(key) == 1 then
-      cmap:set_cmap(1)
+   if tonumber(key) then
+      cmap:set_cmap(tonumber(key))
       actors[1] = luview.ImagePlane()
-      image:set_data("rgba", scolors)
-      image:set_orientation(0,0,-90)
+      actors[1]:set_data("rgba", scolors)
+      actors[1]:set_orientation(0,0,-90)
    end
 end

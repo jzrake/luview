@@ -19,20 +19,9 @@ ColorMaps::ColorMaps() : cmap_id(0) { }
 
 std::vector<double> ColorMaps::call_priv(double *x, int narg)
 {
-  double z = x[0];
   std::vector<double> ret(4);
-
-  /*
-    double a = 50.0;
-    double b = 2.0;
-    ret[0] = exp(-a*pow(z-0.3, b));
-    ret[1] = exp(-a*pow(z-0.5, b));
-    ret[2] = exp(-a*pow(z-0.7, b));
-    ret[3] = 1.0;
-  */
-
   ret[3] = 1.0;
-  get_rgb(z, &ret[0], &ret[1], &ret[2], cmap_id);
+  get_rgb(x[0], &ret[0], &ret[1], &ret[2], cmap_id);
   return ret;
 }
 
@@ -156,6 +145,14 @@ void get_rgb( double val , double * rp , double * gp , double * bp , int COLORBA
     rrr = val;
     ggg = val;
     bbb = val;
+  }
+  else if (COLORBAR == 6) {
+    double a = 50.0;
+    double b = 2.0;
+    rrr = exp(-a*pow(val-0.3, b));
+    ggg = exp(-a*pow(val-0.5, b));
+    bbb = exp(-a*pow(val-0.7, b));
+
   }else{
     rrr = 1.0;
     ggg = 1.0;
@@ -165,6 +162,5 @@ void get_rgb( double val , double * rp , double * gp , double * bp , int COLORBA
   *rp = rrr;
   *gp = ggg;
   *bp = bbb;
-
 }
 

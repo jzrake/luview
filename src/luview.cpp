@@ -1183,7 +1183,6 @@ public:
   void draw_local()
   {
     if (first_call) {
-      printf("first call!\n");
       load_texture();
       first_call = 0;
     }
