@@ -73,7 +73,7 @@ GLfloat *Tesselation3D::get_data()
   if (!input) {
     return NULL;
   }
-  /*
+
   inp.initialize();
   out.initialize();
 
@@ -88,7 +88,7 @@ GLfloat *Tesselation3D::get_data()
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("zveeQ", &inp, &out);
-  */
+
 
   // super returns these on get_size() and get_indices
   Np = out.numberofedges;

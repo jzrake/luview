@@ -73,14 +73,14 @@ std::vector<double> CallbackFunction::call_n(double *x, int narg,
 
 
 DataSource::DataSource(lua_State *L, int pos) : LuaCppObject(L, pos),
-						input(NULL),
-						output(NULL),
-						indices(NULL),
-						transform(NULL) { }
+                                                input(NULL),
+                                                output(NULL),
+                                                indices(NULL),
+                                                transform(NULL) { }
 DataSource::DataSource() : input(NULL),
-			   output(NULL),
-			   indices(NULL),
-			   transform(NULL) { }
+                           output(NULL),
+                           indices(NULL),
+                           transform(NULL) { }
 DataSource::~DataSource()
 {
   if (output) free(output);
@@ -938,7 +938,7 @@ public:
 private:
   void draw_local()
   {
-    EntryDS cp = DataSources.find("vertices");
+    EntryDS cp = DataSources.find("image");
 
     if (cp == DataSources.end()) {
       return;
@@ -949,7 +949,6 @@ private:
                  "data source 'vertices' must be a list of points");
     }
     if (cp->second->get_num_components() != 3) {
-      printf("%d\n", cp->second->get_num_components());
       luaL_error(__lua_state,
                  "data source 'vertices' must provide 3 components "
                  "(x,y,z)");
@@ -978,20 +977,20 @@ private:
     int cyl=1;
     if (cyl) {
       for (int n=0; n<Np; ++n) {
-	GLfloat *u = &verts[3*indices[2*n + 0]];
-	GLfloat *v = &verts[3*indices[2*n + 1]];
-	draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
+        GLfloat *u = &verts[3*indices[2*n + 0]];
+        GLfloat *v = &verts[3*indices[2*n + 1]];
+        draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
       }
     }
     else {
       glBegin(GL_LINES);
       for (int n=0; n<Np; ++n) {
-	GLfloat *u = &verts[3*indices[2*n + 0]];
-	GLfloat *v = &verts[3*indices[2*n + 1]];
-	GLfloat n[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
-	glVertex3fv(u);
-	glVertex3fv(v);
-	glNormal3fv(n);
+        GLfloat *u = &verts[3*indices[2*n + 0]];
+        GLfloat *v = &verts[3*indices[2*n + 1]];
+        GLfloat n[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
+        glVertex3fv(u);
+        glVertex3fv(v);
+        glNormal3fv(n);
       }
       glEnd();
     }
@@ -1024,6 +1023,79 @@ private:
 } ;
 
 
+class ImagePlane : public DrawableObject
+{
+private:
+  GLuint TextureMap;
+  double Lx0, Lx1, Ly0, Ly1;
+
+public:
+  ImagePlane()
+  {
+    gl_modes.push_back(GL_TEXTURE_2D);
+    glGenTextures(1, &TextureMap);
+
+    Lx0 = -0.5;
+    Lx1 = +0.5;
+    Ly0 = -0.5;
+    Ly1 = +0.5;
+  }
+  ~ImagePlane()
+  {
+    glDeleteTextures(1, &TextureMap);
+  }
+  void load_texture()
+  {
+    EntryDS im = DataSources.find("rgba");
+
+    if (im == DataSources.end()) {
+      return;
+    }
+    if (im->second->get_num_dimensions() != 2) {
+      luaL_error(__lua_state,
+                 "data source 'rgba' must be a 2d array");
+    }
+    if (im->second->get_num_components() != 4) {
+      luaL_error(__lua_state,
+                 "data source 'rgba' must provide 4 components "
+                 "(r,g,b,a)");
+    }
+
+    GLfloat *rgba = im->second->get_data();
+    if (!rgba) {
+      luaL_error(__lua_state, "data source 'rgba' returned no data");
+    }
+
+    const int Nx = im->second->get_num_points(0);
+    const int Ny = im->second->get_num_points(1);
+
+    //    const int sx = 1; // apply to graphics card data, not input data
+    //    const int sy = Nx;
+
+    glBindTexture(GL_TEXTURE_2D, TextureMap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, 4, Nx, Ny, 0, GL_RGBA, GL_FLOAT, rgba);
+  }
+  void draw_local()
+  {
+    static int first_call = 1;
+    if (first_call) {
+      load_texture();
+      first_call = 0;
+    }
+    glBindTexture(GL_TEXTURE_2D, TextureMap);
+
+    glBegin(GL_QUADS);
+    glNormal3f(0, 0, 1);
+    glTexCoord2f(0, 0); glVertex3f(Lx0, Ly0, 0);
+    glTexCoord2f(0, 1); glVertex3f(Lx0, Ly1, 0);
+    glTexCoord2f(1, 1); glVertex3f(Lx1, Ly1, 0);
+    glTexCoord2f(1, 0); glVertex3f(Lx1, Ly0, 0);
+    glEnd();
+  }
+} ;
+
 extern "C" int luaopen_luview(lua_State *L)
 {
   lua_newtable(L);
@@ -1033,6 +1105,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<PointsEnsemble>(L);
+  LuaCppObject::Register<ImagePlane>(L);
 
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<PointsSource>(L);
