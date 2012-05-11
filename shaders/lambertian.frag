@@ -1,8 +1,11 @@
 
 varying vec3 normal;
 varying vec4 pos;
+//uniform sampler2D sampler01;
+//uniform sampler2D sampler02;
 
 void main() {
+  //  vec4 color = vec4(texture2D(sampler02, (gl_TexCoord[0].st)));
   vec4 color = gl_FrontMaterial.diffuse;
   vec4 matspec = gl_FrontMaterial.specular;
   float shininess = gl_FrontMaterial.shininess;

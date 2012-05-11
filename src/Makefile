@@ -3,7 +3,7 @@
 
 LUA = ../bin/lua
 LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
-OBJ = luview.o tesselate.o shader.o
+OBJ = luview.o tesselate.o shader.o colorbar.o
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 

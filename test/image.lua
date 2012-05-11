@@ -12,6 +12,7 @@ local image = luview.ImagePlane()
 local normalize = luview.GlobalLinearTransformation()
 local cmap = luview.ColorMaps()
 
+
 local rhoJ = lunum.fromfile("/Users/jzrake/Work/luview/data/rhoJ.bin"):reshape{1024,1024}
 local rhoZ = lunum.fromfile("/Users/jzrake/Work/luview/data/rhoZ.bin"):reshape{1024,1024}
 local rho = lunum.zeros{1024,1024}
@@ -32,4 +33,17 @@ image:set_orientation(0,0,-90)
 window:set_color(0.2, 0.2, 0.2)
 window:set_orientation(0,0,0)
 window:set_position(0,0,-1.4)
-while window:render_scene({image}) == "continue" do end
+
+local status = "continue"
+local key
+local actors = { image }
+
+while status == "continue" do
+   status, key = window:render_scene(actors)
+   if tonumber(key) == 1 then
+      cmap:set_cmap(1)
+      actors[1] = luview.ImagePlane()
+      image:set_data("rgba", scolors)
+      image:set_orientation(0,0,-90)
+   end
+end

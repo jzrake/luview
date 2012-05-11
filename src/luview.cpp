@@ -42,22 +42,6 @@ std::vector<double> CallbackFunction::call(std::vector<double> X)
   return call_priv(&X[0], X.size());
 }
 
-class ColorMaps : public CallbackFunction
-{
-  std::vector<double> call_priv(double *x, int narg)
-  {
-    double z = x[0];
-    double a = 50.0;
-    double b = 2.0;
-    std::vector<double> ret(4);
-    ret[0] = exp(-a*pow(z-0.3, b));
-    ret[1] = exp(-a*pow(z-0.5, b));
-    ret[2] = exp(-a*pow(z-0.7, b));
-    ret[3] = 0.8;
-    return ret;
-  }
-} ;
-
 LuaFunction::LuaFunction(lua_State *L, int pos) :
   CallbackFunction(L, pos) { }
 
@@ -294,7 +278,7 @@ DrawableObject::DrawableObject() : shader(NULL)
   GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
   GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
   GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-  GLfloat light_position[] = { 1.0, 1.0, 1.0, 0.0 };
+  GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
 
   glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
   glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
@@ -1142,17 +1126,25 @@ class ImagePlane : public DrawableObject
 private:
   GLuint TextureMap;
   double Lx0, Lx1, Ly0, Ly1;
+  int first_call;
 
 public:
   ImagePlane()
   {
     gl_modes.push_back(GL_TEXTURE_2D);
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_COLOR_MATERIAL);
+
     glGenTextures(1, &TextureMap);
 
     Lx0 = -0.5;
     Lx1 = +0.5;
     Ly0 = -0.5;
     Ly1 = +0.5;
+
+    first_call = 1;
   }
   ~ImagePlane()
   {
@@ -1161,10 +1153,10 @@ public:
   void load_texture()
   {
     EntryDS im = DataSources.find("rgba");
-
     if (im == DataSources.end()) {
       return;
     }
+
     if (im->second->get_num_dimensions() != 2) {
       luaL_error(__lua_state,
                  "data source 'rgba' must be a 2d array");
@@ -1183,9 +1175,6 @@ public:
     const int Nx = im->second->get_num_points(0);
     const int Ny = im->second->get_num_points(1);
 
-    //    const int sx = 1; // apply to graphics card data, not input data
-    //    const int sy = Nx;
-
     glBindTexture(GL_TEXTURE_2D, TextureMap);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1193,11 +1182,12 @@ public:
   }
   void draw_local()
   {
-    static int first_call = 1;
     if (first_call) {
+      printf("first call!\n");
       load_texture();
       first_call = 0;
     }
+
     glBindTexture(GL_TEXTURE_2D, TextureMap);
 
     glBegin(GL_QUADS);
