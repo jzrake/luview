@@ -30,7 +30,6 @@ protected:
   GLfloat *output;
   GLuint *indices;
   CallbackFunction *transform;
-  std::map<std::string, double> info;
 
 public:
   DataSource(lua_State *L, int pos);
@@ -49,10 +48,25 @@ protected:
   static int _set_transform_(lua_State *L);
   static int _get_input_(lua_State *L);
   static int _set_input_(lua_State *L);
-  static int _get_info_(lua_State *L);
+} ;
+
+
+class GlobalLinearTransformation : public DataSource
+{
+protected:
+  // map component index to min value for normalization
+  std::map<int, std::pair<double, double> > output_range;
+
+public:
+  virtual GLfloat *get_data();
+  virtual int get_num_points(int d);
+  virtual int get_size();
+  virtual int get_num_components();
+  virtual int get_num_dimensions();
 
 protected:
-  std::string K(const char *s, int d);
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_range_(lua_State *L);
 } ;
 
 
@@ -99,6 +113,7 @@ public:
   int get_size();
   int get_num_components();
   int get_num_dimensions();
+  void set_array(double *data, int nx, int ny, int nc);
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);

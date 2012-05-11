@@ -14,21 +14,10 @@ local scolors = luview.FunctionMapping()
 local image_src = luview.MultiImageSource()
 local image = luview.ImagePlane()
 local shader = luview.ShaderProgram()
+local normalize = luview.GlobalLinearTransformation()
 utils.load_shader("lambertian", shader)
 
 
-local function normalize_input(f)
-   local function g(z,caller)
---      print(z,caller)
-      if caller ~= nil then
-         local zmin=caller:get_info("min0")
-         local zmax=caller:get_info("max0")
-         z = (z - zmin) / (zmax - zmin)
-      end
-      return f(z)
-   end
-   return g
-end
 
 local time = 0.0
 local function stingray(u,v)
@@ -46,9 +35,8 @@ local function cmap1(z)
 end
 
 local function cmap2(z)
-   local a = 100.0
+   local a = 50.0
    local b = 2
---   print(z)
    return math.exp(-a*(z-0.3)^b), math.exp(-a*(z-0.5)^b), math.exp(-a*(z-0.7)^b), 0.8
 end
 
@@ -59,8 +47,12 @@ image_src:set_array(rho)
 --ctrlpnt:set_input(grid2d)
 --ctrlpnt:set_transform(stingray)
 --scolors:set_input(ctrlpnt)
-scolors:set_input(image_src)
-scolors:set_transform(normalize_input(cmap2))
+
+normalize:set_input(image_src)
+normalize:set_range(0, 0.0, 1.0)
+
+scolors:set_input(normalize)
+scolors:set_transform(cmap2)
 image:set_data("rgba", scolors)
 
 window:set_color(0.2, 0.2, 0.2)

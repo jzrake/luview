@@ -94,7 +94,6 @@ DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
   attr["set_transform"] = _set_transform_;
   attr["get_input"] = _get_input_;
   attr["set_input"] = _set_input_;
-  attr["get_info"] = _get_info_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 int DataSource::_get_transform_(lua_State *L)
@@ -142,30 +141,6 @@ int DataSource::_set_input_(lua_State *L)
   self->input = checkarg<DataSource>(L, 2);
   return 0;
 }
-int DataSource::_get_info_(lua_State *L)
-{
-  DataSource *self = checkarg<DataSource>(L, 1);
-  std::string key = luaL_checkstring(L, 2);
-  std::map<std::string, double>::iterator val = self->info.find(key);
-
-  if (val != self->info.end()) {
-    lua_pushnumber(L, val->second);
-  }
-  else {
-    lua_pushnil(L);
-  }
-
-  return 1;
-}
-std::string DataSource::K(const char *s, int d)
-{
-  char res[256];
-  sprintf(res, "%s%d", s, d);
-  return res;
-}
-
-
-
 
 LuviewTraitedObject::LuviewTraitedObject()
 {
@@ -646,6 +621,16 @@ int MultiImageSource::get_num_points(int d)
 int MultiImageSource::get_size() { return Nx*Ny; }
 int MultiImageSource::get_num_components() { return Nc; }
 int MultiImageSource::get_num_dimensions() { return 2; }
+void MultiImageSource::set_array(double *data, int nx, int ny, int nc)
+{
+  Nx = nx;
+  Ny = ny;
+  Nc = nc;
+
+  int Nt = Nx * Ny * Nc;
+  output = (GLfloat*) realloc(output, Nt*sizeof(double));
+  for (int i=0; i<Nt; ++i) output[i] = data[i];
+}
 
 MultiImageSource::LuaInstanceMethod MultiImageSource::__getattr__
 (std::string &method_name)
@@ -658,43 +643,25 @@ int MultiImageSource::_set_array_(lua_State *L)
 {
   MultiImageSource *self = checkarg<MultiImageSource>(L, 1);
   Array *A = lunum_checkarray1(L, 2);
+  int nx, ny, nc;
 
   if (A->dtype != ARRAY_TYPE_DOUBLE) {
     luaL_error(L, "array must have type 'double'");
   }
   if (A->ndims == 2) {
-    self->Nx = A->shape[0];
-    self->Ny = A->shape[1];
-    self->Nc = 1;
+    nx = A->shape[0];
+    ny = A->shape[1];
+    nc = 1;
   }
   else if (A->ndims == 3) {
-    self->Nx = A->shape[0];
-    self->Ny = A->shape[1];
-    self->Nc = A->shape[2];
+    nx = A->shape[0];
+    ny = A->shape[1];
+    nc = A->shape[2];
   }
   else {
     luaL_error(L, "array must have dimension 2 or 3");
   }
-
-  int Nt = self->Nx * self->Ny * self->Nc;
-  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
-  for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
-
-  // ---------------------------------------------------------------------------
-  // Set up info dictionary
-  // ---------------------------------------------------------------------------
-  for (int d=0; d<self->Nc; ++d) {
-    double &xmax = self->info[self->K("max", d)];
-    double &xmin = self->info[self->K("min", d)];
-    xmin = +1e16;
-    xmax = -1e16;
-    for (int n=0; n<self->Nx*self->Ny; ++n) {
-      const GLfloat x = self->output[self->Nc*n + d];
-      if (x > xmax) xmax = x;
-      if (x < xmin) xmin = x;
-    }
-  }
-
+  self->set_array((double*)A->data, nx, ny, nc);
   return 0;
 }
 
@@ -732,26 +699,11 @@ GLfloat *FunctionMapping::get_data()
   }
 
   int Nd_domain = input->get_num_components();
-  int Nd_range = this->get_num_components();
-  int nval_output = Nd_range * input->get_size();
+  int Nc = this->get_num_components();
+  int nval_output = Nc * input->get_size();
 
   output = (GLfloat*) realloc(output, nval_output*sizeof(GLfloat));
   GLfloat *domain = input->get_data();
-
-  // ---------------------------------------------------------------------------
-  // Set up info dictionary
-  // ---------------------------------------------------------------------------
-  for (int d=0; d<Nd_domain; ++d) {
-    double &xmax = info[K("max", d)];
-    double &xmin = info[K("min", d)];
-    xmin = +1e16;
-    xmax = -1e16;
-    for (int n=0; n<input->get_size(); ++n) {
-      const GLfloat x = domain[Nd_domain*n + d];
-      if (x > xmax) xmax = x;
-      if (x < xmin) xmin = x;
-    }
-  }
 
   for (int n=0; n<input->get_size(); ++n) {
 
@@ -759,11 +711,79 @@ GLfloat *FunctionMapping::get_data()
     std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
     std::vector<double> Y = transform->call_n(X, this);
 
-    for (int d=0; d<Nd_range; ++d) {
-      output[Nd_range*n + d] = Y[d];
+    for (int d=0; d<Nc; ++d) {
+      output[Nc*n + d] = Y[d];
     }
   }
   return output;
+}
+
+
+int GlobalLinearTransformation::get_num_points(int d)
+{
+  return input ? input->get_num_points(d) : 0;
+}
+int GlobalLinearTransformation::get_size()
+{
+  return input ? input->get_size() : 0;
+}
+int GlobalLinearTransformation::get_num_components()
+{
+  return input ? input->get_num_components() : 0;
+}
+int GlobalLinearTransformation::get_num_dimensions()
+{
+  return input ? input->get_num_dimensions() : 0;
+}
+GLfloat *GlobalLinearTransformation::get_data()
+// -----------------------------------------------------------------------------
+// Normalize data to target output range
+// -----------------------------------------------------------------------------
+{
+  if (input == NULL) return NULL;
+  int Nt = input->get_size();
+  int Nc = input->get_num_components();
+
+  GLfloat *idata = input->get_data();
+  output = (GLfloat*) realloc(output, Nt*Nc*sizeof(GLfloat));
+  memcpy(output, idata, Nt*Nc*sizeof(GLfloat));
+
+  for (int d=0; d<Nc; ++d) {
+    if (output_range.find(d) != output_range.end()) {
+      double x0 = output_range[d].first;
+      double x1 = output_range[d].second;
+      double xmin = +1e16;
+      double xmax = -1e16;
+      for (int n=0; n<Nt; ++n) {
+	const GLfloat x = output[Nc*n + d];
+	if (x > xmax) xmax = x;
+	if (x < xmin) xmin = x;
+      }
+      for (int n=0; n<Nt; ++n) {
+	output[Nc*n + d] -= xmin;
+	output[Nc*n + d] /= xmax - xmin;
+	output[Nc*n + d] *= x1 - x0;
+	output[Nc*n + d] += x0;
+      }
+    }
+  }
+  return output;
+}
+int GlobalLinearTransformation::_set_range_(lua_State *L)
+{
+  GlobalLinearTransformation *self = checkarg<GlobalLinearTransformation>(L, 1);
+  int comp = luaL_checkinteger(L, 2);
+  int y0 = luaL_checknumber(L, 3);
+  int y1 = luaL_checknumber(L, 4);
+  self->output_range[comp] = std::make_pair<double>(y0, y1);
+  return 0;
+}
+GlobalLinearTransformation::LuaInstanceMethod GlobalLinearTransformation::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_range"] = _set_range_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
 }
 
 
@@ -1173,6 +1193,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<PointsSource>(L);
   LuaCppObject::Register<MultiImageSource>(L);
   LuaCppObject::Register<FunctionMapping>(L);
+  LuaCppObject::Register<GlobalLinearTransformation>(L);
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<SegmentsEnsemble>(L);

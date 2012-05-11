@@ -12,6 +12,7 @@ local surface = luview.SurfaceNURBS()
 local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
 local shader = luview.ShaderProgram()
+local normalize = luview.GlobalLinearTransformation()
 utils.load_shader("lambertian", shader)
 
 
@@ -39,8 +40,12 @@ end
 ctrlpnt:set_input(grid2d)
 ctrlpnt:set_transform(stingray)
 
-scolors:set_input(ctrlpnt)
-scolors:set_transform(utils.normalize_input(cmap2))
+normalize:set_range(2, 0.0, 1.0)
+normalize:set_input(ctrlpnt)
+
+scolors:set_input(normalize)
+scolors:set_transform(cmap2)
+
 
 surface:set_data("control_points", ctrlpnt)
 surface:set_data("colors", scolors)
