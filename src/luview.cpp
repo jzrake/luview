@@ -18,45 +18,56 @@ extern "C" {
 
 
 
-
+CallbackFunction::CallbackFunction() { }
 CallbackFunction::CallbackFunction(lua_State *L, int pos) :
   LuaCppObject(L, pos) { }
 
 std::vector<double> CallbackFunction::call(double u)
 {
   double x[1] = {u};
-  return call_n(x, 1);
+  return call_priv(x, 1);
 }
 std::vector<double> CallbackFunction::call(double u, double v)
 {
   double x[2] = {u,v};
-  return call_n(x, 2);
+  return call_priv(x, 2);
 }
 std::vector<double> CallbackFunction::call(double u, double v, double w)
 {
   double x[3] = {u,v,w};
-  return call_n(x, 3);
+  return call_priv(x, 3);
 }
-std::vector<double> CallbackFunction::call_n(std::vector<double> X,
-                                             LuaCppObject *caller)
+std::vector<double> CallbackFunction::call(std::vector<double> X)
 {
-  return call_n(&X[0], X.size(), caller);
+  return call_priv(&X[0], X.size());
 }
-std::vector<double> CallbackFunction::call_n(double *x, int narg,
-                                             LuaCppObject *caller)
+
+class ColorMaps : public CallbackFunction
+{
+  std::vector<double> call_priv(double *x, int narg)
+  {
+    double z = x[0];
+    double a = 50.0;
+    double b = 2.0;
+    std::vector<double> ret(4);
+    ret[0] = exp(-a*pow(z-0.3, b));
+    ret[1] = exp(-a*pow(z-0.5, b));
+    ret[2] = exp(-a*pow(z-0.7, b));
+    ret[3] = 0.8;
+    return ret;
+  }
+} ;
+
+LuaFunction::LuaFunction(lua_State *L, int pos) :
+  CallbackFunction(L, pos) { }
+
+std::vector<double> LuaFunction::call_priv(double *x, int narg)
 {
   lua_State *L = __lua_state;
   std::vector<double> res;
   push_lua_refid(L, __refid, __REGCXX);
   for (int i=0; i<narg; ++i) {
     lua_pushnumber(L, x[i]);
-  }
-  // ---------------------------------------------------------------------------
-  // Append the caller as a Lua object to the argument list if it's given
-  // ---------------------------------------------------------------------------
-  if (caller != NULL) {
-    push_lua_obj(__lua_state, caller, __REGLUA);
-    ++narg;
   }
   if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
     luaL_error(L, lua_tostring(L, -1));
@@ -98,28 +109,38 @@ DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
 }
 int DataSource::_get_transform_(lua_State *L)
 {
+  // == FIXME ==
+  // disabled while object may not be in the __REGCXX table
+
+  /*
   DataSource *self = checkarg<DataSource>(L, 1);
-  if (self->transform == NULL) {
+  const char *name = luaL_checkstring(L, 2);
+  EntryCB val = self->Callbacks.find(name);
+
+  if (val == self->Callbacks.end()) {
     lua_pushnil(L);
   }
   else {
-    self->push_lua_obj(L, self->transform, __REGCXX);
+    self->push_lua_obj(L, val->second, __REGCXX);
   }
-  return 1;
+  */
+  return 0;
 }
 int DataSource::_set_transform_(lua_State *L)
 {
+  // == FIXME ==
+  // dealloc symentics are all wrong here
+
   DataSource *self = checkarg<DataSource>(L, 1);
+
   if (lua_type(L, 2) == LUA_TFUNCTION) {
-    if (self->transform) delete self->transform;
-    self->transform = new CallbackFunction(L, 2);
+    self->transform = new LuaFunction(L, 2);
   }
-  else if (lua_type(L, 2) == LUA_TNIL) {
-    if (self->transform) delete self->transform;
-    self->transform = NULL;
+  else if (lua_type(L, 2) == LUA_TUSERDATA) {
+    self->transform = checkarg<CallbackFunction>(L, 2);
   }
   else {
-    luaL_error(L, "requires either function or nil");
+    luaL_error(L, "requires a function");
   }
   return 0;
 }
@@ -188,6 +209,10 @@ LuviewTraitedObject::LuaInstanceMethod LuviewTraitedObject::__getattr__
 
 int LuviewTraitedObject::_get_Callback_(lua_State *L)
 {
+  // == FIXME ==
+  // disabled while object may not be in the __REGCXX table
+
+  /*
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
   EntryCB val = self->Callbacks.find(name);
@@ -198,20 +223,27 @@ int LuviewTraitedObject::_get_Callback_(lua_State *L)
   else {
     self->push_lua_obj(L, val->second, __REGCXX);
   }
-  return 1;
+  */
+  return 0;
 }
 int LuviewTraitedObject::_set_Callback_(lua_State *L)
 {
+  // == FIXME ==
+  // dealloc symentics are all wrong here
+
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
   EntryCB val = self->Callbacks.find(name);
 
   if (lua_type(L, 3) == LUA_TFUNCTION) {
-    if (val == self->Callbacks.end()) delete self->Callbacks[name];
-    self->Callbacks[name] = new CallbackFunction(L, 3);
+    //    if (val != self->Callbacks.end()) delete self->Callbacks[name];
+    self->Callbacks[name] = new LuaFunction(L, 3);
+  }
+  else if (lua_type(L, 3) == LUA_TUSERDATA) {
+    self->Callbacks[name] = checkarg<CallbackFunction>(L, 3);
   }
   else if (lua_type(L, 3) == LUA_TNIL && (val == self->Callbacks.end())) {
-    delete self->Callbacks[name];
+    //    delete self->Callbacks[name];
     self->Callbacks.erase(val);
   }
   else {
@@ -678,7 +710,7 @@ int FunctionMapping::get_size()
 }
 int FunctionMapping::get_num_components()
 {
-  return (transform && input) ? transform->call_n
+  return (transform && input) ? transform->call
     (std::vector<double>(input->get_num_components(), 0.0)).size() : 0;
 }
 int FunctionMapping::get_num_dimensions()
@@ -709,7 +741,7 @@ GLfloat *FunctionMapping::get_data()
 
     // Here we're loading data from the domain data into the argument vector
     std::vector<double> X(domain + Nd_domain*n, domain + Nd_domain*(n+1));
-    std::vector<double> Y = transform->call_n(X, this);
+    std::vector<double> Y = transform->call(X);
 
     for (int d=0; d<Nc; ++d) {
       output[Nc*n + d] = Y[d];
@@ -1188,6 +1220,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<PointsEnsemble>(L);
   LuaCppObject::Register<ImagePlane>(L);
+  LuaCppObject::Register<ColorMaps>(L);
 
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<PointsSource>(L);
@@ -1200,4 +1233,3 @@ extern "C" int luaopen_luview(lua_State *L)
 
   return 1;
 }
-

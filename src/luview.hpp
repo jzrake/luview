@@ -15,11 +15,22 @@ class CallbackFunction : public LuaCppObject
 {
 public:
   CallbackFunction(lua_State *L, int pos);
+  CallbackFunction();
   std::vector<double> call(double u);
   std::vector<double> call(double u, double v);
   std::vector<double> call(double u, double v, double w);
-  std::vector<double> call_n(std::vector<double> X, LuaCppObject *caller=NULL);
-  std::vector<double> call_n(double *x, int narg, LuaCppObject *caller=NULL);
+  std::vector<double> call(std::vector<double> X);
+private:
+  virtual std::vector<double> call_priv(double *x, int narg) = 0;
+} ;
+
+
+class LuaFunction : public CallbackFunction
+{
+public:
+  LuaFunction(lua_State *L, int pos);
+private:
+  virtual std::vector<double> call_priv(double *x, int narg);
 } ;
 
 
