@@ -97,12 +97,6 @@ protected:
     self->dig();
     return 0;
   }
-
-public:
-  static int new_lua_obj(lua_State *L)
-  {
-    return make_lua_obj(L, new Cat);
-  }
 } ;
 
 
@@ -117,10 +111,6 @@ public:
   {
     printf("eating %d rabbits...\n", number);
   }
-  static int new_lua_obj(lua_State *L)
-  {
-    return make_lua_obj(L, new Dog);
-  }
 } ;
 
 
@@ -134,10 +124,6 @@ public:
   void eat(int number)
   {
     printf("eating %d rabbits (with a cute haircut)...\n", number);
-  }
-  static int new_lua_obj(lua_State *L)
-  {
-    return make_lua_obj(L, new Poodle);
   }
 } ;
 
@@ -204,12 +190,6 @@ protected:
     PetOwner *self = checkarg<PetOwner>(L, 1);
     self->auto_cat();
     return 0;
-  }
-
-public:
-  static int new_lua_obj(lua_State *L)
-  {
-    return make_lua_obj(L, new PetOwner);
   }
 } ;
 
