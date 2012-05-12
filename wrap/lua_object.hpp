@@ -61,21 +61,16 @@ class LuaCppObject
   // created and will be deleted by C++ code. These objects are never returned
   // to Lua, and are thus never entered as a user data or receive a metatable.
   // ---------------------------------------------------------------------------
-
+  LuaCppObject(lua_State *L, int pos) : __refid(make_cpp_handle(L, pos)),
+					__lua_state(L) { }
+  virtual ~LuaCppObject() { }
   /*
-  LuaCppObject(lua_State *L, int pos) : __refid(make_refid(L, pos, __REGCXX)),
-					__lua_state(L),
-					__is_cxx_only(true) { }
-  */
-
-  virtual ~LuaCppObject()
   {
-    /*
     if (__is_cxx_only) {
       unmake_refid(__lua_state, __refid, __REGCXX);
     }
-    */
   }
+  */
 
   static void Init(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -99,7 +94,7 @@ class LuaCppObject
   // stack.
   // ---------------------------------------------------------------------------
   {
-    lua_pushcfunction(L, newobj<T>);
+    lua_pushcfunction(L, __new__<T>);
     lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
   }
 
@@ -108,7 +103,10 @@ protected:
   // =================================
   // U T I L I T Y   F U N C T I O N S
   // =================================
-  template <class T> static int newobj(lua_State *L)
+  template <class T> static int __new__(lua_State *L)
+  // ---------------------------------------------------------------------------
+  // This is the constructor which gets called from Lua code.
+  // ---------------------------------------------------------------------------
   {
     return make_lua_obj(L, new T);
   }
@@ -171,6 +169,12 @@ protected:
     lua_remove(L, -2);
   }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
+  // ---------------------------------------------------------------------------
+  // This function is responsible for creating a Lua userdata out of a C++
+  // object. It is invoked either indirectly by Lua code through object
+  // constructors, or indirectly by C++ code through create_and_hold. It returns
+  // 1, leaving the new userdata on the stack to be picked up by Lua.
+  // ---------------------------------------------------------------------------
   {
     LuaCppObject **place = (LuaCppObject**)
       lua_newuserdata(L, sizeof(LuaCppObject*));
@@ -202,38 +206,64 @@ protected:
 
     return 1;
   }
+
+  static int make_cpp_handle(lua_State *L, int pos)
+  // ---------------------------------------------------------------------------
+  // This function is responsible for creating a C++ object out of the Lua
+  // object at stack index `pos`. It is only invoked by C++ code indirectly
+  // through LuaCppObject::LuaCppObject(lua_State *L, int pos). Its main purpose
+  // is to facilitate the creation of C++ callback functions which invoke Lua
+  // functions, but it could also be used, for example, to wrap a Lua table with
+  // a C++ class. The function returns a refid (key into __REGLUA) whose value
+  // is the Lua object at stack index `pos`.
+  // ---------------------------------------------------------------------------
+  {
+    pos = lua_absindex(L, pos);
+    lua_getglobal(L, __REGLUA);
+    lua_pushvalue(L, pos);
+    int refid = luaL_ref(L, -2);
+    lua_pop(L, 1);
+    lua_remove(L, -2); // registry table
+    return refid;
+  }
   void hold(LuaCppObject *obj)
   {
-    lua_State *L = __lua_state;
-    push_lua_obj(L, this);
-    luaL_getmetafield(L, -1, "held_objects");
-    lua_remove(L, -2); // removes this
-    // now only this->metatable->held_objects table is above starting top
-
-    lua_pushnumber(L, obj->__refid); // key (obj's refid)
-    push_lua_obj(L, obj);  // value (obj's userdata on the stack)
-    lua_settable(L, -3); // pops the key and value
-    lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
+    _hold_or_drop(obj, 'h');
   }
   void drop(LuaCppObject *obj)
   {
-    lua_State *L = __lua_state;
-    push_lua_obj(L, this);
-    luaL_getmetafield(L, -1, "held_objects");
-    lua_remove(L, -2); // removes this
-    // now only this->metatable->held_objects table is above starting top
-
-    lua_pushnumber(L, obj->__refid); // key (obj's refid)
-    lua_pushnil(L); // held_objects[obj->__refid] = nil
-    lua_settable(L, -3); // pops the key and value
-    lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
+    _hold_or_drop(obj, 'd');
   }
   template <class T> T *create_and_hold()
   {
     T *thing = new T;
     make_lua_obj(__lua_state, thing);
     this->hold(thing);
+    lua_pop(__lua_state, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
+  }
+
+private:
+  void _hold_or_drop(LuaCppObject *obj, char op)
+  {
+    lua_State *L = __lua_state;
+    push_lua_obj(L, this);
+    luaL_getmetafield(L, -1, "held_objects");
+    lua_remove(L, -2); // removes this
+    // now only this->metatable->held_objects table is above starting top
+
+    lua_pushnumber(L, obj->__refid); // key (obj's refid)
+    if (op == 'h') {
+      // hold it
+      push_lua_obj(L, obj); // value (obj's userdata on the stack)
+    }
+    else if (op == 'd') {
+      // drop it
+      lua_pushnil(L); // held_objects[obj->__refid] = nil
+    }
+
+    lua_settable(L, -3); // pops the key and value
+    lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
   }
 
 #ifdef __GNUC__
