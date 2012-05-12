@@ -68,11 +68,14 @@ local function test_gc()
 end
 
 local function test_hold_drop()
+   local david = tests.PetOwner()
+
    local sadie = tests.Dog()
    local murphy = tests.Dog()
    local david = tests.PetOwner()
    local laura = tests.PetOwner()
 
+   david:auto_cat()
    david:set_dog(murphy)
    david:set_dog(sadie)
    sadie:set_owner(david)

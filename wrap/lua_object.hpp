@@ -148,14 +148,14 @@ protected:
     return refid;
   }
   */
-  static void unmake_refid(lua_State *L, int refid)
-  {
-    /*
+  /*
+    static void unmake_refid(lua_State *L, int refid)
+    {
     lua_getglobal(L, reg);
     luaL_unref(L, -1, refid);
     lua_pop(L, 1);
-    */
-  }
+    }
+  */
   /*
   static void push_lua_refid(lua_State *L, int refid, const char *reg)
   {
@@ -227,6 +227,13 @@ protected:
     lua_pushnil(L); // held_objects[obj->__refid] = nil
     lua_settable(L, -3); // pops the key and value
     lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
+  }
+  template <class T> T *create_and_hold()
+  {
+    T *thing = new T;
+    make_lua_obj(__lua_state, thing);
+    this->hold(thing);
+    return thing;
   }
 
 #ifdef __GNUC__

@@ -161,6 +161,11 @@ public:
     if (cat) drop(cat);
     hold(cat = _cat);
   }
+  void auto_cat()
+  {
+    cat = create_and_hold<Cat>();
+    cat->set_name("cleo-kitty");
+  }
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
@@ -170,6 +175,7 @@ protected:
     attr["set_dog"] = _set_dog_;
     attr["get_cat"] = _get_cat_;
     attr["get_dog"] = _get_dog_;
+    attr["auto_cat"] = _auto_cat_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   static int _set_dog_(lua_State *L) {
@@ -193,6 +199,11 @@ protected:
     PetOwner *self = checkarg<PetOwner>(L, 1);
     self->push_lua_obj(L, self->cat);
     return 1;
+  }
+  static int _auto_cat_(lua_State *L) {
+    PetOwner *self = checkarg<PetOwner>(L, 1);
+    self->auto_cat();
+    return 0;
   }
 
 public:
