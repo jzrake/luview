@@ -53,6 +53,7 @@ local function test_gc()
    things[4] = nil
 
    collectgarbage()
+   print("did it? ^^")
 
    things[1] = tests.Dog()
    things[2] = tests.Dog()
@@ -93,7 +94,18 @@ local function test_hold_drop()
    print("check what happened ^^")
 end
 
-test_hold_drop()
+
+local function test_callback()
+   local sadie = tests.Dog()
+   sadie:play()
+
+   local f = function() print("chasing rabbit!") end
+   sadie:teach_play(f)
+   sadie:play()
+end
+
+test_callback()
+--test_hold_drop()
 --test_casting()
 --test_method_calls()
 --test_gc()

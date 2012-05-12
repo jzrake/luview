@@ -20,6 +20,7 @@ extern "C" {
 #include "lauxlib.h"
 }
 
+#define __LDEBUG 1
 #define __REGLUA "LuaCppObject"
 
 // ---------------------------------------------------------------------------
@@ -61,8 +62,10 @@ class LuaCppObject
   // created and will be deleted by C++ code. These objects are never returned
   // to Lua, and are thus never entered as a user data or receive a metatable.
   // ---------------------------------------------------------------------------
-  LuaCppObject(lua_State *L, int pos) : __refid(make_cpp_handle(L, pos)),
-					__lua_state(L) { }
+
+  //  LuaCppObject(lua_State *L, int pos) : __refid(make_cpp_handle(L, pos)),
+  //					__lua_state(L) { }
+
   virtual ~LuaCppObject() { }
   /*
   {
@@ -133,41 +136,6 @@ protected:
     }
     return result;
   }
-  /*
-  static int make_refid(lua_State *L, int pos, const char *reg)
-  {
-    pos = lua_absindex(L, pos);
-
-    lua_getglobal(L, reg);
-    lua_pushvalue(L, pos);
-    int refid = luaL_ref(L, -2);
-    lua_pop(L, 1);
-    lua_remove(L, -2); // registry table
-    return refid;
-  }
-  */
-  /*
-    static void unmake_refid(lua_State *L, int refid)
-    {
-    lua_getglobal(L, reg);
-    luaL_unref(L, -1, refid);
-    lua_pop(L, 1);
-    }
-  */
-  /*
-  static void push_lua_refid(lua_State *L, int refid, const char *reg)
-  {
-    lua_getglobal(L, reg);
-    lua_rawgeti(L, -1, refid);
-    lua_remove(L, -2);
-  }
-  */
-  static void push_lua_obj(lua_State *L, LuaCppObject *object)
-  {
-    lua_getglobal(L, __REGLUA);
-    lua_rawgeti(L, -1, object->__refid);
-    lua_remove(L, -2);
-  }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
   // This function is responsible for creating a Lua userdata out of a C++
@@ -202,11 +170,12 @@ protected:
     object->__lua_state = L;
     lua_pop(L, 1);
 
-    printf("created object with refid %d\n", object->__refid);
+    if (__LDEBUG) {
+      printf("created object with refid %d\n", object->__refid);
+    }
 
     return 1;
   }
-
   static int make_cpp_handle(lua_State *L, int pos)
   // ---------------------------------------------------------------------------
   // This function is responsible for creating a C++ object out of the Lua
@@ -221,47 +190,95 @@ protected:
     pos = lua_absindex(L, pos);
     lua_getglobal(L, __REGLUA);
     lua_pushvalue(L, pos);
+
     int refid = luaL_ref(L, -2);
-    lua_pop(L, 1);
-    lua_remove(L, -2); // registry table
+    lua_pop(L, 2);
+
+    if (__LDEBUG) {
+      printf("created lua C++ handle with refid %d\n", refid);
+    }
     return refid;
-  }
-  void hold(LuaCppObject *obj)
-  {
-    _hold_or_drop(obj, 'h');
-  }
-  void drop(LuaCppObject *obj)
-  {
-    _hold_or_drop(obj, 'd');
   }
   template <class T> T *create_and_hold()
   {
+    lua_State *L = __lua_state;
     T *thing = new T;
-    make_lua_obj(__lua_state, thing);
+    make_lua_obj(L, thing);
     this->hold(thing);
-    lua_pop(__lua_state, 1); // make_lua_obj left `thing` on top of the stack
+    lua_pop(L, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
   }
 
-private:
-  void _hold_or_drop(LuaCppObject *obj, char op)
+public: // see if these can be made protected
+  void retrieve(LuaCppObject *object)
+  // ---------------------------------------------------------------------------
+  // Pushes the LuaCppObject associated with `object` on the stack
+  // ---------------------------------------------------------------------------
   {
     lua_State *L = __lua_state;
-    push_lua_obj(L, this);
+    lua_getglobal(L, __REGLUA);
+    lua_rawgeti(L, -1, object->__refid);
+    lua_remove(L, -2);
+  }
+  void retrieve(const char *key)
+  // ---------------------------------------------------------------------------
+  // Pushes the pure Lua object this->held_objects[key] onto the stack
+  // ---------------------------------------------------------------------------
+  {
+    lua_State *L = __lua_state;
+    retrieve(this);
     luaL_getmetafield(L, -1, "held_objects");
-    lua_remove(L, -2); // removes this
+    lua_remove(L, -2); // done with `this`
+    lua_getfield(L, -1, key);
+    lua_remove(L, -2); // done with this->held_objects
+  }
+  // ---------------------------------------------------------------------------
+  // Holds a C++ object, or a Lua object respectively.
+  // ---------------------------------------------------------------------------
+  void hold(LuaCppObject *obj)
+  {
+    retrieve(obj);
+    _hold_or_drop('h', obj->__refid, NULL);
+  }
+  void hold(int pos, const char *key)
+  {
+    lua_pushvalue(__lua_state, pos);
+    _hold_or_drop('h', LUA_NOREF, key);
+  }
+  // ---------------------------------------------------------------------------
+  // Drops a C++ object, or a Lua object respectively
+  // ---------------------------------------------------------------------------
+  void drop(LuaCppObject *obj)
+  {
+    _hold_or_drop('d', obj->__refid, NULL);
+  }
+  void drop(const char *key)
+  {
+    _hold_or_drop('d', LUA_NOREF, key);
+  }
+
+private:
+  void _hold_or_drop(char op, int refid, const char *key)
+  {
+    lua_State *L = __lua_state;
+    const int pos = lua_absindex(L, -1);
+    retrieve(this);
+    luaL_getmetafield(L, -1, "held_objects");
+    lua_remove(L, -2); // removes `this`
     // now only this->metatable->held_objects table is above starting top
 
-    lua_pushnumber(L, obj->__refid); // key (obj's refid)
-    if (op == 'h') {
-      // hold it
-      push_lua_obj(L, obj); // value (obj's userdata on the stack)
+    if (key == NULL) {
+      lua_pushnumber(L, refid); // key is obj's refid (for LuaCppObject's)
+    }
+    else {
+      lua_pushstring(L, key); // key is the string `key` (for pure Lua objects)
+    }
+    if (op == 'h') { // hold the Lua (or C++) object at stack index `pos`
+      lua_pushvalue(L, pos);
     }
     else if (op == 'd') {
-      // drop it
       lua_pushnil(L); // held_objects[obj->__refid] = nil
     }
-
     lua_settable(L, -3); // pops the key and value
     lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
   }

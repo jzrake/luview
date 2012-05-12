@@ -1,18 +1,51 @@
 
 
+#include <vector>
 #include "lua_object.hpp"
 
 
-class PetOwner;
 
+
+
+class CallbackFunction : public LuaCppObject
+{
+public:
+  std::vector<double> call(double u);
+  std::vector<double> call(double u, double v);
+  std::vector<double> call(double u, double v, double w);
+  std::vector<double> call(std::vector<double> X);
+private:
+  virtual std::vector<double> call_priv(double *x, int narg) = 0;
+} ;
+
+class LuaFunction : public CallbackFunction
+{
+private:
+  virtual std::vector<double> call_priv(double *x, int narg);
+} ;
+
+class ColorMaps : public CallbackFunction
+{
+private:
+  int cmap_id;
+  virtual std::vector<double> call_priv(double *x, int narg);
+public:
+  ColorMaps();
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_cmap_(lua_State *L);
+} ;
+
+class PetOwner;
 class Animal : public LuaCppObject
 {
 private:
   std::string given_name;
   PetOwner *owner;
+  CallbackFunction *play_func;
 
 public:
-  Animal() : given_name("noname"), owner(NULL) { }
+  Animal() : given_name("noname"), owner(NULL), play_func(NULL) { }
   virtual ~Animal() { }
 
   virtual void speak() = 0;
@@ -35,6 +68,8 @@ protected:
     attr["get_name"] = _get_name_;
     attr["set_name"] = _set_name_;
     attr["set_owner"] = _set_owner_;
+    attr["teach_play"] = _teach_play_;
+    attr["play"] = _play_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   static int _speak_(lua_State *L)
@@ -64,6 +99,8 @@ protected:
     return 0;
   }
   static int _set_owner_(lua_State *L);
+  static int _teach_play_(lua_State *L);
+  static int _play_(lua_State *L);
 } ;
 
 
@@ -178,12 +215,12 @@ protected:
   }
   static int _get_dog_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->push_lua_obj(L, self->dog);
+    self->retrieve(self->dog);
     return 1;
   }
   static int _get_cat_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->push_lua_obj(L, self->cat);
+    self->retrieve(self->cat);
     return 1;
   }
   static int _auto_cat_(lua_State *L) {
@@ -201,6 +238,71 @@ int Animal::_set_owner_(lua_State *L)
   if (self->owner) self->drop(self->owner);
   self->hold(self->owner = owner);
   return 0;
+}
+
+
+int Animal::_teach_play_(lua_State *L)
+{
+  Animal *self = checkarg<Animal>(L, 1);
+
+  if (self->play_func != NULL) self->drop(self->play_func);
+  self->play_func = self->create_and_hold<LuaFunction>();
+  self->play_func->hold(2, "lua_callback");
+
+}
+int Animal::_play_(lua_State *L)
+{
+  Animal *self = checkarg<Animal>(L, 1);
+  if (self->play_func == NULL) {
+    printf("don't know how ;(\n");
+  }
+  else {
+    self->play_func->call(0.0);
+  }
+  return 0;
+}
+
+
+
+
+std::vector<double> CallbackFunction::call(double u)
+{
+  double x[1] = {u};
+  return call_priv(x, 1);
+}
+std::vector<double> CallbackFunction::call(double u, double v)
+{
+  double x[2] = {u,v};
+  return call_priv(x, 2);
+}
+std::vector<double> CallbackFunction::call(double u, double v, double w)
+{
+  double x[3] = {u,v,w};
+  return call_priv(x, 3);
+}
+std::vector<double> CallbackFunction::call(std::vector<double> X)
+{
+  return call_priv(&X[0], X.size());
+}
+
+std::vector<double> LuaFunction::call_priv(double *x, int narg)
+{
+  lua_State *L = __lua_state;
+  std::vector<double> res;
+  retrieve("lua_callback");
+  for (int i=0; i<narg; ++i) {
+    lua_pushnumber(L, x[i]);
+  }
+  if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
+    luaL_error(L, lua_tostring(L, -1));
+  }
+  int nret = lua_gettop(L) - 2;
+  for (int i=0; i<nret; ++i) {
+    res.push_back(lua_tonumber(L, -1));
+    lua_pop(L, 1);
+  }
+  reverse(res.begin(), res.end());
+  return res;
 }
 
 
