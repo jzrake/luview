@@ -67,8 +67,30 @@ local function test_gc()
    end
 end
 
+local function test_hold_drop()
+   local sadie = tests.Dog()
+   local murphy = tests.Dog()
+   local david = tests.PetOwner()
+   local laura = tests.PetOwner()
 
+   david:set_dog(murphy)
+   david:set_dog(sadie)
+   sadie:set_owner(david)
 
-test_casting()
-test_method_calls()
-test_gc()
+   for k,v in pairs(getmetatable(david).held_objects) do print(k,v) end
+   for k,v in pairs(getmetatable(sadie).held_objects) do print(k,v) end
+
+   print("sadie, " .. sadie:get_refid() .. " should NOT be collected")
+   print("murphy, " .. murphy:get_refid() .. " should be collected")
+
+   murphy = nil
+   sadie = nil
+
+   collectgarbage()
+   print("check what happened ^^")
+end
+
+test_hold_drop()
+--test_casting()
+--test_method_calls()
+--test_gc()

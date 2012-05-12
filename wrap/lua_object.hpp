@@ -135,6 +135,7 @@ protected:
     }
     return result;
   }
+  /*
   static int make_refid(lua_State *L, int pos, const char *reg)
   {
     pos = lua_absindex(L, pos);
@@ -146,21 +147,28 @@ protected:
     lua_remove(L, -2); // registry table
     return refid;
   }
-  static void unmake_refid(lua_State *L, int refid, const char *reg)
+  */
+  static void unmake_refid(lua_State *L, int refid)
   {
+    /*
     lua_getglobal(L, reg);
     luaL_unref(L, -1, refid);
     lua_pop(L, 1);
+    */
   }
+  /*
   static void push_lua_refid(lua_State *L, int refid, const char *reg)
   {
     lua_getglobal(L, reg);
     lua_rawgeti(L, -1, refid);
     lua_remove(L, -2);
   }
-  static void push_lua_obj(lua_State *L, LuaCppObject *object, const char *reg)
+  */
+  static void push_lua_obj(lua_State *L, LuaCppObject *object)
   {
-    push_lua_refid(L, object->__refid, reg);
+    lua_getglobal(L, __REGLUA);
+    lua_rawgeti(L, -1, object->__refid);
+    lua_remove(L, -2);
   }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   {
@@ -190,25 +198,27 @@ protected:
     object->__lua_state = L;
     lua_pop(L, 1);
 
+    printf("created object with refid %d\n", object->__refid);
+
     return 1;
   }
   void hold(LuaCppObject *obj)
   {
     lua_State *L = __lua_state;
-    push_lua_obj(L, this, __REGLUA);
+    push_lua_obj(L, this);
     luaL_getmetafield(L, -1, "held_objects");
     lua_remove(L, -2); // removes this
     // now only this->metatable->held_objects table is above starting top
 
     lua_pushnumber(L, obj->__refid); // key (obj's refid)
-    push_lua_obj(L, obj, __REGLUA);  // value (obj's userdata on the stack)
+    push_lua_obj(L, obj);  // value (obj's userdata on the stack)
     lua_settable(L, -3); // pops the key and value
     lua_pop(L, 1); // removes this->metatable->held_objects, back to normal
   }
   void drop(LuaCppObject *obj)
   {
     lua_State *L = __lua_state;
-    push_lua_obj(L, this, __REGLUA);
+    push_lua_obj(L, this);
     luaL_getmetafield(L, -1, "held_objects");
     lua_remove(L, -2); // removes this
     // now only this->metatable->held_objects table is above starting top
@@ -325,7 +335,12 @@ protected:
   // ---------------------------------------------------------------------------
   {
     LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
-    unmake_refid(L, object->__refid, __REGLUA);
+
+    //    unmake_refid(L, object->__refid, __REGLUA);
+
+    lua_getglobal(L, __REGLUA);
+    luaL_unref(L, -1, object->__refid);
+    lua_pop(L, 1);
 
     printf("killing object with refid %d...\n", object->__refid);
 

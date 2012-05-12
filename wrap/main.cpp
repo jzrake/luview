@@ -2,13 +2,17 @@
 
 #include "lua_object.hpp"
 
+
+class PetOwner;
+
 class Animal : public LuaCppObject
 {
 private:
   std::string given_name;
+  PetOwner *owner;
 
 public:
-  Animal() : given_name("noname") { }
+  Animal() : given_name("noname"), owner(NULL) { }
   virtual ~Animal() { }
 
   virtual void speak() = 0;
@@ -30,6 +34,7 @@ protected:
     attr["eat"] = _eat_;
     attr["get_name"] = _get_name_;
     attr["set_name"] = _set_name_;
+    attr["set_owner"] = _set_owner_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   static int _speak_(lua_State *L)
@@ -58,6 +63,7 @@ protected:
     self->set_name(name);
     return 0;
   }
+  static int _set_owner_(lua_State *L);
 } ;
 
 
@@ -144,13 +150,16 @@ private:
   Cat *cat;
 
 public:
+  PetOwner() : dog(NULL), cat(NULL) { }
   void set_dog(Dog *_dog)
   {
-    dog = _dog;
+    if (dog) drop(dog);
+    hold(dog = _dog);
   }
   void set_cat(Cat *_cat)
   {
-    cat = _cat;
+    if (cat) drop(cat);
+    hold(cat = _cat);
   }
 
 protected:
@@ -165,22 +174,24 @@ protected:
   }
   static int _set_dog_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->set_dog(checkarg<Dog>(L, 2));
+    Dog *dog = checkarg<Dog>(L, 2);
+    self->set_dog(dog);
     return 0;
   }
   static int _set_cat_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->set_cat(checkarg<Cat>(L, 2));
+    Cat *cat = checkarg<Cat>(L, 2);
+    self->set_cat(cat);
     return 0;
   }
   static int _get_dog_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->push_lua_obj(L, self->dog, __REGLUA);
+    self->push_lua_obj(L, self->dog);
     return 1;
   }
   static int _get_cat_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
-    self->push_lua_obj(L, self->cat,  __REGLUA);
+    self->push_lua_obj(L, self->cat);
     return 1;
   }
 
@@ -192,9 +203,18 @@ public:
 } ;
 
 
+int Animal::_set_owner_(lua_State *L)
+{
+  Animal *self = checkarg<Animal>(L, 1);
+  PetOwner *owner = checkarg<PetOwner>(L, 2);
+  if (self->owner) self->drop(self->owner);
+  self->hold(self->owner = owner);
+  return 0;
+}
+
+
 int main()
 {
-
   lua_State *L = luaL_newstate();
   luaL_openlibs(L);
 
