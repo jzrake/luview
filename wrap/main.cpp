@@ -4,9 +4,6 @@
 #include "lua_object.hpp"
 
 
-
-
-
 class CallbackFunction : public LuaCppObject
 {
 public:
@@ -25,16 +22,15 @@ class LuaFunction : public CallbackFunction
 private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
+
 CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
 {
   if (lua_type(L, pos) == LUA_TUSERDATA) {
     return checkarg<CallbackFunction>(L, pos);
   }
   else {
-
     LuaFunction *f = create<LuaFunction>(L);
     f->hold(2, "lua_callback");
-
     return f;
   }
 }
@@ -260,15 +256,8 @@ int Animal::_set_owner_(lua_State *L)
 int Animal::_teach_play_(lua_State *L)
 {
   Animal *self = checkarg<Animal>(L, 1);
-
   if (self->play_func != NULL) self->drop(self->play_func);
-  self->play_func = CallbackFunction::create_from_stack(L, 2);
-  self->hold(self->play_func);
-  /*
-  self->create<LuaFunction>();
-  self->hold(self->play_func);
-  self->play_func->hold(2, "lua_callback");
-  */
+  self->hold(self->play_func = CallbackFunction::create_from_stack(L, 2));
 }
 
 int Animal::_play_(lua_State *L)

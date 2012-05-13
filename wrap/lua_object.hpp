@@ -56,24 +56,7 @@ class LuaCppObject
 
   LuaCppObject() : __refid(LUA_NOREF),
 		   __lua_state(NULL) { }
-
-  // ---------------------------------------------------------------------------
-  // This constructor is intended for C++ only methods, i.e. one which was
-  // created and will be deleted by C++ code. These objects are never returned
-  // to Lua, and are thus never entered as a user data or receive a metatable.
-  // ---------------------------------------------------------------------------
-
-  //  LuaCppObject(lua_State *L, int pos) : __refid(make_cpp_handle(L, pos)),
-  //					__lua_state(L) { }
-
   virtual ~LuaCppObject() { }
-  /*
-  {
-    if (__is_cxx_only) {
-      unmake_refid(__lua_state, __refid, __REGCXX);
-    }
-  }
-  */
 
   static void Init(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -87,9 +70,6 @@ class LuaCppObject
     lua_setfield(L, -2, "__mode");
     lua_setmetatable(L, -2);
     lua_setglobal(L, __REGLUA);
-
-    //    lua_newtable(L);
-    //    lua_setglobal(L, __REGCXX);
   }
   template <class T> static void Register(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -140,8 +120,8 @@ protected:
   // ---------------------------------------------------------------------------
   // This function is responsible for creating a Lua userdata out of a C++
   // object. It is invoked either indirectly by Lua code through object
-  // constructors, or indirectly by C++ code through create_and_hold. It returns
-  // 1, leaving the new userdata on the stack to be picked up by Lua.
+  // constructors, or indirectly by C++ code through create. It returns 1,
+  // leaving the new userdata on the stack to be picked up by Lua.
   // ---------------------------------------------------------------------------
   {
     LuaCppObject **place = (LuaCppObject**)
@@ -208,7 +188,7 @@ protected:
     return thing;
   }
 
-public: // see if these can be made protected
+protected:
   void retrieve(LuaCppObject *object)
   // ---------------------------------------------------------------------------
   // Pushes the LuaCppObject associated with `object` on the stack
@@ -264,8 +244,6 @@ private:
     retrieve(this);
     luaL_getmetafield(L, -1, "held_objects");
     lua_remove(L, -2); // removes `this`
-    // now only this->metatable->held_objects table is above starting top
-
     if (key == NULL) {
       lua_pushnumber(L, refid); // key is obj's refid (for LuaCppObject's)
     }
@@ -389,13 +367,13 @@ private:
   {
     LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
 
-    //    unmake_refid(L, object->__refid, __REGLUA);
-
     lua_getglobal(L, __REGLUA);
     luaL_unref(L, -1, object->__refid);
     lua_pop(L, 1);
 
-    printf("killing object with refid %d...\n", object->__refid);
+    if (__LDEBUG) {
+      printf("killing object with refid %d...\n", object->__refid);
+    }
 
     delete object;
     return 0;

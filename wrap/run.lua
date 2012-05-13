@@ -99,8 +99,7 @@ local function test_callback()
    local sadie = tests.Dog()
    sadie:play()
 
-   local f = function() print("chasing rabbit!") end
-   sadie:teach_play(f)
+   sadie:teach_play(function() print("chasing rabbit!") end)
    sadie:play()
 end
 
