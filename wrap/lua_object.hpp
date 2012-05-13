@@ -199,12 +199,11 @@ protected:
     }
     return refid;
   }
-  template <class T> T *create_and_hold()
+  template <class T> static T *create(lua_State *L)
   {
-    lua_State *L = __lua_state;
     T *thing = new T;
     make_lua_obj(L, thing);
-    this->hold(thing);
+    //    this->hold(thing);
     lua_pop(L, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
   }

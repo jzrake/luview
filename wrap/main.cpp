@@ -10,10 +10,12 @@
 class CallbackFunction : public LuaCppObject
 {
 public:
+  std::vector<double> call();
   std::vector<double> call(double u);
   std::vector<double> call(double u, double v);
   std::vector<double> call(double u, double v, double w);
   std::vector<double> call(std::vector<double> X);
+  static CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos);
 private:
   virtual std::vector<double> call_priv(double *x, int narg) = 0;
 } ;
@@ -23,6 +25,19 @@ class LuaFunction : public CallbackFunction
 private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
+CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
+{
+  if (lua_type(L, pos) == LUA_TUSERDATA) {
+    return checkarg<CallbackFunction>(L, pos);
+  }
+  else {
+
+    LuaFunction *f = create<LuaFunction>(L);
+    f->hold(2, "lua_callback");
+
+    return f;
+  }
+}
 
 class ColorMaps : public CallbackFunction
 {
@@ -186,7 +201,8 @@ public:
   }
   void auto_cat()
   {
-    cat = create_and_hold<Cat>();
+    cat = create<Cat>(__lua_state);
+    hold(cat);
     cat->set_name("cleo-kitty");
   }
 
@@ -246,10 +262,15 @@ int Animal::_teach_play_(lua_State *L)
   Animal *self = checkarg<Animal>(L, 1);
 
   if (self->play_func != NULL) self->drop(self->play_func);
-  self->play_func = self->create_and_hold<LuaFunction>();
+  self->play_func = CallbackFunction::create_from_stack(L, 2);
+  self->hold(self->play_func);
+  /*
+  self->create<LuaFunction>();
+  self->hold(self->play_func);
   self->play_func->hold(2, "lua_callback");
-
+  */
 }
+
 int Animal::_play_(lua_State *L)
 {
   Animal *self = checkarg<Animal>(L, 1);
@@ -257,7 +278,7 @@ int Animal::_play_(lua_State *L)
     printf("don't know how ;(\n");
   }
   else {
-    self->play_func->call(0.0);
+    self->play_func->call();
   }
   return 0;
 }
@@ -265,6 +286,10 @@ int Animal::_play_(lua_State *L)
 
 
 
+std::vector<double> CallbackFunction::call()
+{
+  return call_priv(NULL, 0);
+}
 std::vector<double> CallbackFunction::call(double u)
 {
   double x[1] = {u};
