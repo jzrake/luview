@@ -183,7 +183,6 @@ protected:
   {
     T *thing = new T;
     make_lua_obj(L, thing);
-    //    this->hold(thing);
     lua_pop(L, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
   }

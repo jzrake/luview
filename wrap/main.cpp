@@ -35,16 +35,14 @@ CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
   }
 }
 
-class ColorMaps : public CallbackFunction
+class CppFunction : public CallbackFunction
 {
 private:
-  int cmap_id;
-  virtual std::vector<double> call_priv(double *x, int narg);
-public:
-  ColorMaps();
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _set_cmap_(lua_State *L);
+  virtual std::vector<double> call_priv(double *x, int narg)
+  {
+    printf("calling the CppFunction!\n");
+    return std::vector<double>();
+  }
 } ;
 
 class PetOwner;
@@ -242,7 +240,6 @@ protected:
   }
 } ;
 
-
 int Animal::_set_owner_(lua_State *L)
 {
   Animal *self = checkarg<Animal>(L, 1);
@@ -252,12 +249,12 @@ int Animal::_set_owner_(lua_State *L)
   return 0;
 }
 
-
 int Animal::_teach_play_(lua_State *L)
 {
   Animal *self = checkarg<Animal>(L, 1);
   if (self->play_func != NULL) self->drop(self->play_func);
   self->hold(self->play_func = CallbackFunction::create_from_stack(L, 2));
+  return 0;
 }
 
 int Animal::_play_(lua_State *L)
@@ -333,6 +330,7 @@ int main()
   LuaCppObject::Register<Dog>(L);
   LuaCppObject::Register<Poodle>(L);
   LuaCppObject::Register<PetOwner>(L);
+  LuaCppObject::Register<CppFunction>(L);
   lua_setglobal(L, "tests");
 
   if (luaL_dofile(L, "run.lua")) {
