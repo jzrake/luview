@@ -132,12 +132,16 @@ protected:
 
     lua_pushcfunction(L, LuaCppObject::__index);
     lua_setfield(L, -2, "__index");
+    lua_pushcfunction(L, LuaCppObject::__newindex);
+    lua_setfield(L, -2, "__newindex");
     lua_pushcfunction(L, LuaCppObject::__tostring);
     lua_setfield(L, -2, "__tostring");
     lua_pushcfunction(L, LuaCppObject::__gc);
     lua_setfield(L, -2, "__gc");
     lua_newtable(L);
     lua_setfield(L, -2, "held_objects");
+    lua_newtable(L);
+    lua_setfield(L, -2, "lua_attributes");
 
     lua_setmetatable(L, -2);
 
@@ -294,7 +298,52 @@ private:
     ss<<"<"<<this->get_type()<<" instance at "<<this<<">";
     return ss.str();
   }
+  virtual int newindex()
+  {
+    lua_State *L = __lua_state;
+    luaL_getmetafield(L, 1, "lua_attributes");
+    lua_pushvalue(L, 2);
+    lua_pushvalue(L, 3);
+    lua_settable(L, -3);
 
+    return 0;
+  }
+  virtual int index()
+  // ---------------------------------------------------------------------------
+  // Arguments:
+  //
+  // (1) object: a user data pointing to a LuaCppObject
+  // (2) method_name: a string
+  //
+  // Returns: a static c-function which wraps the instance method
+  //
+  // ---------------------------------------------------------------------------
+  {
+    lua_State *L = __lua_state;
+    LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    std::string method_name = lua_tostring(L, 2);
+
+    luaL_getmetafield(L, 1, "lua_attributes");
+    lua_getfield(L, -1, method_name.c_str());
+
+    if (!lua_isnil(L, -1)) {
+      lua_remove(L, -2);
+      return 1;
+    }
+    else {
+      lua_pop(L, 2);
+    }
+
+    LuaInstanceMethod m = object->__getattr__(method_name);
+
+    if (m == NULL) {
+      luaL_error(L, "'%s' has no attribute '%s'", object->get_type().c_str(),
+                 method_name.c_str());
+    }
+
+    lua_pushcfunction(L, m);
+    return 1;
+  }
 
   // ===============================
   // I N S T A N C E   M E T H O D S
@@ -330,29 +379,15 @@ private:
   // M E T A M E T H O D S
   // =====================
 
-  static int __index(lua_State *L)
-  // ---------------------------------------------------------------------------
-  // Arguments:
-  //
-  // (1) object: a user data pointing to a LuaCppObject
-  // (2) method_name: a string
-  //
-  // Returns: a static c-function which wraps the instance method
-  //
-  // ---------------------------------------------------------------------------
+  static int __newindex(lua_State *L)
   {
-    LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
-    std::string method_name = lua_tostring(L, 2);
-
-    LuaInstanceMethod m = object->__getattr__(method_name);
-
-    if (m == NULL) {
-      luaL_error(L, "'%s' has no attribute '%s'", object->get_type().c_str(),
-                 method_name.c_str());
-    }
-
-    lua_pushcfunction(L, m);
-    return 1;
+    LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    return self->newindex();
+  }
+  static int __index(lua_State *L)
+  {
+    LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    return self->index();
   }
 
   static int __gc(lua_State *L)

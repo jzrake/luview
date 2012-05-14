@@ -111,7 +111,18 @@ local function test_callback()
    sadie:play()
 end
 
-test_callback()
+local function test_add_method()
+
+   local sadie = tests.Dog()
+   function sadie:run_around()
+      print("running aound! ok, playing...")
+      self:play()
+   end
+   sadie:run_around()
+end
+
+test_add_method()
+--test_callback()
 --test_hold_drop()
 --test_casting()
 --test_method_calls()
