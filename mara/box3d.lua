@@ -45,7 +45,7 @@ for _,v in pairs({"x", "y", "z"}) do
    image_src[v]:set_array(all_data[v])
    normalize[v]:set_input(image_src[v])
    scolors[v]:set_input(normalize[v])
-   scolors[v]:set_transform(function(z) return z,z,z,1 end)
+   scolors[v]:set_transform(cmap)
    image[v]:set_data("rgba", scolors[v])
    image[v]:set_alpha(1.0)
 end
