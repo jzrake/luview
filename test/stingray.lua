@@ -54,6 +54,7 @@ surface:set_color(1.0, 0.5, 0.3)
 
 window:set_color(0.2, 0.2, 0.2)
 box:set_color(0.5, 0.9, 0.9)
+box:set_shader(shader)
 
 local cycle = 0
 while window:render_scene({box, surface}) == "continue" do

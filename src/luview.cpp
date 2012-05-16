@@ -434,6 +434,33 @@ private:
   }
 
 private:
+  void TakeScreenshot(const char *basenm)
+  {
+    static int nframe = 0;
+    static char fname_ppm[512];
+    static char fname_png[512];
+    static char convert_cmd[512];
+    sprintf(fname_ppm, "%s-%04d.ppm", basenm, nframe);
+    sprintf(fname_png, "%s-%04d.png", basenm, nframe);
+    sprintf(convert_cmd, "convert %s %s; rm %s", fname_ppm, fname_png, fname_ppm);
+    printf("writing a screenshot to %s\n", fname_png);
+    ++nframe;
+
+    int dimx = WindowWidth;
+    int dimy = WindowHeight;
+    
+    size_t imsize = 3*dimx*dimy;
+    char *pixels = (char*) malloc(imsize*sizeof(char));
+    glReadPixels(0, 0, dimx, dimy, GL_RGB, GL_UNSIGNED_BYTE, pixels);
+    
+    FILE *fp = fopen(fname_ppm, "wb");
+    fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
+    fwrite(pixels, sizeof(char), imsize, fp);
+    fclose(fp);
+    system(convert_cmd);
+    free(pixels);
+  }
+
   static void KeyboardInput(int key, int state)
   {
     if (state != GLFW_PRESS) return;
@@ -452,6 +479,10 @@ private:
     double *Scale = CurrentWindow->Scale;
 
     switch (key) {
+    case 'p':
+      CurrentWindow->TakeScreenshot("screenshot");
+      break;
+
     case 'a': Position[0] += 0.1; break;
     case 'd': Position[0] -= 0.1; break;
 
@@ -472,6 +503,7 @@ protected:
   {
     AttributeMap attr;
     attr["render_scene"] = _render_scene_;
+    attr["print_screen"] = _print_screen_;
     RETURN_ATTR_OR_CALL_SUPER(LuviewTraitedObject);
   }
   static int _render_scene_(lua_State *L)
@@ -489,6 +521,13 @@ protected:
     lua_pushstring(L, self->render_scene(actors));
     lua_pushlstring(L, (char*)&self->character_input, 1);
     return 2;
+  }
+  static int _print_screen_(lua_State *L)
+  {
+    Window *self = checkarg<Window>(L, 1);
+    const char *basenm = luaL_optstring(L, 2, "screenshot");
+    self->TakeScreenshot(basenm);
+    return 0;
   }
 } ;
 Window *Window::CurrentWindow;

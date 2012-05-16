@@ -2,7 +2,6 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
-local util = require 'util'
 local utils = require 'test.utils'
 
 local window = luview.Window()
@@ -18,7 +17,7 @@ local image_src = { }
 local normalize = { }
 local scolors = { }
 
-local dsets = { "rho" }--, "pre", "vx", "vy", "vz" }
+local dsets = { "rho", "pre", "vx", "vy", "vz" }
 local all_data = { }
 
 for _,v in pairs({"x", "y", "z"}) do
@@ -46,7 +45,7 @@ for _,v in pairs({"x", "y", "z"}) do
    image_src[v]:set_array(all_data[v])
    normalize[v]:set_input(image_src[v])
    scolors[v]:set_input(normalize[v])
-   scolors[v]:set_transform(cmap)
+   scolors[v]:set_transform(function(z) return z,z,z,1 end)
    image[v]:set_data("rgba", scolors[v])
    image[v]:set_alpha(1.0)
 end
@@ -76,10 +75,10 @@ local function setup_light()
 end
 setup_light(light_inside)
 
-window:set_color(0.05, 0.05, 0.05)
+window:set_color(0,0,0)
 window:set_orientation(0,0,0)
 box:set_linewidth(0.6)
-box:set_color(0.5, 0.5, 0.5)
+box:set_color(1,0,0)
 box:set_shader(shader)
 box:set_alpha(1)
 
