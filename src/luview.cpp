@@ -97,16 +97,16 @@ int DataSource::_get_transform_(lua_State *L)
   // disabled while object may not be in the __REGCXX table
 
   /*
-  DataSource *self = checkarg<DataSource>(L, 1);
-  const char *name = luaL_checkstring(L, 2);
-  EntryCB val = self->Callbacks.find(name);
+    DataSource *self = checkarg<DataSource>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    EntryCB val = self->Callbacks.find(name);
 
-  if (val == self->Callbacks.end()) {
+    if (val == self->Callbacks.end()) {
     lua_pushnil(L);
-  }
-  else {
+    }
+    else {
     self->push_lua_obj(L, val->second, __REGCXX);
-  }
+    }
   */
   return 0;
 }
@@ -197,16 +197,16 @@ int LuviewTraitedObject::_get_Callback_(lua_State *L)
   // disabled while object may not be in the __REGCXX table
 
   /*
-  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-  const char *name = luaL_checkstring(L, 2);
-  EntryCB val = self->Callbacks.find(name);
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+    const char *name = luaL_checkstring(L, 2);
+    EntryCB val = self->Callbacks.find(name);
 
-  if (val == self->Callbacks.end()) {
+    if (val == self->Callbacks.end()) {
     lua_pushnil(L);
-  }
-  else {
+    }
+    else {
     self->push_lua_obj(L, val->second, __REGCXX);
-  }
+    }
   */
   return 0;
 }
@@ -275,7 +275,7 @@ DrawableObject::DrawableObject() : shader(NULL)
 {
   gl_modes.push_back(GL_DEPTH_TEST);
 
-  GLfloat light_ambient[] = { 0.0, 0.0, 0.0, 1.0 };
+  GLfloat light_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
   GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
   GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
   GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
@@ -346,8 +346,8 @@ private:
   static Window *CurrentWindow;
 
 public:
-  Window() : WindowWidth(1200),
-             WindowHeight(1024), character_input(0)
+  Window() : WindowWidth(1024),
+             WindowHeight(768), character_input(0)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
@@ -368,7 +368,7 @@ private:
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, (float) WindowWidth / WindowHeight, 0.1, 100.0);
+    gluPerspective(45.0, WindowWidth/WindowHeight, 0.01, 100.0);
     glMatrixMode(GL_MODELVIEW);
 
     glfwSetKeyCallback(KeyboardInput);
@@ -771,15 +771,15 @@ GLfloat *GlobalLinearTransformation::get_data()
       double xmin = +1e16;
       double xmax = -1e16;
       for (int n=0; n<Nt; ++n) {
-	const GLfloat x = output[Nc*n + d];
-	if (x > xmax) xmax = x;
-	if (x < xmin) xmin = x;
+        const GLfloat x = output[Nc*n + d];
+        if (x > xmax) xmax = x;
+        if (x < xmin) xmin = x;
       }
       for (int n=0; n<Nt; ++n) {
-	output[Nc*n + d] -= xmin;
-	output[Nc*n + d] /= xmax - xmin;
-	output[Nc*n + d] *= x1 - x0;
-	output[Nc*n + d] += x0;
+        output[Nc*n + d] -= xmin;
+        output[Nc*n + d] /= xmax - xmin;
+        output[Nc*n + d] *= x1 - x0;
+        output[Nc*n + d] += x0;
       }
     }
   }
@@ -1126,7 +1126,7 @@ class ImagePlane : public DrawableObject
 private:
   GLuint TextureMap;
   double Lx0, Lx1, Ly0, Ly1;
-  int first_call;
+  int staged;
 
 public:
   ImagePlane()
@@ -1144,7 +1144,7 @@ public:
     Ly0 = -0.5;
     Ly1 = +0.5;
 
-    first_call = 1;
+    staged = 1;
   }
   ~ImagePlane()
   {
@@ -1182,9 +1182,9 @@ public:
   }
   void draw_local()
   {
-    if (first_call) {
+    if (staged) {
       load_texture();
-      first_call = 0;
+      staged = 0;
     }
 
     glBindTexture(GL_TEXTURE_2D, TextureMap);
@@ -1196,6 +1196,20 @@ public:
     glTexCoord2f(1, 1); glVertex3f(Lx1, Ly1, 0);
     glTexCoord2f(1, 0); glVertex3f(Lx1, Ly0, 0);
     glEnd();
+  }
+
+protected:
+  LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["stage"] = _stage_;
+    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+  }
+  static int _stage_(lua_State *L)
+  {
+    ImagePlane *self = checkarg<ImagePlane>(L, 1);
+    self->staged = 1;
+    return 0;
   }
 } ;
 

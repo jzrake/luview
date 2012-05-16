@@ -187,12 +187,25 @@ protected:
     return __set_vec__(L, self->prop, 3);                               \
   }                                                                     \
   // ---------------------------------------------------------------------------
+#define GETSET_TRAITS_D4(prop)						\
+  static int _get_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __get_vec__(L, self->prop, 4);                               \
+  }                                                                     \
+  static int _set_##prop##_(lua_State *L) {				\
+    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
+    lua_remove(L, 1);                                                   \
+    return __set_vec__(L, self->prop, 4);                               \
+  }                                                                     \
+  // ---------------------------------------------------------------------------
+
 
 class LuviewTraitedObject : public LuaCppObject
 {
 protected:
   double Position[3];
-  double Orientation[3];
+  double Orientation[4];
   double Color[3];
   double Scale[3];
   double LineWidth;
