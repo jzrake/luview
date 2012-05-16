@@ -17,6 +17,32 @@ extern "C" {
 }
 
 
+template <class T> static void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
+{
+  T r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
+  T mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+  r[0] /= mag;
+  r[1] /= mag;
+  r[2] /= mag;
+
+  T a[3], zhat[3] = { 0, 0, 1 };
+  a[0] = zhat[1]*r[2] - zhat[2]*r[1];
+  a[1] = zhat[2]*r[0] - zhat[0]*r[2];
+  a[2] = zhat[0]*r[1] - zhat[1]*r[0];
+
+  T angle = acos(r[2]) * 180.0 / M_PI;
+
+  glPushMatrix();
+  glTranslated(x0[0], x0[1], x0[2]);
+  glRotated(angle, a[0], a[1], a[2]);
+
+  GLUquadric *quad = gluNewQuadric();
+  gluCylinder(quad, rad0, rad1, mag, 72, 1);
+  gluDeleteQuadric(quad);
+
+  glPopMatrix();
+}
+
 
 CallbackFunction::CallbackFunction() { }
 CallbackFunction::CallbackFunction(lua_State *L, int pos) :
@@ -471,28 +497,66 @@ Window *Window::CurrentWindow;
 class BoundingBox : public DrawableObject
 {
 public:
+  BoundingBox()
+  {
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_COLOR_MATERIAL);
+    gl_modes.push_back(GL_AUTO_NORMAL);
+    gl_modes.push_back(GL_NORMALIZE);
+  }
   void draw_local()
   {
-    glBegin(GL_LINES);
-    // x-edges
-    glVertex3f(-0.5, -0.5, -0.5); glVertex3f(+0.5, -0.5, -0.5);
-    glVertex3f(-0.5, -0.5, +0.5); glVertex3f(+0.5, -0.5, +0.5);
-    glVertex3f(-0.5, +0.5, -0.5); glVertex3f(+0.5, +0.5, -0.5);
-    glVertex3f(-0.5, +0.5, +0.5); glVertex3f(+0.5, +0.5, +0.5);
+    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
+    GLfloat mat_shininess[] = { 128.0 };
 
-    // y-edges
-    glVertex3f(-0.5, -0.5, -0.5); glVertex3f(-0.5, +0.5, -0.5);
-    glVertex3f(+0.5, -0.5, -0.5); glVertex3f(+0.5, +0.5, -0.5);
-    glVertex3f(-0.5, -0.5, +0.5); glVertex3f(-0.5, +0.5, +0.5);
-    glVertex3f(+0.5, -0.5, +0.5); glVertex3f(+0.5, +0.5, +0.5);
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
 
-    // z-edges
-    glVertex3f(-0.5, -0.5, -0.5); glVertex3f(-0.5, -0.5, +0.5);
-    glVertex3f(-0.5, +0.5, -0.5); glVertex3f(-0.5, +0.5, +0.5);
-    glVertex3f(+0.5, -0.5, -0.5); glVertex3f(+0.5, -0.5, +0.5);
-    glVertex3f(+0.5, +0.5, -0.5); glVertex3f(+0.5, +0.5, +0.5);
+    GLfloat x0[3], x1[3];
+    GLfloat lw = LineWidth * 0.01;
 
-    glEnd();
+    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
+    x1[0] = +0.5; x1[1] = -0.5; x1[2] = -0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
+    x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
+    x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = -0.5; x0[1] = +0.5; x0[2] = +0.5;
+    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+
+    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
+    x1[0] = -0.5; x1[1] = +0.5; x1[2] = -0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
+    x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
+    x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = +0.5; x0[1] = -0.5; x0[2] = +0.5;
+    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+
+    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
+    x1[0] = -0.5; x1[1] = -0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
+    x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
+    x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
+    x0[0] = +0.5; x0[1] = +0.5; x0[2] = -0.5;
+    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
+    draw_cylinder<GLfloat>(x0, x1, lw, lw);
   }
 } ;
 
@@ -1091,31 +1155,6 @@ private:
       }
       glEnd();
     }
-  }
-  template <class T> void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
-  {
-    T r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-    T mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
-    r[0] /= mag;
-    r[1] /= mag;
-    r[2] /= mag;
-
-    T a[3], zhat[3] = { 0, 0, 1 };
-    a[0] = zhat[1]*r[2] - zhat[2]*r[1];
-    a[1] = zhat[2]*r[0] - zhat[0]*r[2];
-    a[2] = zhat[0]*r[1] - zhat[1]*r[0];
-
-    T angle = acos(r[2]) * 180.0 / M_PI;
-
-    glPushMatrix();
-    glTranslated(x0[0], x0[1], x0[2]);
-    glRotated(angle, a[0], a[1], a[2]);
-
-    GLUquadric *quad = gluNewQuadric();
-    gluCylinder(quad, rad0, rad1, mag, 72, 1);
-    gluDeleteQuadric(quad);
-
-    glPopMatrix();
   }
 } ;
 

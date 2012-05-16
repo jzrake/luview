@@ -3,11 +3,13 @@
 local luview = require 'luview'
 local lunum = require 'lunum'
 local util = require 'util'
+local utils = require 'test.utils'
 
 local window = luview.Window()
 local cmap = luview.ColorMaps()
 local box = luview.BoundingBox()
-
+local shader = luview.ShaderProgram()
+utils.load_shader("lambertian", shader)
 
 h5_open_file(cmdline.args[1], "r")
 
@@ -16,7 +18,7 @@ local image_src = { }
 local normalize = { }
 local scolors = { }
 
-local dsets = { "rho", "pre", "vx", "vy", "vz" }
+local dsets = { "rho" }--, "pre", "vx", "vy", "vz" }
 local all_data = { }
 
 for _,v in pairs({"x", "y", "z"}) do
@@ -73,12 +75,13 @@ local function setup_light()
    end
 end
 setup_light(light_inside)
-cmap:set_component(0)
 
-window:set_color(0.1, 0.1, 0.1)
+window:set_color(0.05, 0.05, 0.05)
 window:set_orientation(0,0,0)
-box:set_linewidth(2)
-box:set_color(0,0,0)
+box:set_linewidth(0.6)
+box:set_color(0.5, 0.5, 0.5)
+box:set_shader(shader)
+box:set_alpha(1)
 
 local status = "continue"
 local key
