@@ -37,12 +37,14 @@ class ColorMaps : public CallbackFunction
 {
 private:
   int cmap_id;
+  int var_index;
   virtual std::vector<double> call_priv(double *x, int narg);
 public:
   ColorMaps();
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_cmap_(lua_State *L);
+  static int _set_component_(lua_State *L);
 } ;
 
 class DataSource : public LuaCppObject

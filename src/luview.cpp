@@ -612,7 +612,7 @@ int PointsSource::_set_points_(lua_State *L)
   int Nt = A->shape[0]*A->shape[1];
   self->Np = A->shape[0];
   self->Nc = A->shape[1];
-  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(double));
+  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(GLfloat));
   for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
 
   return 0;
@@ -644,7 +644,7 @@ void MultiImageSource::set_array(double *data, int nx, int ny, int nc)
   Nc = nc;
 
   int Nt = Nx * Ny * Nc;
-  output = (GLfloat*) realloc(output, Nt*sizeof(double));
+  output = (GLfloat*) realloc(output, Nt*sizeof(GLfloat));
   for (int i=0; i<Nt; ++i) output[i] = data[i];
 }
 
@@ -680,7 +680,6 @@ int MultiImageSource::_set_array_(lua_State *L)
   self->set_array((double*)A->data, nx, ny, nc);
   return 0;
 }
-
 
 
 
@@ -757,12 +756,12 @@ GLfloat *GlobalLinearTransformation::get_data()
 // -----------------------------------------------------------------------------
 {
   if (input == NULL) return NULL;
-  int Nt = input->get_size();
+  int Nz = input->get_size();
   int Nc = input->get_num_components();
 
   GLfloat *idata = input->get_data();
-  output = (GLfloat*) realloc(output, Nt*Nc*sizeof(GLfloat));
-  memcpy(output, idata, Nt*Nc*sizeof(GLfloat));
+  output = (GLfloat*) realloc(output, Nz*Nc*sizeof(GLfloat));
+  memcpy(output, idata, Nz*Nc*sizeof(GLfloat));
 
   for (int d=0; d<Nc; ++d) {
     if (output_range.find(d) != output_range.end()) {
@@ -770,12 +769,12 @@ GLfloat *GlobalLinearTransformation::get_data()
       double x1 = output_range[d].second;
       double xmin = +1e16;
       double xmax = -1e16;
-      for (int n=0; n<Nt; ++n) {
+      for (int n=0; n<Nz; ++n) {
         const GLfloat x = output[Nc*n + d];
         if (x > xmax) xmax = x;
         if (x < xmin) xmin = x;
       }
-      for (int n=0; n<Nt; ++n) {
+      for (int n=0; n<Nz; ++n) {
         output[Nc*n + d] -= xmin;
         output[Nc*n + d] /= xmax - xmin;
         output[Nc*n + d] *= x1 - x0;

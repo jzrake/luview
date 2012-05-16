@@ -15,13 +15,17 @@
 
 static void get_rgb(double val, double *rp ,double *gp, double *bp, int COLORBAR);
 
-ColorMaps::ColorMaps() : cmap_id(0) { }
+ColorMaps::ColorMaps() : cmap_id(0), var_index(0) { }
 
 std::vector<double> ColorMaps::call_priv(double *x, int narg)
 {
+  double z = 0.0;
   std::vector<double> ret(4);
-  ret[3] = 1.0;
-  get_rgb(x[0], &ret[0], &ret[1], &ret[2], cmap_id);
+  if (var_index < narg) {
+    z = x[var_index];
+  }
+  ret[3] = 1.0; // alpha
+  get_rgb(z, &ret[0], &ret[1], &ret[2], cmap_id);
   return ret;
 }
 
@@ -30,6 +34,7 @@ ColorMaps::LuaInstanceMethod ColorMaps::__getattr__
 {
   AttributeMap attr;
   attr["set_cmap"] = _set_cmap_;
+  attr["set_component"] = _set_component_;
   RETURN_ATTR_OR_CALL_SUPER(CallbackFunction);
 }
 int ColorMaps::_set_cmap_(lua_State *L)
@@ -39,6 +44,14 @@ int ColorMaps::_set_cmap_(lua_State *L)
   printf("using cmap %d\n", self->cmap_id);
   return 0;
 }
+int ColorMaps::_set_component_(lua_State *L)
+{
+  ColorMaps *self = checkarg<ColorMaps>(L, 1);
+  self->var_index = luaL_checkinteger(L, 2);
+  printf("mapping colors over component %d\n", self->var_index);
+  return 0;
+}
+
 
 
 void get_rgb( double val , double * rp , double * gp , double * bp , int COLORBAR)
