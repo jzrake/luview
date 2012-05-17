@@ -44,7 +44,7 @@ local function waterwave(u,v)
    return u, v, z
 end
 
-grid2d:set_num_points(24, 24)
+grid2d:set_num_points(20, 20)
 ctrlpnt:set_input(grid2d)
 ctrlpnt:set_transform(waterwave)
 
@@ -55,6 +55,7 @@ surface:set_shader(shader)
 
 box:set_color(0.6, 0.6, 0.6)
 box:set_position(0.0, -0.5, 0.0)
+box:set_shader(shader)
 
 window:set_color(0.2, 0.2, 0.2)
 window:set_orientation(45, 0, 0)

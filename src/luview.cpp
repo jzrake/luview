@@ -1026,7 +1026,7 @@ private:
   }
   void draw_local()
   {
-    EntryDS cp = DataSources.find("control_points");
+    EntryDS cp = DataSources.find("points");
     EntryDS cm = DataSources.find("colors");
 
     if (cp == DataSources.end()) {
@@ -1038,11 +1038,11 @@ private:
 
     if (cp->second->get_num_dimensions() != 1) {
       luaL_error(__lua_state,
-                 "data source 'control_points' must be a list of points");
+                 "data source 'points' must be a list of points");
     }
     if (cp->second->get_num_components() != 3) {
       luaL_error(__lua_state,
-                 "data source 'control_points' must provide 3 components "
+                 "data source 'points' must provide 3 components "
                  "(x,y,z)");
     }
 
@@ -1266,6 +1266,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<SegmentsEnsemble>(L);
+
+  LuaCppObject::Register<NbodySimulation>(L);
 
   return 1;
 }

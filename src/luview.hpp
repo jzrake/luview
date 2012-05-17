@@ -184,25 +184,25 @@ protected:
 
 
 // ---------------------------------------------------------------------------
-#define GETSET_TRAITS_D1(prop)						\
-  static int _get_##prop##_(lua_State *L) {				\
+#define GETSET_TRAITS_D1(prop)                                          \
+  static int _get_##prop##_(lua_State *L) {                             \
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
     lua_remove(L, 1);                                                   \
     return __get_vec__(L, &self->prop, 1);                              \
   }                                                                     \
-  static int _set_##prop##_(lua_State *L) {				\
+  static int _set_##prop##_(lua_State *L) {                             \
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
     lua_remove(L, 1);                                                   \
     return __set_vec__(L, &self->prop, 1);                              \
   }                                                                     \
   // ---------------------------------------------------------------------------
-#define GETSET_TRAITS_D3(prop)						\
-  static int _get_##prop##_(lua_State *L) {				\
+#define GETSET_TRAITS_D3(prop)                                          \
+  static int _get_##prop##_(lua_State *L) {                             \
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
     lua_remove(L, 1);                                                   \
     return __get_vec__(L, self->prop, 3);                               \
   }                                                                     \
-  static int _set_##prop##_(lua_State *L) {				\
+  static int _set_##prop##_(lua_State *L) {                             \
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
     lua_remove(L, 1);                                                   \
     return __set_vec__(L, self->prop, 3);                               \
@@ -291,5 +291,42 @@ protected:
 
 
 
+class NbodySimulation : public DataSource
+{
+public:
+  NbodySimulation();
+  void advance();
+
+  int get_num_points(int d) { return NumberOfParticles; }
+  int get_size() { return NumberOfParticles; }
+  int get_num_components() { return 3; }
+  int get_num_dimensions() { return 1; }
+
+private:
+  int NumberOfParticles;
+  double TimeStep;
+  struct MassiveParticle
+  {
+    int id;
+    double m;
+    double x[3], v[3], a[3];
+  } ;
+
+  struct MassiveParticle *particles;
+  void init_particles();
+
+  void ComputeForces(struct MassiveParticle *P0, int N);
+  void ComputeForces2(struct MassiveParticle *P0, int N);
+  void MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt);
+  void MoveParticlesRK2(struct MassiveParticle *P0, int N, double dt);
+  void MoveParticlesRK4(struct MassiveParticle *P0, int N, double dt);
+  void (*MoveParticles)(struct MassiveParticle *P0, int N, double dt);
+
+  double RandomDouble(double a, double b);
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _advance_(lua_State *L);
+} ;
 
 #endif // __LuviewObjects_HEADER__
