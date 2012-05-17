@@ -18,7 +18,7 @@ local image_src = { }
 local normalize = { }
 local scolors = { }
 
-local dsets = { "rho", "pre", "vx", "vy", "vz" }
+local dsets = {"Bx"}--"rho", "pre", "vx", "vy", "vz" }
 local all_data = { }
 
 for _,v in pairs({"x", "y", "z"}) do

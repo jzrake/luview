@@ -44,10 +44,31 @@ template <class T> static void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
 }
 
 
-CallbackFunction::CallbackFunction() { }
-CallbackFunction::CallbackFunction(lua_State *L, int pos) :
-  LuaCppObject(L, pos) { }
-
+CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
+{
+  if (lua_type(L, pos) == LUA_TUSERDATA) {
+    return checkarg<CallbackFunction>(L, pos);
+  }
+  else {
+    LuaFunction *f = create<LuaFunction>(L);
+    f->hold(2, "lua_callback");
+    return f;
+  }
+}
+int CallbackFunction::_call()
+{
+  lua_State *L = __lua_state;
+  int narg = lua_gettop(L);
+  std::vector<double> args;
+  for (int n=1; n<=narg; ++n) {
+    args.push_back(lua_tonumber(L, n));
+  }
+  std::vector<double> res = call(args);
+  for (unsigned int n=0; n<res.size(); ++n) {
+    lua_pushnumber(L, res[n]);
+  }
+  return res.size();
+}
 std::vector<double> CallbackFunction::call(double u)
 {
   double x[1] = {u};
@@ -68,21 +89,19 @@ std::vector<double> CallbackFunction::call(std::vector<double> X)
   return call_priv(&X[0], X.size());
 }
 
-LuaFunction::LuaFunction(lua_State *L, int pos) :
-  CallbackFunction(L, pos) { }
-
 std::vector<double> LuaFunction::call_priv(double *x, int narg)
 {
   lua_State *L = __lua_state;
   std::vector<double> res;
-  push_lua_refid(L, __refid, __REGCXX);
+  int nstart = lua_gettop(L);
+  retrieve("lua_callback");
   for (int i=0; i<narg; ++i) {
     lua_pushnumber(L, x[i]);
   }
   if (lua_pcall(L, narg, LUA_MULTRET, 0) != 0) {
     luaL_error(L, lua_tostring(L, -1));
   }
-  int nret = lua_gettop(L) - 2;
+  int nret = lua_gettop(L) - nstart;
   for (int i=0; i<nret; ++i) {
     res.push_back(lua_tonumber(L, -1));
     lua_pop(L, 1);
@@ -92,12 +111,6 @@ std::vector<double> LuaFunction::call_priv(double *x, int narg)
 }
 
 
-
-DataSource::DataSource(lua_State *L, int pos) : LuaCppObject(L, pos),
-                                                input(NULL),
-                                                output(NULL),
-                                                indices(NULL),
-                                                transform(NULL) { }
 DataSource::DataSource() : input(NULL),
                            output(NULL),
                            indices(NULL),
@@ -119,57 +132,27 @@ DataSource::LuaInstanceMethod DataSource::__getattr__(std::string &method_name)
 }
 int DataSource::_get_transform_(lua_State *L)
 {
-  // == FIXME ==
-  // disabled while object may not be in the __REGCXX table
-
-  /*
-    DataSource *self = checkarg<DataSource>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-    EntryCB val = self->Callbacks.find(name);
-
-    if (val == self->Callbacks.end()) {
-    lua_pushnil(L);
-    }
-    else {
-    self->push_lua_obj(L, val->second, __REGCXX);
-    }
-  */
-  return 0;
+  DataSource *self = checkarg<DataSource>(L, 1);
+  self->retrieve(self->transform);
+  return 1;
 }
 int DataSource::_set_transform_(lua_State *L)
 {
-  // == FIXME ==
-  // dealloc symentics are all wrong here
-
   DataSource *self = checkarg<DataSource>(L, 1);
-
-  if (lua_type(L, 2) == LUA_TFUNCTION) {
-    self->transform = new LuaFunction(L, 2);
-  }
-  else if (lua_type(L, 2) == LUA_TUSERDATA) {
-    self->transform = checkarg<CallbackFunction>(L, 2);
-  }
-  else {
-    luaL_error(L, "requires a function");
-  }
+  CallbackFunction *newcb = CallbackFunction::create_from_stack(L, 2);
+  self->transform = self->replace(self->transform, newcb);
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-
-  if (self->input == NULL) {
-    lua_pushnil(L);
-  }
-  else {
-    self->push_lua_obj(L, self->input, __REGLUA);
-  }
+  self->retrieve(self->input);
   return 1;
 }
 int DataSource::_set_input_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-  self->input = checkarg<DataSource>(L, 2);
+  self->input = self->replace(self->input, 2);
   return 0;
 }
 
@@ -219,60 +202,35 @@ LuviewTraitedObject::LuaInstanceMethod LuviewTraitedObject::__getattr__
 
 int LuviewTraitedObject::_get_Callback_(lua_State *L)
 {
-  // == FIXME ==
-  // disabled while object may not be in the __REGCXX table
-
-  /*
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
-    const char *name = luaL_checkstring(L, 2);
-    EntryCB val = self->Callbacks.find(name);
-
-    if (val == self->Callbacks.end()) {
-    lua_pushnil(L);
-    }
-    else {
-    self->push_lua_obj(L, val->second, __REGCXX);
-    }
-  */
-  return 0;
-}
-int LuviewTraitedObject::_set_Callback_(lua_State *L)
-{
-  // == FIXME ==
-  // dealloc symentics are all wrong here
-
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
   EntryCB val = self->Callbacks.find(name);
-
-  if (lua_type(L, 3) == LUA_TFUNCTION) {
-    //    if (val != self->Callbacks.end()) delete self->Callbacks[name];
-    self->Callbacks[name] = new LuaFunction(L, 3);
-  }
-  else if (lua_type(L, 3) == LUA_TUSERDATA) {
-    self->Callbacks[name] = checkarg<CallbackFunction>(L, 3);
-  }
-  else if (lua_type(L, 3) == LUA_TNIL && (val == self->Callbacks.end())) {
-    //    delete self->Callbacks[name];
-    self->Callbacks.erase(val);
+  if (val == self->Callbacks.end()) {
+    lua_pushnil(L);
   }
   else {
-    luaL_error(L, "requires either function or nil");
+    self->retrieve(val->second);
   }
+  return 1;
+}
+int LuviewTraitedObject::_set_Callback_(lua_State *L)
+{
+  LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
+  const char *name = luaL_checkstring(L, 2);
+  CallbackFunction *newcb = CallbackFunction::create_from_stack(L, 3);
+  self->Callbacks[name] = self->replace(self->Callbacks[name], newcb);
   return 0;
 }
 int LuviewTraitedObject::_get_DataSource_(lua_State *L)
 {
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
-
   EntryDS val = self->DataSources.find(name);
-
   if (val == self->DataSources.end()) {
     lua_pushnil(L);
   }
   else {
-    self->push_lua_obj(L, val->second, __REGLUA);
+    self->retrieve(val->second);
   }
   return 1;
 }
@@ -280,7 +238,7 @@ int LuviewTraitedObject::_set_DataSource_(lua_State *L)
 {
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
-  self->DataSources[name] = checkarg<DataSource>(L, 3);
+  self->DataSources[name] = self->replace(self->DataSources[name], 3);
   return 0;
 }
 
@@ -352,14 +310,13 @@ DrawableObject::LuaInstanceMethod DrawableObject::__getattr__
 int DrawableObject::_get_shader_(lua_State *L)
 {
   DrawableObject *self = checkarg<DrawableObject>(L, 1);
-  push_lua_obj(L, self->shader, __REGLUA);
+  self->retrieve(self->shader);
   return 1;
 }
 int DrawableObject::_set_shader_(lua_State *L)
 {
   DrawableObject *self = checkarg<DrawableObject>(L, 1);
-  ShaderProgram *shader = checkarg<ShaderProgram>(L, 2);
-  self->shader = shader;
+  self->shader = self->replace(self->shader, 2);
   return 0;
 }
 
@@ -674,8 +631,6 @@ protected:
 } ;
 
 
-
-PointsSource::PointsSource(lua_State *L, int pos) : DataSource(L, pos) { }
 PointsSource::PointsSource()
 {
   Np = 0;

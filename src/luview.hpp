@@ -14,21 +14,19 @@ extern "C" {
 class CallbackFunction : public LuaCppObject
 {
 public:
-  CallbackFunction(lua_State *L, int pos);
-  CallbackFunction();
+  std::vector<double> call();
   std::vector<double> call(double u);
   std::vector<double> call(double u, double v);
   std::vector<double> call(double u, double v, double w);
   std::vector<double> call(std::vector<double> X);
+  static CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos);
 private:
   virtual std::vector<double> call_priv(double *x, int narg) = 0;
+  int _call();
 } ;
-
 
 class LuaFunction : public CallbackFunction
 {
-public:
-  LuaFunction(lua_State *L, int pos);
 private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
@@ -78,7 +76,6 @@ protected:
   CallbackFunction *transform;
 
 public:
-  DataSource(lua_State *L, int pos);
   DataSource();
   ~DataSource();
   virtual GLfloat *get_data() { return output; }
@@ -209,18 +206,6 @@ protected:
     LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
     lua_remove(L, 1);                                                   \
     return __set_vec__(L, self->prop, 3);                               \
-  }                                                                     \
-  // ---------------------------------------------------------------------------
-#define GETSET_TRAITS_D4(prop)						\
-  static int _get_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __get_vec__(L, self->prop, 4);                               \
-  }                                                                     \
-  static int _set_##prop##_(lua_State *L) {				\
-    LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);    \
-    lua_remove(L, 1);                                                   \
-    return __set_vec__(L, self->prop, 4);                               \
   }                                                                     \
   // ---------------------------------------------------------------------------
 
