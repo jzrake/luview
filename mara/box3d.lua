@@ -5,7 +5,8 @@ local lunum = require 'lunum'
 local utils = require 'test.utils'
 
 local window = luview.Window()
-local cmap = luview.ColorMaps()
+--local cmap = luview.TessColormaps()
+local cmap = luview.MatplotlibColormaps()
 local box = luview.BoundingBox()
 local shader = luview.ShaderProgram()
 utils.load_shader("lambertian", shader)
@@ -90,6 +91,12 @@ while status == "continue" do
    status, key = window:render_scene(actors)
    if tonumber(key) then
       cmap:set_cmap(tonumber(key))
+      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
+   elseif key == 'k' then
+      cmap:next_colormap()
+      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
+   elseif key == 'j' then
+      cmap:prev_colormap()
       for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
    elseif key == 'v' then
       cmap_comp = cmap_comp + 1

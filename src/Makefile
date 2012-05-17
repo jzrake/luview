@@ -3,12 +3,12 @@
 
 LUA = ../bin/lua
 LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
-OBJ = luview.o tesselate.o shader.o colorbar.o
+OBJ = luview.o tesselate.o shader.o colorbar.o pyplotcm.o
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
 %.o : %.c
-	$(CC) $(CFLAGS) -std=c99 -c $< -I../include
+	$(CC) $(CFLAGS) -c $<
 
 %.o : %.cpp
 	$(CXX) $(CFLAGS) -c $< -I../include

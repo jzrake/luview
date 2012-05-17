@@ -1300,7 +1300,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<PointsEnsemble>(L);
   LuaCppObject::Register<ImagePlane>(L);
-  LuaCppObject::Register<ColorMaps>(L);
+  LuaCppObject::Register<TessColormaps>(L);
+  LuaCppObject::Register<MatplotlibColormaps>(L);
 
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<PointsSource>(L);
@@ -1313,3 +1314,4 @@ extern "C" int luaopen_luview(lua_State *L)
 
   return 1;
 }
+

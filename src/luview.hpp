@@ -33,18 +33,40 @@ private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
 
-class ColorMaps : public CallbackFunction
+
+class ColormapCollection : public CallbackFunction
 {
-private:
+public:
+  ColormapCollection();
+  virtual void next_colormap() = 0;
+  virtual void prev_colormap() = 0;
+protected:
   int cmap_id;
   int var_index;
-  virtual std::vector<double> call_priv(double *x, int narg);
-public:
-  ColorMaps();
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_cmap_(lua_State *L);
   static int _set_component_(lua_State *L);
+  static int _next_colormap_(lua_State *L);
+  static int _prev_colormap_(lua_State *L);
+} ;
+
+class TessColormaps : public ColormapCollection
+{
+public:
+  void next_colormap();
+  void prev_colormap();
+private:
+  virtual std::vector<double> call_priv(double *x, int narg);
+} ;
+
+class MatplotlibColormaps : public ColormapCollection
+{
+public:
+  void next_colormap();
+  void prev_colormap();
+private:
+  virtual std::vector<double> call_priv(double *x, int narg);
 } ;
 
 class DataSource : public LuaCppObject

@@ -12,12 +12,58 @@
 
 #include <math.h>
 #include "luview.hpp"
+#include "pyplotcm.h"
 
 static void get_rgb(double val, double *rp ,double *gp, double *bp, int COLORBAR);
 
-ColorMaps::ColorMaps() : cmap_id(0), var_index(0) { }
+ColormapCollection::ColormapCollection() : cmap_id(0), var_index(0) { }
 
-std::vector<double> ColorMaps::call_priv(double *x, int narg)
+ColormapCollection::LuaInstanceMethod ColormapCollection::__getattr__
+(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_component"] = _set_component_;
+  attr["set_colormap"] = _set_cmap_;
+  attr["next_colormap"] = _next_colormap_;
+  attr["prev_colormap"] = _prev_colormap_;
+  RETURN_ATTR_OR_CALL_SUPER(CallbackFunction);
+}
+int ColormapCollection::_set_cmap_(lua_State *L)
+{
+  ColormapCollection *self = checkarg<ColormapCollection>(L, 1);
+  self->cmap_id = luaL_checkinteger(L, 2);
+  printf("using cmap %d\n", self->cmap_id);
+  return 0;
+}
+int ColormapCollection::_set_component_(lua_State *L)
+{
+  ColormapCollection *self = checkarg<ColormapCollection>(L, 1);
+  self->var_index = luaL_checkinteger(L, 2);
+  printf("mapping colors over component %d\n", self->var_index);
+  return 0;
+}
+int ColormapCollection::_next_colormap_(lua_State *L)
+{
+  ColormapCollection *self = checkarg<ColormapCollection>(L, 1);
+  self->next_colormap();
+  return 0;
+}
+int ColormapCollection::_prev_colormap_(lua_State *L)
+{
+  ColormapCollection *self = checkarg<ColormapCollection>(L, 1);
+  self->prev_colormap();
+  return 0;
+}
+
+void TessColormaps::next_colormap()
+{
+  if (++cmap_id == 5) cmap_id = 0;
+}
+void TessColormaps::prev_colormap()
+{
+  if (--cmap_id ==-1) cmap_id = 4;
+}
+std::vector<double> TessColormaps::call_priv(double *x, int narg)
 {
   double z = 0.0;
   std::vector<double> ret(4);
@@ -29,32 +75,45 @@ std::vector<double> ColorMaps::call_priv(double *x, int narg)
   return ret;
 }
 
-ColorMaps::LuaInstanceMethod ColorMaps::__getattr__
-(std::string &method_name)
+
+void MatplotlibColormaps::next_colormap()
 {
-  AttributeMap attr;
-  attr["set_cmap"] = _set_cmap_;
-  attr["set_component"] = _set_component_;
-  RETURN_ATTR_OR_CALL_SUPER(CallbackFunction);
+  const char **names = pyplot_colors_get_names();
+  if (names[++cmap_id] == NULL) {
+    cmap_id = 0;
+  }
+  printf("set colormap to matplotlib:%s\n", names[cmap_id]);
 }
-int ColorMaps::_set_cmap_(lua_State *L)
+void MatplotlibColormaps::prev_colormap()
 {
-  ColorMaps *self = checkarg<ColorMaps>(L, 1);
-  self->cmap_id = luaL_checkinteger(L, 2);
-  printf("using cmap %d\n", self->cmap_id);
-  return 0;
+  const char **names = pyplot_colors_get_names();
+  if (--cmap_id == -1) {
+    cmap_id = pyplot_colors_get_num_tables()-1;
+  }
+  printf("set colormap to matplotlib:%s\n", names[cmap_id]);
 }
-int ColorMaps::_set_component_(lua_State *L)
+std::vector<double> MatplotlibColormaps::call_priv(double *x, int narg)
 {
-  ColorMaps *self = checkarg<ColorMaps>(L, 1);
-  self->var_index = luaL_checkinteger(L, 2);
-  printf("mapping colors over component %d\n", self->var_index);
-  return 0;
+  double z = 0.0;
+
+  if (var_index < narg) {
+    z = x[var_index];
+  }
+
+  const char **names = pyplot_colors_get_names();
+  const float *data = pyplot_colors_get_lookup_table(names[cmap_id]);
+
+  if (data == NULL) {
+    printf("no cmap %s!\n", names[cmap_id]);
+  }
+
+  int n = z * 255.0;
+  std::vector<double> ret(&data[4*n], &data[4*(n+1)]);
+  return ret;
 }
 
 
-
-void get_rgb( double val , double * rp , double * gp , double * bp , int COLORBAR)
+void get_rgb(double val, double *rp, double *gp, double *bp, int COLORBAR)
 {
   double rrr,ggg,bbb;
   if( COLORBAR == 0 ){
