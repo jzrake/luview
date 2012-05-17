@@ -1,14 +1,4 @@
 
-// Just the code for the color bar.
-
-/* List of choices:
-   0. Original
-   1. Standard
-   2. Copper
-   3. Roy G. Biv
-   4. Electric
-   5. Blank
-*/
 
 #include <math.h>
 #include "luview.hpp"
@@ -55,6 +45,18 @@ int ColormapCollection::_prev_colormap_(lua_State *L)
   return 0;
 }
 
+
+
+// -----------------------------------------------------------------------------
+//  List of choices:
+//
+//  0. Original
+//  1. Standard
+//  2. Copper
+//  3. Roy G. Biv
+//  4. Electric
+//  5. Blank
+// -----------------------------------------------------------------------------
 void TessColormaps::next_colormap()
 {
   if (++cmap_id == 5) cmap_id = 0;
@@ -74,8 +76,6 @@ std::vector<double> TessColormaps::call_priv(double *x, int narg)
   get_rgb(z, &ret[0], &ret[1], &ret[2], cmap_id);
   return ret;
 }
-
-
 void MatplotlibColormaps::next_colormap()
 {
   const char **names = pyplot_colors_get_names();

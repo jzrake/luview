@@ -6,7 +6,8 @@ local lunum = require 'lunum'
 local window = luview.Window()
 local image_src = luview.MultiImageSource()
 local normalize = luview.GlobalLinearTransformation()
-local cmap = luview.TessColormaps()
+--local cmap = luview.TessColormaps()
+local cmap = luview.MatplotlibColormaps()
 local scolors = luview.FunctionMapping()
 
 
@@ -47,18 +48,22 @@ window:set_orientation(0,0,0)
 window:set_position(0,0,-1.3)
 
 
-local auto_movie = true
+local auto_movie = false
 local narg = 1
 local status = "continue"
 local key
 local actors = { image }
 actors[1] = load_frame(cmdline.args[narg])
-cmap:set_cmap(4)
+cmap:set_colormap(4)
 
 while status == "continue" do
    status, key = window:render_scene(actors)
-   if tonumber(key) then
-      cmap:set_cmap(tonumber(key))
+
+   if key == 'j' then
+      cmap:prev_colormap()
+      actors[1]:stage()
+   elseif key == 'k' then
+      cmap:next_colormap()
       actors[1]:stage()
    elseif key == 'v' then
       cmap_comp = cmap_comp + 1
