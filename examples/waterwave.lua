@@ -1,17 +1,18 @@
 
 
+
 local luview = require 'luview'
 local lunum = require 'lunum'
-local utils = require 'test.utils'
+local shaders = require 'shaders'
+
 
 local window = luview.Window()
 local box = luview.BoundingBox()
 local grid2d = luview.GridSource2D()
 local surface = luview.SurfaceNURBS()
 local ctrlpnt = luview.FunctionMapping()
-local shader = luview.ShaderProgram()
+local shader = shaders.load_shader("lambertian")
 
-utils.load_shader("lambertian", shader)
 
 local time = 0.0
 
@@ -19,13 +20,13 @@ local cos = math.cos
 local cosh = math.cosh
 local pi = math.pi
 local A, phi = { }, { }
-local M, N = 8,8
+local M, N = 6,6
 
 for m=1,M do
    A[m] = { }
    phi[m] = { }
    for n=1,N do
-      A[m][n] = math.random()*0.015
+      A[m][n] = math.random()*0.025
       phi[m][n] = math.random()*pi
    end
 end
@@ -44,7 +45,7 @@ local function waterwave(u,v)
    return u, v, z
 end
 
-grid2d:set_num_points(20, 20)
+grid2d:set_num_points(24, 24)
 ctrlpnt:set_input(grid2d)
 ctrlpnt:set_transform(waterwave)
 

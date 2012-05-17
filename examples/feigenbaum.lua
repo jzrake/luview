@@ -2,7 +2,7 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
-local utils = require 'test.utils'
+local shaders = require 'shaders'
 
 
 local window = luview.Window()
@@ -10,8 +10,8 @@ local box = luview.BoundingBox()
 local points = luview.PointsSource()
 local colors = luview.FunctionMapping()
 local pntens = luview.PointsEnsemble()
-local shader = luview.ShaderProgram()
-utils.load_shader("lambertian", shader)
+local shader = shaders.load_shader("lambertian")
+
 
 local function make_data(lam)
    local Npnt = 800

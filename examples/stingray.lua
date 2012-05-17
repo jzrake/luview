@@ -3,7 +3,7 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
-local utils = require 'test.utils'
+local shaders = require 'shaders'
 
 local window = luview.Window()
 local box = luview.BoundingBox()
@@ -13,7 +13,7 @@ local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
 local shader = luview.ShaderProgram()
 local normalize = luview.GlobalLinearTransformation()
-utils.load_shader("lambertian", shader)
+local shader = shaders.load_shader("lambertian")
 
 
 local time = 0.0
