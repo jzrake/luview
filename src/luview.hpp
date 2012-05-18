@@ -246,6 +246,13 @@ protected:
   static int __set_vec__(lua_State *L, double *v, int n);
 } ;
 
+class GpuInformation : public LuaCppObject
+{
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _ext_supported_(lua_State *L);
+  static int _print_(lua_State *L);
+} ;
 
 class ShaderProgram : public LuaCppObject
 {
@@ -295,6 +302,7 @@ class VolumeRendering : public DrawableObject
 public:
   VolumeRendering();
 private:
+  void draw_local3();
   void draw_local2();
   void draw_local1();
   void draw_local();

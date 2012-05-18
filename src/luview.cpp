@@ -15,6 +15,7 @@ extern "C" {
 #include "lunum.h"
 #include "GL/glfw.h"
 }
+#include "glInfo.hpp"
 
 
 template <class T> static void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
@@ -41,6 +42,33 @@ template <class T> static void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
   gluDeleteQuadric(quad);
 
   glPopMatrix();
+}
+
+
+
+GpuInformation::LuaInstanceMethod
+GpuInformation::__getattr__(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["print"] = _print_;
+  attr["ext_supported"] = _ext_supported_;
+  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+}
+
+int GpuInformation::_ext_supported_(lua_State *L)
+{
+  const char *ext = luaL_checkstring(L, 2);
+  glInfo info;
+  info.getInfo();
+  lua_pushboolean(L, info.isExtensionSupported(ext));
+  return 1;
+}
+int GpuInformation::_print_(lua_State *L)
+{
+  glInfo info;
+  info.getInfo();
+  info.printSelf();
+  return 0;
 }
 
 
@@ -1251,6 +1279,7 @@ extern "C" int luaopen_luview(lua_State *L)
   lua_newtable(L);
 
   LuaCppObject::Init(L);
+  LuaCppObject::Register<GpuInformation>(L);
   LuaCppObject::Register<Window>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<SurfaceNURBS>(L);
@@ -1267,7 +1296,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<SegmentsEnsemble>(L);
-  LuaCppObject::Register<VolumeRendering>(L);
+  //  LuaCppObject::Register<VolumeRendering>(L);
 
   LuaCppObject::Register<NbodySimulation>(L);
 
