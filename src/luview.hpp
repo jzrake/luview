@@ -77,7 +77,7 @@ protected:
 
 public:
   DataSource();
-  ~DataSource();
+  virtual ~DataSource();
   virtual GLfloat *get_data() { return output; }
   virtual GLuint *get_indices() { return indices; }
   virtual int get_num_points(int d) = 0;
@@ -169,7 +169,7 @@ class Tesselation3D : public PointsSource
 {
 public:
   Tesselation3D();
-  ~Tesselation3D();
+  virtual ~Tesselation3D();
 
   int get_num_points(int d);
   int get_size();
@@ -254,7 +254,7 @@ private:
 
 public:
   ShaderProgram();
-  ~ShaderProgram();
+  virtual ~ShaderProgram();
 
   void set_program(const char *vert_src, const char *frag_src);
   void unset_program();
@@ -296,13 +296,10 @@ class NbodySimulation : public LuaCppObject
 {
 public:
   NbodySimulation();
+  virtual ~NbodySimulation();
   void advance();
 
 private:
-  int NumberOfParticles;
-  double TimeStep;
-  PointsSource *output_points;
-
   struct MassiveParticle
   {
     int id;
@@ -310,7 +307,11 @@ private:
     double x[3], v[3], a[3];
   } ;
 
-  struct MassiveParticle *particles;
+  int NumberOfParticles;
+  double TimeStep;
+  PointsSource *output_points;
+  MassiveParticle *particles;
+
   void init_particles();
   void refresh_output();
 

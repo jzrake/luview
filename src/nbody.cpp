@@ -7,6 +7,18 @@
 #include "luview.hpp"
 
 
+
+NbodySimulation::NbodySimulation() :
+  NumberOfParticles(600),
+  TimeStep(1e-5),
+  particles(NULL)
+{
+  init_particles();
+}
+NbodySimulation::~NbodySimulation()
+{
+  if (particles) free(particles); 
+}
 void NbodySimulation::advance()
 {
   MoveParticlesRK2(particles, NumberOfParticles, TimeStep);
@@ -51,19 +63,12 @@ int NbodySimulation::_get_output_(lua_State *L)
   return 1;
 }
 
-NbodySimulation::NbodySimulation() :
-  NumberOfParticles(600),
-  TimeStep(1e-5)
-{
-  init_particles();
-}
-
 void NbodySimulation::init_particles()
 {
   const int N = NumberOfParticles;
   const double M = 1e7;
 
-  particles = (MassiveParticle*) malloc(N*sizeof(MassiveParticle));
+  particles = (MassiveParticle*) realloc(particles, N*sizeof(MassiveParticle));
 
   particles[0].m    = M;
   particles[0].x[0] = 0.0;
