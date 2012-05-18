@@ -112,7 +112,7 @@ VolumeRendering::VolumeRendering()
 
 void VolumeRendering::draw_local()
 {
-  int Nx=1024, Ny=768;
+  int Nx=512, Ny=512;
 
   GLuint texId;
   GLuint fboId;
@@ -155,12 +155,14 @@ void VolumeRendering::draw_local()
   glPushMatrix();
   glClearColor(0.5, 0.5, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glViewport(0,0,Nx,Ny);
 
   glLoadIdentity();
-  glTranslatef(0,0,-2);
+  glTranslatef(0,0.15,-2.4);
   glRotatef(30,1,0,0);
   glRotatef(180-45,0,1,0);
-  draw_cube_back();
+  //  draw_cube_back();
+  draw_cube_front();
 
   glPopMatrix();
   glPopAttrib();
