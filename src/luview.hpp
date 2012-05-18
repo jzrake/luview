@@ -302,9 +302,6 @@ class VolumeRendering : public DrawableObject
 public:
   VolumeRendering();
 private:
-  void draw_local3();
-  void draw_local2();
-  void draw_local1();
   void draw_local();
 } ;
 

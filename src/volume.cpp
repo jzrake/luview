@@ -29,54 +29,57 @@
 #define GL_FRAMEBUFFER_COMPLETE GL_FRAMEBUFFER_COMPLETE_EXT
 
 
+static void draw_cube()
+{
+  const GLfloat x0 = -0.5;
+  const GLfloat x1 = +0.5;
+  const GLfloat c0 =  0.0;
+  const GLfloat c1 =  1.0;
+
+  glBegin(GL_QUADS);
+  glNormal3f(1,0,0);
+  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
+  glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
+  glColor3f(c0,c1,c1); glVertex3f(x0,x1,x1);
+  glColor3f(c0,c1,c0); glVertex3f(x0,x1,x0);
+  glEnd();
+
+  glBegin(GL_QUADS);
+  glNormal3f(0,1,0);
+  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
+  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
+  glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
+  glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
+  glEnd();
+
+  glBegin(GL_QUADS);
+  glNormal3f(0,0,1);
+  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
+  glColor3f(c0,c1,c0); glVertex3f(x0,x1,x0);
+  glColor3f(c1,c1,c0); glVertex3f(x1,x1,x0);
+  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
+  glEnd();
+}
 
 VolumeRendering::VolumeRendering()
 {
   gl_modes.push_back(GL_TEXTURE_2D);
-  gl_modes.push_back(GL_LIGHTING);
-  gl_modes.push_back(GL_LIGHT0);
-  gl_modes.push_back(GL_BLEND);
-  gl_modes.push_back(GL_COLOR_MATERIAL);
+  //  gl_modes.push_back(GL_LIGHTING);
+  //  gl_modes.push_back(GL_LIGHT0);
+  //  gl_modes.push_back(GL_BLEND);
+  //  gl_modes.push_back(GL_COLOR_MATERIAL);
 }
 
-
-
-void VolumeRendering::draw_local1()
-{
-  int Nx=512, Ny=512;
-  GLuint texId;
-
-  glGenTextures(1, &texId);
-  glBindTexture(GL_TEXTURE_2D, texId);
-
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-  glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-  glViewport(Nx, Ny, Nx, Ny);
-
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glCopyTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, 128, 128, Nx, Ny, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-  glPopAttrib();
-
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glPolygonMode(GL_FRONT, GL_FILL);
-  glBegin(GL_POLYGON);
-  glTexCoord2d(0,0); glVertex2f(0,0);
-  glTexCoord2d(0,1); glVertex2f(0,1);
-  glTexCoord2d(1,1); glVertex2f(1,1);
-  glTexCoord2d(1,0); glVertex2f(1,0);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  glDeleteTextures(1, &texId);
-}
 
 void VolumeRendering::draw_local()
 {
-  int Nx=256, Ny=256;
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glTranslatef(0,1.5,0);
+  draw_cube();
+  glTranslatef(0,-1.5,0);
+  glPopAttrib();
+
+  int Nx=1024, Ny=768;
 
   GLuint texId;
   GLuint fboId;
@@ -119,27 +122,13 @@ void VolumeRendering::draw_local()
   }
 
   // clear buffers
-  glClearColor(0.5, 0.5, 1.0, 1);
+  glClearColor(0.5, 0.5, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  glLoadIdentity();
+  draw_cube();
 
-  glTranslatef(0,0,-5);
-
-  glColor3f(0,1,0);
-  glPointSize(10);
-
-  glBegin(GL_POINTS);
-  for (int n=-50; n<50; ++n) {
-    for (int m=-50; m<50; ++m) {
-      glVertex3f(0.1*n, 0.1*m, 0.0);
-    }
-  }
-  glEnd();
-
-  // unbind FBO
-  glPopMatrix();
+  //  glPopMatrix();
   glPopAttrib();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
+  glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind FBO
 
 
 
@@ -151,10 +140,10 @@ void VolumeRendering::draw_local()
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
 
-  //  glBindTexture(GL_TEXTURE_2D, TextureMap);
   glBindTexture(GL_TEXTURE_2D, texId);
   glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
+  glNormal3f(0,0,1);
   glTexCoord2d(0,0); glVertex2f(-0.5,-0.5);
   glTexCoord2d(0,1); glVertex2f(-0.5, 0.5);
   glTexCoord2d(1,1); glVertex2f( 0.5, 0.5);
@@ -167,108 +156,3 @@ void VolumeRendering::draw_local()
   glDeleteFramebuffers(1, &fboId);
   glDeleteRenderbuffers(1, &rboId);
 }
-
-
-
-
-void VolumeRendering::draw_local2()
-{
-  int Nx=128, Ny=128;
-
-  // ---------------------------------------------------------------------------
-  // Setting up the frame buffer and texture
-  // ---------------------------------------------------------------------------
-  GLuint texId;
-  glGenTextures(1, &texId);
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
-  glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
-  glTexParameteri(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_TRUE); // automatic mipmap
-  glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA8, Nx, Ny, 0, GL_RGBA, GL_UNSIGNED_BYTE, 0);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-  // create a renderbuffer object to store depth info
-  GLuint rboId;
-  glGenRenderbuffers(1, &rboId);
-  glBindRenderbuffer(GL_RENDERBUFFER, rboId);
-  glRenderbufferStorage(GL_RENDERBUFFER, GL_DEPTH_COMPONENT, Nx, Ny);
-  glBindRenderbuffer(GL_RENDERBUFFER, 0);
-
-  // create a framebuffer object
-  GLuint fboId;
-  glGenFramebuffers(1, &fboId);
-  glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-
-  // attach the texture to FBO color attachment point
-  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                         GL_TEXTURE_2D, texId, 0);
-
-  // attach the renderbuffer to depth attachment point
-  glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, rboId);
-
-  // check FBO status
-  GLenum status = glCheckFramebufferStatus(GL_FRAMEBUFFER);
-  if (status != GL_FRAMEBUFFER_COMPLETE) {
-    printf("warning! the fbo was not used!\n");
-  }
-
-  // switch back to window-system-provided framebuffer
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-
-  // ---------------------------------------------------------------------------
-  // Drawing into the texture
-  // ---------------------------------------------------------------------------
-
-  // switch to drawing on the frame buffer
-  glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-
-  glPolygonMode(GL_FRONT, GL_FILL);
-  glBegin(GL_POLYGON);
-  glColor3f(1,0,0); glVertex3f(0,0,-1);
-  glColor3f(1,0,1); glVertex3f(0,1,-1);
-  glColor3f(1,1,1); glVertex3f(1,1,-1);
-  glColor3f(1,1,0); glVertex3f(1,0,-1);
-  glEnd();
-
-  // unbind FBO
-  glPopAttrib();
-  glBindFramebuffer(GL_FRAMEBUFFER, 0);
-
-  // trigger mipmaps generation explicitly
-  // NOTE: If GL_GENERATE_MIPMAP is set to GL_TRUE, then glCopyTexSubImage2D()
-  // triggers mipmap generation automatically. However, the texture attached
-  // onto a FBO should generate mipmaps manually via glGenerateMipmap().
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glGenerateMipmap(GL_TEXTURE_2D);
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-
-
-  // ---------------------------------------------------------------------------
-  // Using the texture
-  // ---------------------------------------------------------------------------
-
-  glBindTexture(GL_TEXTURE_2D, texId);
-  glPolygonMode(GL_FRONT, GL_FILL);
-  glBegin(GL_POLYGON);
-  glTexCoord2d(0,0); glVertex2f(0,0);
-  glTexCoord2d(0,1); glVertex2f(0,1);
-  glTexCoord2d(1,1); glVertex2f(1,1);
-  glTexCoord2d(1,0); glVertex2f(1,0);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
-
-
-  // ---------------------------------------------------------------------------
-  // Cleanup
-  // ---------------------------------------------------------------------------
-  glDeleteTextures(1, &texId);
-  glDeleteRenderbuffers(1, &rboId);
-  glDeleteFramebuffers(1, &fboId);
-}
-
