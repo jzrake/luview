@@ -154,6 +154,7 @@ protected:
     lua_pushvalue(L, -2);
     object->__refid = luaL_ref(L, -2);
     object->__lua_state = L;
+    object->__init_lua_objects();
     lua_pop(L, 1);
 
     if (__LDEBUG) {
@@ -227,11 +228,13 @@ protected:
   {
     retrieve(obj);
     _hold_or_drop('h', obj->__refid, NULL);
+    lua_pop(__lua_state, 1);
   }
   void hold(int pos, const char *key)
   {
     lua_pushvalue(__lua_state, pos);
     _hold_or_drop('h', LUA_NOREF, key);
+    lua_pop(__lua_state, 1);
   }
   // ---------------------------------------------------------------------------
   // Drops a C++ object, or a Lua object respectively
@@ -312,6 +315,13 @@ private:
 
 
  protected:
+  virtual void __init_lua_objects()
+  // ---------------------------------------------------------------------------
+  // Objects needing to instantiate their own Lua objects should do so here.
+  // ---------------------------------------------------------------------------
+  {
+    
+  }
   virtual std::string _get_type()
   // ---------------------------------------------------------------------------
   // May be over-ridden by derived classes in case a different type name is

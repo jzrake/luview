@@ -323,6 +323,7 @@ private:
   double RandomDouble(double a, double b);
 
 protected:
+  void __init_lua_objects();
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _advance_(lua_State *L);
   static int _get_output_(lua_State *L);
