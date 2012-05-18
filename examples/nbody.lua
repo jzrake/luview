@@ -11,7 +11,9 @@ local nbody = luview.NbodySimulation()
 local pntens = luview.PointsEnsemble()
 local shader = shaders.load_shader("lambertian")
 
-pntens:set_data("points", nbody)
+nbody:advance()
+
+pntens:set_data("points", nbody:get_output())
 pntens:set_scale(0.5, 0.5, 0.5)
 pntens:set_orientation(0, 90, 0)
 pntens:set_linewidth(16.0)

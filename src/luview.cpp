@@ -647,6 +647,13 @@ int PointsSource::get_num_points(int d)
 int PointsSource::get_size() { return Np; }
 int PointsSource::get_num_components() { return Nc; }
 int PointsSource::get_num_dimensions() { return 1; }
+void PointsSource::set_points(double *data, int np, int nc)
+{
+  Np = np;
+  Nc = nc;
+  output = (GLfloat*) realloc(output, Np*Nc*sizeof(GLfloat));
+  for (int i=0; i<Np*Nc; ++i) output[i] = data[i];
+}
 
 PointsSource::LuaInstanceMethod PointsSource::__getattr__
 (std::string &method_name)
@@ -666,13 +673,7 @@ int PointsSource::_set_points_(lua_State *L)
   else if (A->dtype != ARRAY_TYPE_DOUBLE) {
     luaL_error(L, "array must have type 'double'");
   }
-
-  int Nt = A->shape[0]*A->shape[1];
-  self->Np = A->shape[0];
-  self->Nc = A->shape[1];
-  self->output = (GLfloat*) realloc(self->output, Nt*sizeof(GLfloat));
-  for (int i=0; i<Nt; ++i) self->output[i] = ((double*)A->data)[i];
-
+  self->set_points((double*)A->data, A->shape[0], A->shape[1]);
   return 0;
 }
 

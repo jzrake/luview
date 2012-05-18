@@ -133,6 +133,7 @@ public:
   PointsSource(lua_State *L, int pos);
   PointsSource();
 
+  void set_points(double *data, int np, int nc);
   int get_num_points(int d);
   int get_size();
   int get_num_components();
@@ -291,20 +292,17 @@ protected:
 
 
 
-class NbodySimulation : public DataSource
+class NbodySimulation : public LuaCppObject
 {
 public:
   NbodySimulation();
   void advance();
 
-  int get_num_points(int d) { return NumberOfParticles; }
-  int get_size() { return NumberOfParticles; }
-  int get_num_components() { return 3; }
-  int get_num_dimensions() { return 1; }
-
 private:
   int NumberOfParticles;
   double TimeStep;
+  PointsSource *output_points;
+
   struct MassiveParticle
   {
     int id;
@@ -314,19 +312,20 @@ private:
 
   struct MassiveParticle *particles;
   void init_particles();
+  void refresh_output();
 
   void ComputeForces(struct MassiveParticle *P0, int N);
   void ComputeForces2(struct MassiveParticle *P0, int N);
   void MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt);
   void MoveParticlesRK2(struct MassiveParticle *P0, int N, double dt);
   void MoveParticlesRK4(struct MassiveParticle *P0, int N, double dt);
-  void (*MoveParticles)(struct MassiveParticle *P0, int N, double dt);
 
   double RandomDouble(double a, double b);
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _advance_(lua_State *L);
+  static int _get_output_(lua_State *L);
 } ;
 
 #endif // __LuviewObjects_HEADER__

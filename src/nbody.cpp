@@ -9,21 +9,20 @@
 
 void NbodySimulation::advance()
 {
-  MoveParticlesRK2(particles, NumberOfParticles, TimeStep);
-  
-  for (int i=0; i<NumberOfParticles; ++i) {
-    struct MassiveParticle *p = particles + i;
-    output[3*i + 0] = p->x[0];
-    output[3*i + 1] = p->x[1];
-    output[3*i + 2] = p->x[2];
+  if (!output_points) {
+    output_points = create<PointsSource>(__lua_state);
+    hold(output_points);
   }
+  MoveParticlesRK2(particles, NumberOfParticles, TimeStep);
+  refresh_output();
 }
 NbodySimulation::LuaInstanceMethod
 NbodySimulation::__getattr__(std::string &method_name)
 {
   AttributeMap attr;
   attr["advance"] = _advance_;
-  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+  attr["get_output"] = _get_output_;
+  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 int NbodySimulation::_advance_(lua_State *L)
 {
@@ -31,12 +30,33 @@ int NbodySimulation::_advance_(lua_State *L)
   self->advance();
   return 0;
 }
+void NbodySimulation::refresh_output()
+{
+  double *points = new double[NumberOfParticles*3];
+  for (int i=0; i<NumberOfParticles; ++i) {
+    struct MassiveParticle *p = particles + i;
+    points[3*i + 0] = p->x[0];
+    points[3*i + 1] = p->x[1];
+    points[3*i + 2] = p->x[2];
+  }
+  output_points->set_points(points, NumberOfParticles, 3);
+  delete [] points;
+}
+int NbodySimulation::_get_output_(lua_State *L)
+{
+  NbodySimulation *self = checkarg<NbodySimulation>(L, 1);
+  self->retrieve(self->output_points);
+  return 1;
+}
 
 NbodySimulation::NbodySimulation() :
   NumberOfParticles(600),
   TimeStep(1e-5)
 {
+  output_points = NULL;//create<PointsSource>(__lua_state);
+  //  hold(output_points);
   init_particles();
+  //  refresh_output();
 }
 
 void NbodySimulation::init_particles()
@@ -45,7 +65,6 @@ void NbodySimulation::init_particles()
   const double M = 1e7;
 
   particles = (MassiveParticle*) malloc(N*sizeof(MassiveParticle));
-  output = (GLfloat*) realloc(output, 3*N*sizeof(GLfloat));
 
   particles[0].m    = M;
   particles[0].x[0] = 0.0;
@@ -58,9 +77,9 @@ void NbodySimulation::init_particles()
   for (int i=1; i<N; ++i) {
     struct MassiveParticle *p = particles + i;
 
-        const double r = RandomDouble(0.5, 1.0);
-        const double t = RandomDouble(0.0, 2*M_PI);
-        const double v = sqrt(M/r);
+    const double r = RandomDouble(0.5, 1.0);
+    const double t = RandomDouble(0.0, 2*M_PI);
+    const double v = sqrt(M/r);
 
     p->id = i;
     p->m = RandomDouble(0.1, 10.0);
