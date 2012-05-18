@@ -82,15 +82,15 @@ void VolumeRendering::draw_local()
 {
   int Nx=100, Ny=100;
 
-  GLuint textureId;
+  GLuint texId;
   GLuint fboId;
   GLuint rboId;
 
-  glGenTextures(1, &textureId);
+  glGenTextures(1, &texId);
   glGenFramebuffers(1, &fboId);
   glGenRenderbuffers(1, &rboId);
 
-  glBindTexture(GL_TEXTURE_2D, textureId);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -106,37 +106,40 @@ void VolumeRendering::draw_local()
 
 
   glBindFramebuffer(GL_FRAMEBUFFER_EXT, fboId);
-  glFramebufferTexture2DEXT(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                            GL_TEXTURE_2D, textureId, 0);
+  glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
+			 GL_TEXTURE_2D, texId, 0);
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
-                            GL_RENDERBUFFER, rboId);
+			    GL_RENDERBUFFER, rboId);
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
 
   // switch to drawing on the frame buffer
   glBindFramebuffer(GL_FRAMEBUFFER, fboId);
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
 
   // clear buffers
-  glClearColor(1, 1, 1, 1);
-  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  //  glClearColor(0, 1, 0, 1);
+  //  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
   glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
-  glColor3f(1,0,0); glVertex2f(0,0);
-  glColor3f(1,0,1); glVertex2f(0,1);
-  glColor3f(1,1,1); glVertex2f(1,1);
-  glColor3f(1,1,0); glVertex2f(1,0);
+  glColor3f(1,0,0); glVertex3f(1,0,0);
+  glColor3f(1,0,1); glVertex3f(1,0,1);
+  glColor3f(1,1,1); glVertex3f(1,1,1);
+  glColor3f(1,1,0); glVertex3f(1,1,0);
   glEnd();
 
   // unbind FBO
+  glPopAttrib();
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
+
 
 
   // trigger mipmaps generation explicitly
   // NOTE: If GL_GENERATE_MIPMAP is set to GL_TRUE, then glCopyTexSubImage2D()
   // triggers mipmap generation automatically. However, the texture attached
   // onto a FBO should generate mipmaps manually via glGenerateMipmap().
-  glBindTexture(GL_TEXTURE_2D, textureId);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -162,13 +165,14 @@ void VolumeRendering::draw_local()
 
 
 
-  glBindTexture(GL_TEXTURE_2D, TextureMap);
+  //  glBindTexture(GL_TEXTURE_2D, TextureMap);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
-  glTexCoord2d(0,0); glVertex2f(0,0);
-  glTexCoord2d(0,1); glVertex2f(0,1);
-  glTexCoord2d(1,1); glVertex2f(1,1);
-  glTexCoord2d(1,0); glVertex2f(1,0);
+  glTexCoord2d(0,0); glVertex3f(0,0,0);
+  glTexCoord2d(0,1); glVertex3f(0,0,1);
+  glTexCoord2d(1,1); glVertex3f(0,1,1);
+  glTexCoord2d(1,0); glVertex3f(0,1,0);
   glEnd();
   glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -176,19 +180,7 @@ void VolumeRendering::draw_local()
   glDeleteTextures(1, &TextureMap);
   delete [] texdata;
 
-  /*
-  glBindTexture(GL_TEXTURE_2D, textureId);
-  glPolygonMode(GL_FRONT, GL_FILL);
-  glBegin(GL_POLYGON);
-  glTexCoord2d(0,0); glVertex2f(0,0);
-  glTexCoord2d(0,1); glVertex2f(0,1);
-  glTexCoord2d(1,1); glVertex2f(1,1);
-  glTexCoord2d(1,0); glVertex2f(1,0);
-  glEnd();
-  glBindTexture(GL_TEXTURE_2D, 0);
-  */
-
-  glDeleteTextures(1, &textureId);
+  glDeleteTextures(1, &texId);
   glDeleteFramebuffers(1, &fboId);
   glDeleteRenderbuffers(1, &rboId);
 }
@@ -203,9 +195,9 @@ void VolumeRendering::draw_local1()
   // ---------------------------------------------------------------------------
   // Setting up the frame buffer and texture
   // ---------------------------------------------------------------------------
-  GLuint textureId;
-  glGenTextures(1, &textureId);
-  glBindTexture(GL_TEXTURE_2D, textureId);
+  GLuint texId;
+  glGenTextures(1, &texId);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR_MIPMAP_LINEAR);
   glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -229,7 +221,7 @@ void VolumeRendering::draw_local1()
 
   // attach the texture to FBO color attachment point
   glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                         GL_TEXTURE_2D, textureId, 0);
+                         GL_TEXTURE_2D, texId, 0);
 
   // attach the renderbuffer to depth attachment point
   glFramebufferRenderbuffer(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT,
@@ -271,7 +263,7 @@ void VolumeRendering::draw_local1()
   // NOTE: If GL_GENERATE_MIPMAP is set to GL_TRUE, then glCopyTexSubImage2D()
   // triggers mipmap generation automatically. However, the texture attached
   // onto a FBO should generate mipmaps manually via glGenerateMipmap().
-  glBindTexture(GL_TEXTURE_2D, textureId);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glGenerateMipmap(GL_TEXTURE_2D);
   glBindTexture(GL_TEXTURE_2D, 0);
 
@@ -281,7 +273,7 @@ void VolumeRendering::draw_local1()
   // Using the texture
   // ---------------------------------------------------------------------------
 
-  glBindTexture(GL_TEXTURE_2D, textureId);
+  glBindTexture(GL_TEXTURE_2D, texId);
   glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
   glTexCoord2d(0,0); glVertex2f(0,0);
@@ -295,7 +287,7 @@ void VolumeRendering::draw_local1()
   // ---------------------------------------------------------------------------
   // Drawing into the texture
   // ---------------------------------------------------------------------------
-  glDeleteTextures(1, &textureId);
+  glDeleteTextures(1, &texId);
   glDeleteRenderbuffers(1, &rboId);
   glDeleteFramebuffers(1, &fboId);
 }
