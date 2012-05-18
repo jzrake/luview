@@ -112,19 +112,32 @@ void VolumeRendering::draw_local()
   // switch to drawing on the frame buffer
   glBindFramebuffer(GL_FRAMEBUFFER, fboId);
   glPushAttrib(GL_ALL_ATTRIB_BITS);
+  //  glPushMatrix();
 
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     printf("warning! the fbo is not complete\n");
   }
 
   // clear buffers
-  glClearColor(0.5, 0.5, 0.5, 1);
+  glClearColor(0.5, 0.5, 1.0, 1);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glLoadIdentity();
 
-  //  glScalef(0.2, 0.2, 0.2);
-  drawTeapot();
+  glTranslatef(0,0,-5);
+
+  glColor3f(0,1,0);
+  glPointSize(10);
+
+  glBegin(GL_POINTS);
+  for (int n=-50; n<50; ++n) {
+    for (int m=-50; m<50; ++m) {
+      glVertex3f(0.1*n, 0.1*m, 0.0);
+    }
+  }
+  glEnd();
 
   // unbind FBO
+  glPopMatrix();
   glPopAttrib();
   glBindFramebuffer(GL_FRAMEBUFFER, 0);
 
@@ -142,10 +155,10 @@ void VolumeRendering::draw_local()
   glBindTexture(GL_TEXTURE_2D, texId);
   glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
-  glTexCoord2d(0,0); glVertex3f(0,0,0);
-  glTexCoord2d(0,1); glVertex3f(0,0,1);
-  glTexCoord2d(1,1); glVertex3f(0,1,1);
-  glTexCoord2d(1,0); glVertex3f(0,1,0);
+  glTexCoord2d(0,0); glVertex2f(-0.5,-0.5);
+  glTexCoord2d(0,1); glVertex2f(-0.5, 0.5);
+  glTexCoord2d(1,1); glVertex2f( 0.5, 0.5);
+  glTexCoord2d(1,0); glVertex2f( 0.5,-0.5);
   glEnd();
   glBindTexture(GL_TEXTURE_2D, 0);
 
