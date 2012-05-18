@@ -29,12 +29,58 @@
 #define GL_FRAMEBUFFER_COMPLETE GL_FRAMEBUFFER_COMPLETE_EXT
 
 
-static void draw_cube()
+static void draw_cube_back()
 {
   const GLfloat x0 = -0.5;
   const GLfloat x1 = +0.5;
   const GLfloat c0 =  0.0;
   const GLfloat c1 =  1.0;
+
+  glPolygonMode(GL_FRONT, GL_FILL);
+  glPolygonMode(GL_BACK, GL_FILL);
+
+  glBegin(GL_QUADS);
+  glNormal3f(0,0,1);
+  glColor3f(c1,c1,c1); glVertex3f(x1,x1,x1);
+  glColor3f(c0,c1,c1); glVertex3f(x0,x1,x1);
+  glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
+  glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
+  glEnd();
+
+  glBegin(GL_QUADS);
+  glNormal3f(1,0,0);
+  glColor3f(c1,c1,c1); glVertex3f(x1,x1,x1);
+  glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
+  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
+  glColor3f(c1,c1,c0); glVertex3f(x1,x1,x0);
+  glEnd();
+
+  glBegin(GL_QUADS);
+  glNormal3f(0,1,0);
+  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
+  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
+  glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
+  glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
+  glEnd();
+}
+
+static void draw_cube_front()
+{
+  const GLfloat x0 = -0.5;
+  const GLfloat x1 = +0.5;
+  const GLfloat c0 =  0.0;
+  const GLfloat c1 =  1.0;
+
+  glPolygonMode(GL_FRONT, GL_FILL);
+  glPolygonMode(GL_BACK, GL_FILL);
+
+  glBegin(GL_QUADS);
+  glNormal3f(0,0,1);
+  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
+  glColor3f(c0,c1,c0); glVertex3f(x0,x1,x0);
+  glColor3f(c1,c1,c0); glVertex3f(x1,x1,x0);
+  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
+  glEnd();
 
   glBegin(GL_QUADS);
   glNormal3f(1,0,0);
@@ -46,24 +92,17 @@ static void draw_cube()
 
   glBegin(GL_QUADS);
   glNormal3f(0,1,0);
-  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
-  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
-  glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
-  glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
-  glEnd();
-
-  glBegin(GL_QUADS);
-  glNormal3f(0,0,1);
-  glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
   glColor3f(c0,c1,c0); glVertex3f(x0,x1,x0);
+  glColor3f(c0,c1,c1); glVertex3f(x0,x1,x1);
+  glColor3f(c1,c1,c1); glVertex3f(x1,x1,x1);
   glColor3f(c1,c1,c0); glVertex3f(x1,x1,x0);
-  glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
   glEnd();
 }
 
 VolumeRendering::VolumeRendering()
 {
   gl_modes.push_back(GL_TEXTURE_2D);
+  //  gl_modes.push_back(GL_CULL_FACE);
   //  gl_modes.push_back(GL_LIGHTING);
   //  gl_modes.push_back(GL_LIGHT0);
   //  gl_modes.push_back(GL_BLEND);
@@ -73,12 +112,6 @@ VolumeRendering::VolumeRendering()
 
 void VolumeRendering::draw_local()
 {
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-  glTranslatef(0,1.5,0);
-  draw_cube();
-  glTranslatef(0,-1.5,0);
-  glPopAttrib();
-
   int Nx=1024, Ny=768;
 
   GLuint texId;
@@ -114,19 +147,22 @@ void VolumeRendering::draw_local()
 
   // switch to drawing on the frame buffer
   glBindFramebuffer(GL_FRAMEBUFFER, fboId);
-  glPushAttrib(GL_ALL_ATTRIB_BITS);
-  //  glPushMatrix();
-
   if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
     printf("warning! the fbo is not complete\n");
   }
 
-  // clear buffers
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushMatrix();
   glClearColor(0.5, 0.5, 1.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
-  draw_cube();
 
-  //  glPopMatrix();
+  glLoadIdentity();
+  glTranslatef(0,0,-2);
+  glRotatef(30,1,0,0);
+  glRotatef(180-45,0,1,0);
+  draw_cube_back();
+
+  glPopMatrix();
   glPopAttrib();
   glBindFramebuffer(GL_FRAMEBUFFER, 0); // unbind FBO
 
@@ -141,7 +177,6 @@ void VolumeRendering::draw_local()
   glBindTexture(GL_TEXTURE_2D, 0);
 
   glBindTexture(GL_TEXTURE_2D, texId);
-  glPolygonMode(GL_FRONT, GL_FILL);
   glBegin(GL_POLYGON);
   glNormal3f(0,0,1);
   glTexCoord2d(0,0); glVertex2f(-0.5,-0.5);
