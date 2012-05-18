@@ -1,15 +1,15 @@
 
+package.path = package.path .. ";" .. os.getenv("LUA_PATH")
 
 local luview = require 'luview'
 local lunum = require 'lunum'
-local utils = require 'test.utils'
+local shaders = require 'shaders'
 
 local window = luview.Window()
 --local cmap = luview.TessColormaps()
 local cmap = luview.MatplotlibColormaps()
 local box = luview.BoundingBox()
-local shader = luview.ShaderProgram()
-utils.load_shader("lambertian", shader)
+local shader = shaders.load_shader("lambertian")
 
 h5_open_file(cmdline.args[1], "r")
 

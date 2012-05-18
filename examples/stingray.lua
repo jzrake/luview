@@ -11,7 +11,6 @@ local grid2d = luview.GridSource2D()
 local surface = luview.SurfaceNURBS()
 local ctrlpnt = luview.FunctionMapping()
 local scolors = luview.FunctionMapping()
-local shader = luview.ShaderProgram()
 local normalize = luview.GlobalLinearTransformation()
 local shader = shaders.load_shader("lambertian")
 

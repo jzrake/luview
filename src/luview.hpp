@@ -290,6 +290,15 @@ protected:
   static int _set_shader_(lua_State *L);
 } ;
 
+class VolumeRendering : public DrawableObject
+{
+public:
+  VolumeRendering();
+private:
+  void draw_local2();
+  void draw_local1();
+  void draw_local();
+} ;
 
 
 class NbodySimulation : public LuaCppObject

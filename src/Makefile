@@ -1,9 +1,9 @@
 
 
-
+GL_INCL = -I/usr/X11/include
 LUA = ../bin/lua
 LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
-OBJ = luview.o tesselate.o shader.o colorbar.o pyplotcm.o nbody.o
+OBJ = luview.o tesselate.o shader.o colorbar.o pyplotcm.o nbody.o volume.o
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
@@ -11,7 +11,7 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 	$(CC) $(CFLAGS) -c $<
 
 %.o : %.cpp
-	$(CXX) $(CFLAGS) -c $< -I../include
+	$(CXX) $(CFLAGS) -c $< -I../include $(GL_INCL)
 
 %.lc : %.lua
 	$(LUA) bin2c.lua +$< > $@
