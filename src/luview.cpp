@@ -1296,7 +1296,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<Tesselation3D>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<SegmentsEnsemble>(L);
-  //  LuaCppObject::Register<VolumeRendering>(L);
+  LuaCppObject::Register<VolumeRendering>(L);
 
   LuaCppObject::Register<NbodySimulation>(L);
 

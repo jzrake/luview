@@ -9,9 +9,13 @@ OBJ = 	luview.o \
 	colorbar.o \
 	pyplotcm.o \
 	nbody.o \
+	volume.o \
 	glInfo.o \
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
+
+volume.o : volume.cpp
+	$(CXX) $(CFLAGS) -c $< -I../include $(GL_INCL)
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<

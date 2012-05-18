@@ -4,4 +4,4 @@ local window = luview.Window()
 local info = luview.GpuInformation()
 
 info:print()
-info:ext_supported("thing")
+print(info:ext_supported("GL_EXT_framebuffer_object"))
