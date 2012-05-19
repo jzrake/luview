@@ -40,7 +40,7 @@ static void draw_cube_back()
   glPolygonMode(GL_BACK, GL_FILL);
 
   glBegin(GL_QUADS);
-  glNormal3f(0,0,1);
+  glNormal3f(0,0,-1);
   glColor3f(c1,c1,c1); glVertex3f(x1,x1,x1);
   glColor3f(c0,c1,c1); glVertex3f(x0,x1,x1);
   glColor3f(c0,c0,c1); glVertex3f(x0,x0,x1);
@@ -48,7 +48,7 @@ static void draw_cube_back()
   glEnd();
 
   glBegin(GL_QUADS);
-  glNormal3f(1,0,0);
+  glNormal3f(-1,0,0);
   glColor3f(c1,c1,c1); glVertex3f(x1,x1,x1);
   glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
   glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
@@ -56,7 +56,7 @@ static void draw_cube_back()
   glEnd();
 
   glBegin(GL_QUADS);
-  glNormal3f(0,1,0);
+  glNormal3f(0,-1,0);
   glColor3f(c0,c0,c0); glVertex3f(x0,x0,x0);
   glColor3f(c1,c0,c0); glVertex3f(x1,x0,x0);
   glColor3f(c1,c0,c1); glVertex3f(x1,x0,x1);
@@ -103,14 +103,38 @@ VolumeRendering::VolumeRendering()
 {
   gl_modes.push_back(GL_TEXTURE_2D);
   //  gl_modes.push_back(GL_CULL_FACE);
-  //  gl_modes.push_back(GL_LIGHTING);
-  //  gl_modes.push_back(GL_LIGHT0);
-  //  gl_modes.push_back(GL_BLEND);
-  //  gl_modes.push_back(GL_COLOR_MATERIAL);
+  // gl_modes.push_back(GL_LIGHTING);
+  // gl_modes.push_back(GL_LIGHT0);
+  // gl_modes.push_back(GL_BLEND);
+  // gl_modes.push_back(GL_COLOR_MATERIAL);
 }
 
 
 void VolumeRendering::draw_local()
+{
+  static int count = 0;
+  ++count;
+  if (count % 1000 == 0) {
+    if ((count / 1000) % 2 == 0) {
+      printf("switching to less\n");
+      glClearDepth(1);
+      glDepthFunc(GL_LESS);
+    }
+    else {
+      printf("switching to greater\n");
+      glClearDepth(0);
+      glDepthFunc(GL_GREATER);
+    }
+  }
+  glClearColor(0.0, 0.0, 0.0, 0.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+
+  glPointSize(10);
+  draw_cube_back();
+  draw_cube_front();
+}
+
+static void draw_local1()
 {
   int Nx=512, Ny=512;
 

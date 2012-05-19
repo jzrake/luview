@@ -370,16 +370,17 @@ private:
   void start_window()
   {
     glfwInit();
-    glfwOpenWindow(WindowWidth, WindowHeight, 0,0,0,0,0,0, GLFW_WINDOW);
+    glfwOpenWindow(WindowWidth, WindowHeight, 5, 6, 5, 0, 8, 0, GLFW_WINDOW);
 
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
+
     glShadeModel(GL_SMOOTH);
     glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, WindowWidth/WindowHeight, 0.01, 100.0);
+    gluPerspective(45.0, WindowWidth/WindowHeight, 0.01, 200.0);
     glMatrixMode(GL_MODELVIEW);
 
     glfwSetKeyCallback(KeyboardInput);
@@ -393,7 +394,7 @@ private:
     character_input = ' ';
     CurrentWindow = this;
 
-    glClearColor(Color[0], Color[1], Color[2], 0.0);
+    glClearColor(Color[0], Color[1], Color[2], 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
 
