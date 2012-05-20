@@ -254,7 +254,7 @@ protected:
   // ---------------------------------------------------------------------------
   {
     if (oldobj != NULL) drop(oldobj);
-    hold(newobj);
+    if (newobj) hold(newobj);
     return newobj;
   }
   template <class T> T *replace(T *oldobj, int pos)
@@ -266,6 +266,9 @@ protected:
   {
     pos = lua_absindex(__lua_state, pos);
     if (oldobj != NULL) drop(oldobj);
+    if (lua_isnil(__lua_state, pos)) {
+      return NULL;
+    }
     T *newobj = checkarg<T>(__lua_state, pos);
     hold(newobj);
     return newobj;

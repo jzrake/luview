@@ -77,6 +77,9 @@ CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
   if (lua_type(L, pos) == LUA_TUSERDATA) {
     return checkarg<CallbackFunction>(L, pos);
   }
+  else if (lua_type(L, pos) == LUA_TNIL) {
+    return NULL;
+  }
   else {
     LuaFunction *f = create<LuaFunction>(L);
     f->hold(pos, "lua_callback");
@@ -254,7 +257,12 @@ int LuviewTraitedObject::_set_Callback_(lua_State *L)
   CallbackFunction *newcb = CallbackFunction::create_from_stack(L, 3);
   const char *help = luaL_optstring(L, 4, "");
   self->Callbacks[name] = self->replace(self->Callbacks[name], newcb);
-  self->Callbacks[name]->set_message(help);
+  if (self->Callbacks[name] == NULL) {
+    self->Callbacks.erase(self->Callbacks.find(name));
+  }
+  else {
+    self->Callbacks[name]->set_message(help);
+  }
   return 0;
 }
 int LuviewTraitedObject::_get_DataSource_(lua_State *L)
@@ -275,6 +283,9 @@ int LuviewTraitedObject::_set_DataSource_(lua_State *L)
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
   self->DataSources[name] = self->replace(self->DataSources[name], 3);
+  if (self->DataSources[name] == NULL) {
+    self->DataSources.erase(self->DataSources.find(name));
+  }
   return 0;
 }
 
