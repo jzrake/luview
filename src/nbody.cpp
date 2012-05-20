@@ -10,7 +10,7 @@
 
 NbodySimulation::NbodySimulation() :
   NumberOfParticles(600),
-  TimeStep(1e-5),
+  TimeStep(4e-6),
   particles(NULL)
 {
   init_particles();

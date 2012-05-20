@@ -568,8 +568,8 @@ public:
   }
   void draw_local()
   {
-    GLfloat mat_diffuse[] = { 0.3, 0.6, 0.7, 0.8 };
-    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 0.8 };
+    GLfloat mat_diffuse[] = { 0.9, 0.9, 0.9, 1.0 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat mat_shininess[] = { 128.0 };
 
     glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
@@ -1127,6 +1127,7 @@ private:
     GLuint *ind = (GLuint*) malloc(Np*sizeof(GLuint));
     for (int n=0; n<Np; ++n) ind[n] = n;
 
+    glDisable(GL_DEPTH_TEST);
     load_tex_data();
     glPointSize(LineWidth);
     glEnableClientState(GL_VERTEX_ARRAY);
@@ -1136,6 +1137,7 @@ private:
     glDrawElements(GL_POINTS, Np, GL_UNSIGNED_INT, ind);
     glDisableClientState(GL_VERTEX_ARRAY);
     if (colordata) glDisableClientState(GL_COLOR_ARRAY);
+    glEnable(GL_DEPTH_TEST);
 
     free(ind);
   }

@@ -14,15 +14,16 @@ local shader = shaders.load_shader("lambertian")
 nbody:advance()
 
 pntens:set_data("points", nbody:get_output())
-pntens:set_scale(0.5, 0.5, 0.5)
+pntens:set_scale(0.6, 0.6, 0.6)
 pntens:set_orientation(0, 90, 0)
 pntens:set_linewidth(16.0)
-pntens:set_color(0.8, 0.1, 0.9)
-pntens:set_alpha(0.5)
+pntens:set_color(0.5, 1.0, 0.3)
+pntens:set_alpha(1)
 
-window:set_color(0.05, 0.1, 0.1)
-box:set_color(0.5, 0.9, 0.9)
+window:set_color(0,0,0)
+box:set_color(0.7, 0.9, 0.9)
 box:set_shader(shader)
+box:set_alpha(0.9)
 
 local status = "continue"
 local key = ''
