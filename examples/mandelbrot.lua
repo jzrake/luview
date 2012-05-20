@@ -18,7 +18,8 @@ void main() {
 }
 ]]
 
-local function frag(zoom, x0, y0)
+local function frag(params)
+   local zoom, x0, y0 = params.z, params.x, params.y
    return string.format([[
 varying vec4 pos;
 void main() {
@@ -50,24 +51,20 @@ image:set_orientation(0,0,-90)
 image:set_shader(shade)
 window:set_color(0,0,0)
 window:set_orientation(0,0,0)
-window:set_position(0,0,-1.4)
+window:set_position(0,0,-0.9)
 
 
-local status = "continue"
-local iter = 0
-local key
 local params = { z=3, x=0, y=0 }
+shade:set_program(vert, frag(params))
 
-while status == "continue" do
-   status, key = window:render_scene{image}
+window:set_callback("a", function() params.x = params.x + 0.03*params.z end)
+window:set_callback("d", function() params.x = params.x - 0.03*params.z end)
+window:set_callback("s", function() params.y = params.y + 0.03*params.z end)
+window:set_callback("w", function() params.y = params.y - 0.03*params.z end)
+window:set_callback("-", function() params.z = params.z * 1.1 end)
+window:set_callback("+", function() params.z = params.z / 1.1 end)
+window:set_callback("idle", function() shade:set_program(vert, frag(params)) end)
 
-   if key == '[' then params.x = params.x + 0.03*params.z end
-   if key == ']' then params.x = params.x - 0.03*params.z end
-   if key == 'm' then params.y = params.y + 0.03*params.z end
-   if key == 'k' then params.y = params.y - 0.03*params.z end
-   if key == '-' then params.z = params.z * 1.1 end
-   if key == '+' then params.z = params.z / 1.1 end
-
-   shade:set_program(vert, frag(params.z, params.x, params.y))
-   iter = iter + 1
+while window:render_scene{image} == "continue" do
+   shade:set_program(vert, frag(params))
 end

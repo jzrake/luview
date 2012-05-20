@@ -79,7 +79,7 @@ CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
   }
   else {
     LuaFunction *f = create<LuaFunction>(L);
-    f->hold(2, "lua_callback");
+    f->hold(pos, "lua_callback");
     return f;
   }
 }
@@ -96,6 +96,10 @@ int CallbackFunction::_call()
     lua_pushnumber(L, res[n]);
   }
   return res.size();
+}
+std::vector<double> CallbackFunction::call()
+{
+  return call_priv(NULL, 0);
 }
 std::vector<double> CallbackFunction::call(double u)
 {
@@ -123,6 +127,8 @@ std::vector<double> LuaFunction::call_priv(double *x, int narg)
   std::vector<double> res;
   int nstart = lua_gettop(L);
   retrieve("lua_callback");
+
+
   for (int i=0; i<narg; ++i) {
     lua_pushnumber(L, x[i]);
   }
@@ -446,7 +452,17 @@ private:
     system(convert_cmd);
     free(pixels);
   }
-
+  int exec_callback(const char *key)
+  {
+    EntryCB cb = Callbacks.find(key);
+    if (cb != Callbacks.end()) {
+      cb->second->call(0);
+      return 1;
+    }
+    else {
+      return 0;
+    }
+  }
   static void KeyboardInput(int key, int state)
   {
     if (state != GLFW_PRESS) return;
@@ -463,6 +479,11 @@ private:
   {
     double *Position = CurrentWindow->Position;
     double *Scale = CurrentWindow->Scale;
+
+    int resp = CurrentWindow->exec_callback((const char*)&key);
+    CurrentWindow->exec_callback("idle");
+
+    if (resp) return;
 
     switch (key) {
     case 'p':
