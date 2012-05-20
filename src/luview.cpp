@@ -252,7 +252,9 @@ int LuviewTraitedObject::_set_Callback_(lua_State *L)
   LuviewTraitedObject *self = checkarg<LuviewTraitedObject>(L, 1);
   const char *name = luaL_checkstring(L, 2);
   CallbackFunction *newcb = CallbackFunction::create_from_stack(L, 3);
+  const char *help = luaL_optstring(L, 4, "");
   self->Callbacks[name] = self->replace(self->Callbacks[name], newcb);
+  self->Callbacks[name]->set_message(help);
   return 0;
 }
 int LuviewTraitedObject::_get_DataSource_(lua_State *L)
@@ -361,10 +363,11 @@ private:
   double WindowWidth, WindowHeight;
   int character_input;
   static Window *CurrentWindow;
+  bool first_frame;
 
 public:
   Window() : WindowWidth(1024),
-             WindowHeight(768), character_input(0)
+             WindowHeight(768), character_input(0), first_frame(true)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
@@ -397,6 +400,17 @@ private:
 
   const char *render_scene(std::vector<DrawableObject*> &actors)
   {
+    if (first_frame) {
+      EntryCB cb = Callbacks.begin();
+      while (cb != Callbacks.end()) {
+	if (cb->first != "idle") {
+	  std::cout<<cb->first<<": "<<cb->second->get_message()<<std::endl;
+	}
+	++cb;
+      }
+      first_frame = false;
+    }
+
     character_input = ' ';
     CurrentWindow = this;
 

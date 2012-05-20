@@ -57,12 +57,12 @@ window:set_position(0,0,-0.9)
 local params = { z=3, x=0, y=0 }
 shade:set_program(vert, frag(params))
 
-window:set_callback("a", function() params.x = params.x + 0.03*params.z end)
-window:set_callback("d", function() params.x = params.x - 0.03*params.z end)
-window:set_callback("s", function() params.y = params.y + 0.03*params.z end)
-window:set_callback("w", function() params.y = params.y - 0.03*params.z end)
-window:set_callback("-", function() params.z = params.z * 1.1 end)
-window:set_callback("+", function() params.z = params.z / 1.1 end)
+window:set_callback("a", function() params.x = params.x + 0.03*params.z end, "move left")
+window:set_callback("d", function() params.x = params.x - 0.03*params.z end, "move right")
+window:set_callback("s", function() params.y = params.y + 0.03*params.z end, "move down")
+window:set_callback("w", function() params.y = params.y - 0.03*params.z end, "move up")
+window:set_callback("-", function() params.z = params.z * 1.1 end, "zoom out")
+window:set_callback("+", function() params.z = params.z / 1.1 end, "zoom in")
 window:set_callback("idle", function() shade:set_program(vert, frag(params)) end)
 
 while window:render_scene{image} == "continue" do
