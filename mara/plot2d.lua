@@ -39,7 +39,7 @@ window:set_color(0,0,0)
 window:set_orientation(0,0,0)
 window:set_position(0,0,-1.3)
 
-local auto_movie = true
+local auto_movie = false
 local narg = 1
 local status = "continue"
 local key
@@ -47,6 +47,9 @@ local actors = { }
 
 actors[1] = load_frame(cmdline.args[narg], "rho")
 
+local function stage()
+   actors[1]:stage()
+end
 local function next_frame()
    narg = narg + 1
    local fn = cmdline.args[narg]
@@ -60,8 +63,8 @@ local function idle()
    end
 end
 
-window:set_callback("]", function() cmap:next_colormap() end, "next colormap")
-window:set_callback("[", function() cmap:prev_colormap() end, "previous colormap")
+window:set_callback("]", function() cmap:next_colormap(); stage() end, "next colormap")
+window:set_callback("[", function() cmap:prev_colormap(); stage() end, "previous colormap")
 window:set_callback("n", next_frame, "next frame")
 window:set_callback("idle", idle)
 

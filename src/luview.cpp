@@ -306,16 +306,6 @@ int LuviewTraitedObject::__set_vec__(lua_State *L, double *v, int n)
 DrawableObject::DrawableObject() : shader(NULL)
 {
   gl_modes.push_back(GL_DEPTH_TEST);
-
-  GLfloat light_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
-  GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
-  GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-  GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
-
-  glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-  glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-  glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-  glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 }
 void DrawableObject::draw()
 {
@@ -408,6 +398,17 @@ private:
     glfwSetCharCallback(CharacterInput);
     glfwEnable(GLFW_STICKY_KEYS);
     glfwEnable(GLFW_KEY_REPEAT);
+
+
+    GLfloat light_ambient[] = { 0.1, 0.1, 0.1, 1.0 };
+    GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
   }
 
   const char *render_scene(std::vector<DrawableObject*> &actors)
@@ -1414,6 +1415,14 @@ public:
   }
   void draw_local()
   {
+    GLfloat mat_diffuse[] = { 0.9, 0.9, 0.9, 1.0 };
+    GLfloat mat_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat mat_shininess[] = { 128.0 };
+
+    glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diffuse);
+    glMaterialfv(GL_FRONT, GL_SPECULAR, mat_specular);
+    glMaterialfv(GL_FRONT, GL_SHININESS, mat_shininess);
+
     if (staged) {
       load_texture();
       staged = 0;
