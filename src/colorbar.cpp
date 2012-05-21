@@ -107,9 +107,35 @@ std::vector<double> MatplotlibColormaps::call_priv(double *x, int narg)
     printf("no cmap %s!\n", names[cmap_id]);
   }
 
-  int n = z * 255.0;
+  int n = z * 256.0; if (n >= 256) n = 255;
   std::vector<double> ret(&data[4*n], &data[4*(n+1)]);
   return ret;
+}
+
+MatplotlibColormaps::LuaInstanceMethod
+MatplotlibColormaps::__getattr__(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["get_output"] = _get_output_;
+  RETURN_ATTR_OR_CALL_SUPER(ColormapCollection);
+}
+int MatplotlibColormaps::_get_output_(lua_State *L)
+{
+  MatplotlibColormaps *self = checkarg<MatplotlibColormaps>(L, 1);
+
+  const char **names = pyplot_colors_get_names();
+  const float *data = pyplot_colors_get_lookup_table(names[self->cmap_id]);
+
+  if (data == NULL) {
+    luaL_error(L, "no cmap %s!\n", names[self->cmap_id]);
+  }
+  self->color_table->set_points(data, 256, 4);
+  self->retrieve(self->color_table);
+  return 1;
+}
+void MatplotlibColormaps::__init_lua_objects()
+{
+  hold(color_table = create<PointsSource>(__lua_state));
 }
 
 

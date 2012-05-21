@@ -26,8 +26,7 @@ void NbodySimulation::advance()
 }
 void NbodySimulation::__init_lua_objects()
 {
-  output_points = create<PointsSource>(__lua_state);
-  hold(output_points);
+  hold(output_points = create<PointsSource>(__lua_state));
   refresh_output();
 }
 NbodySimulation::LuaInstanceMethod

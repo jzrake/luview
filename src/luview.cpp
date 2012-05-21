@@ -730,6 +730,13 @@ void PointsSource::set_points(double *data, int np, int nc)
   output = (GLfloat*) realloc(output, Np*Nc*sizeof(GLfloat));
   for (int i=0; i<Np*Nc; ++i) output[i] = data[i];
 }
+void PointsSource::set_points(const GLfloat *data, int np, int nc)
+{
+  Np = np;
+  Nc = nc;
+  output = (GLfloat*) realloc(output, Np*Nc*sizeof(GLfloat));
+  for (int i=0; i<Np*Nc; ++i) output[i] = data[i];
+}
 
 PointsSource::LuaInstanceMethod PointsSource::__getattr__
 (std::string &method_name)
@@ -780,7 +787,9 @@ void MultiImageSource::set_array(double *data, int nx, int ny, int nc)
 
   int Nt = Nx * Ny * Nc;
   output = (GLfloat*) realloc(output, Nt*sizeof(GLfloat));
-  for (int i=0; i<Nt; ++i) output[i] = data[i];
+  for (int i=0; i<Nt; ++i) {
+    output[i] = data[i];
+  }
 }
 
 MultiImageSource::LuaInstanceMethod MultiImageSource::__getattr__
@@ -1266,6 +1275,7 @@ public:
   void load_texture()
   {
     EntryDS im = DataSources.find("rgba");
+
     if (im == DataSources.end()) {
       return;
     }
@@ -1276,7 +1286,7 @@ public:
     }
     if (im->second->get_num_components() != 4) {
       luaL_error(__lua_state,
-                 "data source 'rgba' must provide 4 components "
+                 "data source 'rgba' must provide 4 components: "
                  "(r,g,b,a)");
     }
 
@@ -1292,8 +1302,110 @@ public:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, 4, Nx, Ny, 0, GL_RGBA, GL_FLOAT, rgba);
+  }
+  void draw_local()
+  {
+    if (staged) {
+      load_texture();
+      staged = 0;
+    }
 
-    const GLfloat *table = pyplot_colors_get_lookup_table("gnuplot");
+    glBindTexture(GL_TEXTURE_2D, TextureMap);
+    glBegin(GL_QUADS);
+    glNormal3f(0, 0, 1);
+    glTexCoord2f(0, 0); glVertex3f(Lx0, Ly0, 0);
+    glTexCoord2f(0, 1); glVertex3f(Lx0, Ly1, 0);
+    glTexCoord2f(1, 1); glVertex3f(Lx1, Ly1, 0);
+    glTexCoord2f(1, 0); glVertex3f(Lx1, Ly0, 0);
+    glEnd();
+  }
+
+protected:
+  LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["stage"] = _stage_;
+    RETURN_ATTR_OR_CALL_SUPER(DrawableObject);
+  }
+  static int _stage_(lua_State *L)
+  {
+    ImagePlane *self = checkarg<ImagePlane>(L, 1);
+    self->staged = 1;
+    return 0;
+  }
+} ;
+
+
+class ImagePlaneGpuShaded : public DrawableObject
+{
+private:
+  GLuint TextureMap, ColortableTex;
+  double Lx0, Lx1, Ly0, Ly1;
+  int staged;
+
+public:
+  ImagePlaneGpuShaded()
+  {
+    gl_modes.push_back(GL_TEXTURE_2D);
+    gl_modes.push_back(GL_LIGHTING);
+    gl_modes.push_back(GL_LIGHT0);
+    gl_modes.push_back(GL_BLEND);
+    gl_modes.push_back(GL_COLOR_MATERIAL);
+
+    glGenTextures(1, &TextureMap);
+    glGenTextures(1, &ColortableTex);
+
+    Lx0 = -0.5;
+    Lx1 = +0.5;
+    Ly0 = -0.5;
+    Ly1 = +0.5;
+
+    staged = 1;
+  }
+  ~ImagePlaneGpuShaded()
+  {
+    glDeleteTextures(1, &TextureMap);
+    glDeleteTextures(1, &ColortableTex);
+  }
+  void load_texture()
+  {
+    EntryDS im = DataSources.find("data");
+    EntryDS cm = DataSources.find("color_table");
+
+    if (im == DataSources.end() || cm == DataSources.end()) {
+      return;
+    }
+
+    if (im->second->get_num_dimensions() != 2) {
+      luaL_error(__lua_state,
+                 "data source 'data' must be a 2d array");
+    }
+    if (im->second->get_num_components() != 1) {
+      luaL_error(__lua_state,
+                 "data source 'data' must provide 1 component");
+    }
+
+    if (cm->second->get_num_dimensions() != 1) {
+      luaL_error(__lua_state, "data source 'color_table' must be a 1d array");
+    }
+    if (cm->second->get_num_components() != 4) {
+      luaL_error(__lua_state, "data source 'color_table' must provide 4"
+		 "components: (r,g,b,a)");
+    }
+    if (cm->second->get_num_points(0) != 256) {
+      luaL_error(__lua_state, "data source 'color_table' must have length 256");
+    }
+
+    const int Nx = im->second->get_num_points(0);
+    const int Ny = im->second->get_num_points(1);
+
+    GLfloat *data = im->second->get_data();
+    glBindTexture(GL_TEXTURE_2D, TextureMap);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexImage2D(GL_TEXTURE_2D, 0, 1, Nx, Ny, 0, GL_LUMINANCE, GL_FLOAT, data);
+
+    const GLfloat *table = cm->second->get_data();
     glBindTexture(GL_TEXTURE_1D, ColortableTex);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
@@ -1302,7 +1414,7 @@ public:
   }
   void draw_local()
   {
-    if (staged) {
+    if (staged || true) {
       load_texture();
       staged = 0;
     }
@@ -1335,11 +1447,12 @@ protected:
   }
   static int _stage_(lua_State *L)
   {
-    ImagePlane *self = checkarg<ImagePlane>(L, 1);
+    ImagePlaneGpuShaded *self = checkarg<ImagePlaneGpuShaded>(L, 1);
     self->staged = 1;
     return 0;
   }
 } ;
+
 
 extern "C" int luaopen_luview(lua_State *L)
 {
@@ -1352,6 +1465,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SurfaceNURBS>(L);
   LuaCppObject::Register<PointsEnsemble>(L);
   LuaCppObject::Register<ImagePlane>(L);
+  LuaCppObject::Register<ImagePlaneGpuShaded>(L);
   LuaCppObject::Register<TessColormaps>(L);
   LuaCppObject::Register<MatplotlibColormaps>(L);
 

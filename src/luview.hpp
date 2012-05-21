@@ -11,6 +11,39 @@ extern "C" {
 }
 
 
+// Forward declarations
+// -----------------------------------------------------------------------------
+class CallbackFunction;
+class PointsSource;
+// -----------------------------------------------------------------------------
+
+
+class DataSource : public LuaCppObject
+{
+protected:
+  DataSource *input;
+  GLfloat *output;
+  GLuint *indices;
+  CallbackFunction *transform;
+
+public:
+  DataSource();
+  virtual ~DataSource();
+  virtual GLfloat *get_data() { return output; }
+  virtual GLuint *get_indices() { return indices; }
+  virtual int get_num_points(int d) = 0;
+  virtual int get_size() = 0;
+  virtual int get_num_components() = 0;
+  virtual int get_num_dimensions() = 0;
+
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _get_transform_(lua_State *L);
+  static int _set_transform_(lua_State *L);
+  static int _get_input_(lua_State *L);
+  static int _set_input_(lua_State *L);
+} ;
+
 class CallbackFunction : public LuaCppObject
 {
 public:
@@ -33,7 +66,6 @@ class LuaFunction : public CallbackFunction
 private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
-
 
 class ColormapCollection : public CallbackFunction
 {
@@ -67,35 +99,13 @@ public:
   void next_colormap();
   void prev_colormap();
 private:
+  PointsSource *color_table;
   virtual std::vector<double> call_priv(double *x, int narg);
-} ;
-
-class DataSource : public LuaCppObject
-{
-protected:
-  DataSource *input;
-  GLfloat *output;
-  GLuint *indices;
-  CallbackFunction *transform;
-
-public:
-  DataSource();
-  virtual ~DataSource();
-  virtual GLfloat *get_data() { return output; }
-  virtual GLuint *get_indices() { return indices; }
-  virtual int get_num_points(int d) = 0;
-  virtual int get_size() = 0;
-  virtual int get_num_components() = 0;
-  virtual int get_num_dimensions() = 0;
-
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _get_transform_(lua_State *L);
-  static int _set_transform_(lua_State *L);
-  static int _get_input_(lua_State *L);
-  static int _set_input_(lua_State *L);
+  void __init_lua_objects();
+  static int _get_output_(lua_State *L);
 } ;
-
 
 class GlobalLinearTransformation : public DataSource
 {
@@ -104,11 +114,11 @@ protected:
   std::map<int, std::pair<double, double> > output_range;
 
 public:
-  virtual GLfloat *get_data();
-  virtual int get_num_points(int d);
-  virtual int get_size();
-  virtual int get_num_components();
-  virtual int get_num_dimensions();
+  GLfloat *get_data();
+  int get_num_points(int d);
+  int get_size();
+  int get_num_components();
+  int get_num_dimensions();
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
@@ -137,6 +147,7 @@ public:
   PointsSource();
 
   void set_points(double *data, int np, int nc);
+  void set_points(const GLfloat *data, int np, int nc);
   int get_num_points(int d);
   int get_size();
   int get_num_components();

@@ -36,16 +36,20 @@ local function load_frame(fname)
    image_src:set_array(data)
    normalize:set_input(image_src)
 
---   scolors:set_input(normalize)
---   scolors:set_transform(cmap)
+   scolors:set_input(normalize)
+   scolors:set_transform(cmap)
 
    local image = luview.ImagePlane()
---   image:set_data("rgba", scolors)
-   image:set_data("rgba", normalize)
+   image:set_data("rgba", scolors)
+
+--   image:set_data("rgba", normalize)
+   image:set_data("color_table", normalize)
    image:set_orientation(0,0,-90)
-   image:set_shader(cmshade)
+--   image:set_shader(cmshade)
    return image
 end
+
+
 
 
 window:set_color(0,0,0)
@@ -60,6 +64,7 @@ local key
 local actors = { image }
 actors[1] = load_frame(cmdline.args[narg])
 cmap:set_colormap(4)
+
 
 while status == "continue" do
    status, key = window:render_scene(actors)
