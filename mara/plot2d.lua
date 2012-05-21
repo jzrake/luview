@@ -43,7 +43,7 @@ local auto_movie = true
 local narg = 1
 local status = "continue"
 local key
-local actors = { image }
+local actors = { }
 
 actors[1] = load_frame(cmdline.args[narg], "rho")
 
@@ -55,7 +55,7 @@ local function next_frame()
 end
 local function idle()
    if auto_movie then
---      window:print_screen("img/screen")
+      window:print_screen("img/screen")
       next_frame()
    end
 end

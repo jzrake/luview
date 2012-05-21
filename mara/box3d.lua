@@ -1,113 +1,82 @@
 
-package.path = package.path .. ";" .. os.getenv("LUA_PATH")
-
 local luview = require 'luview'
 local lunum = require 'lunum'
 local shaders = require 'shaders'
 
 local window = luview.Window()
---local cmap = luview.TessColormaps()
 local cmap = luview.MatplotlibColormaps()
 local box = luview.BoundingBox()
-local shader = shaders.load_shader("lambertian")
+local boxshader = shaders.load_shader("lambertian")
+local cmshade = shaders.load_shader("cbar")
 
-h5_open_file(cmdline.args[1], "r")
 
-local image = { }
-local image_src = { }
-local normalize = { }
-local scolors = { }
 
-local dsets = {"Bx"}--"rho", "pre", "vx", "vy", "vz" }
-local all_data = { }
-
-for _,v in pairs({"x", "y", "z"}) do
-   local Nq = #dsets
-
-   local shape = h5_get_ndims("cutplanes/"..v.."_face/"..dsets[1])
-   all_data[v] = lunum.zeros{shape[0], shape[1], Nq}
-
-   image_src[v] = luview.MultiImageSource()
-   normalize[v] = luview.GlobalLinearTransformation()
-   scolors[v] = luview.FunctionMapping()
-   image[v] = luview.ImagePlane()
-
-   for nd,d in pairs(dsets) do
-      local dsetname = "cutplanes/"..v.."_face/"..d
-      local var = h5_read_array(dsetname)
-      print("loading "..dsetname)
-
-      for i=0,shape[0]*shape[1]-1 do
-	 all_data[v][i*Nq + nd-1] = var[i]
-      end
-      normalize[v]:set_range(nd-1, 0.0, 1.0)
-   end
-
-   image_src[v]:set_array(all_data[v])
-   normalize[v]:set_input(image_src[v])
-   scolors[v]:set_input(normalize[v])
-   scolors[v]:set_transform(cmap)
-   image[v]:set_data("rgba", scolors[v])
-   image[v]:set_alpha(1.0)
-end
-
-h5_close_file()
-
-image["x"]:set_position(-0.5,  0.0,  0.0)
-image["y"]:set_position( 0.0, -0.5,  0.0)
-image["z"]:set_position( 0.0,  0.0, -0.5)
-
-image["x"]:set_orientation(0,-90,0)
-image["y"]:set_orientation(90,0,90)
-image["z"]:set_orientation(0,0,90)
-
+local images = { }
 local cmap_comp = 0
 local light_inside = true
-local function setup_light()
+
+
+local function load_frame(fname, dir, var)
+   h5_open_file(fname, "r")
+   local image_src = luview.MultiImageSource()
+   local image = luview.ImagePlaneGpuShaded()
+   local normalize = luview.GlobalLinearTransformation()
+   local data = h5_read_array("cutplanes/"..dir.."_face/"..var)
+   h5_close_file()
+
+   image_src:set_array(data)
+   normalize:set_input(image_src)
+   normalize:set_range(0, 0.0, 1.0)
+   image:set_data("data", normalize)
+   image:set_data("color_table", cmap:get_output())
+   image:set_shader(cmshade)
+
+   return image
+end
+
+local function setup_planes()
    if light_inside then
-      image["x"]:set_scale(1,1,-1) -- puts the front face inside the box
-      image["y"]:set_scale(1,1,-1)
-      image["z"]:set_scale(1,1, 1)
+      images["x"]:set_scale(1,1,-1) -- puts the front face inside the box
+      images["y"]:set_scale(1,1,-1)
+      images["z"]:set_scale(1,1, 1)
    else
-      image["x"]:set_scale(1,1, 1)
-      image["y"]:set_scale(1,1, 1)
-      image["z"]:set_scale(1,1,-1)
+      images["x"]:set_scale(1,1, 1)
+      images["y"]:set_scale(1,1, 1)
+      images["z"]:set_scale(1,1,-1)
+   end
+
+   images["x"]:set_position(-0.5,  0.0,  0.0)
+   images["y"]:set_position( 0.0, -0.5,  0.0)
+   images["z"]:set_position( 0.0,  0.0, -0.5)
+
+   images["x"]:set_orientation( 0,-90,  0)
+   images["y"]:set_orientation(90,  0, 90)
+   images["z"]:set_orientation( 0,  0, 90)
+
+end
+
+local function stage()
+   for _,d in pairs{"x","y","z"} do
+      images[d]:stage()
    end
 end
-setup_light(light_inside)
+
+for _,d in pairs{"x","y","z"} do
+   images[d] = load_frame(cmdline.args[1], d, "rho")
+end
+setup_planes()
+
 
 window:set_color(0,0,0)
 window:set_orientation(0,0,0)
-box:set_linewidth(0.6)
+box:set_linewidth(0.8)
 box:set_color(1,0,0)
-box:set_shader(shader)
+box:set_shader(boxshader)
 box:set_alpha(1)
 
-local status = "continue"
-local key
-local actors = { image["z"], image["x"], image["y"], box }
+local actors = { images["x"], images["y"], images["z"], box }
 
-while status == "continue" do
-   status, key = window:render_scene(actors)
-   if tonumber(key) then
-      cmap:set_cmap(tonumber(key))
-      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
-   elseif key == 'k' then
-      cmap:next_colormap()
-      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
-   elseif key == 'j' then
-      cmap:prev_colormap()
-      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
-   elseif key == 'v' then
-      cmap_comp = cmap_comp + 1
-      if cmap_comp == #dsets then cmap_comp = 0 end
-      print("showing variable "..dsets[cmap_comp+1])
-      cmap:set_component(cmap_comp)
-      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
-   elseif key == 'l' then
-      light_inside = not light_inside
-      setup_light()
-      for _,v in pairs({"x", "y", "z"}) do image[v]:stage() end
-   end
-end
+window:set_callback("]", function() cmap:next_colormap(); stage() end, "next colormap")
+window:set_callback("[", function() cmap:prev_colormap(); stage() end, "previous colormap")
 
+while window:render_scene(actors) == "continue" do end

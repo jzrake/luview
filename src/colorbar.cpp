@@ -133,6 +133,7 @@ int MatplotlibColormaps::_get_output_(lua_State *L)
 void MatplotlibColormaps::__init_lua_objects()
 {
   hold(color_table = create<PointsSource>(__lua_state));
+  refresh_output();
 }
 void MatplotlibColormaps::refresh_output()
 {

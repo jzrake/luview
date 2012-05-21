@@ -1007,7 +1007,7 @@ private:
       colordata = cm->second->get_data();
       if (cm->second->get_num_components() != 4) {
         luaL_error(__lua_state,
-                   "data source 'colors' must provide 4 components (r,g,b,a)");
+                   "data source 'colors' must provide 4 components: (r,g,b,a)");
       }
       if (cm->second->get_num_dimensions() != 2) {
         luaL_error(__lua_state,
@@ -1138,7 +1138,7 @@ private:
       colordata = cm->second->get_data();
       if (cm->second->get_num_components() != 4) {
         luaL_error(__lua_state,
-                   "data source 'colors' must provide 4 components (r,g,b,a)");
+                   "data source 'colors' must provide 4 components: (r,g,b,a)");
       }
       if (cm->second->get_num_dimensions() != 1) {
         luaL_error(__lua_state,
@@ -1288,8 +1288,7 @@ public:
     }
     if (im->second->get_num_components() != 4) {
       luaL_error(__lua_state,
-                 "data source 'rgba' must provide 4 components: "
-                 "(r,g,b,a)");
+                 "data source 'rgba' must provide 4 components: (r,g,b,a)");
     }
 
     GLfloat *rgba = im->second->get_data();
@@ -1391,8 +1390,7 @@ public:
       luaL_error(__lua_state, "data source 'color_table' must be a 1d array");
     }
     if (cm->second->get_num_components() != 4) {
-      luaL_error(__lua_state, "data source 'color_table' must provide 4"
-		 "components: (r,g,b,a)");
+      luaL_error(__lua_state, "data source 'color_table' must provide 4 components: (r,g,b,a)");
     }
     if (cm->second->get_num_points(0) != 256) {
       luaL_error(__lua_state, "data source 'color_table' must have length 256");
@@ -1416,7 +1414,7 @@ public:
   }
   void draw_local()
   {
-    if (staged || true) {
+    if (staged) {
       load_texture();
       staged = 0;
     }
