@@ -76,6 +76,7 @@ public:
 protected:
   int cmap_id;
   int var_index;
+  virtual void refresh_output() { }
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_cmap_(lua_State *L);
@@ -100,10 +101,12 @@ public:
   void prev_colormap();
 private:
   PointsSource *color_table;
+  const float *ctable_data;
   virtual std::vector<double> call_priv(double *x, int narg);
 protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  void refresh_output();
   void __init_lua_objects();
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _get_output_(lua_State *L);
 } ;
 

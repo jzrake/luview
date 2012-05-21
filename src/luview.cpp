@@ -448,6 +448,8 @@ private:
       glfwCloseWindow();
       return "terminate";
     }
+
+    CurrentWindow->exec_callback("idle");
     return "continue";
   }
 
@@ -472,6 +474,9 @@ private:
     glReadPixels(0, 0, dimx, dimy, GL_RGB, GL_UNSIGNED_BYTE, pixels);
     
     FILE *fp = fopen(fname_ppm, "wb");
+    if (fp == NULL) {
+      luaL_error(__lua_state, "could not create image with filename %s", fname_ppm);
+    }
     fprintf(fp, "P6\n%d %d\n255\n", dimx, dimy);
     fwrite(pixels, sizeof(char), imsize, fp);
     fclose(fp);
@@ -506,10 +511,7 @@ private:
     double *Position = CurrentWindow->Position;
     double *Scale = CurrentWindow->Scale;
 
-    int resp = CurrentWindow->exec_callback((const char*)&key);
-    CurrentWindow->exec_callback("idle");
-
-    if (resp) return;
+    if (CurrentWindow->exec_callback((const char*)&key)) return;
 
     switch (key) {
     case 'p':

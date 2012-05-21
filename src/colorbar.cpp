@@ -22,6 +22,7 @@ int ColormapCollection::_set_cmap_(lua_State *L)
 {
   ColormapCollection *self = checkarg<ColormapCollection>(L, 1);
   self->cmap_id = luaL_checkinteger(L, 2);
+  self->refresh_output();
   printf("using cmap %d\n", self->cmap_id);
   return 0;
 }
@@ -76,6 +77,8 @@ std::vector<double> TessColormaps::call_priv(double *x, int narg)
   get_rgb(z, &ret[0], &ret[1], &ret[2], cmap_id);
   return ret;
 }
+
+
 void MatplotlibColormaps::next_colormap()
 {
   const char **names = pyplot_colors_get_names();
@@ -83,6 +86,7 @@ void MatplotlibColormaps::next_colormap()
     cmap_id = 0;
   }
   printf("set colormap to matplotlib:%s\n", names[cmap_id]);
+  refresh_output();
 }
 void MatplotlibColormaps::prev_colormap()
 {
@@ -91,6 +95,7 @@ void MatplotlibColormaps::prev_colormap()
     cmap_id = pyplot_colors_get_num_tables()-1;
   }
   printf("set colormap to matplotlib:%s\n", names[cmap_id]);
+  refresh_output();
 }
 std::vector<double> MatplotlibColormaps::call_priv(double *x, int narg)
 {
@@ -104,7 +109,7 @@ std::vector<double> MatplotlibColormaps::call_priv(double *x, int narg)
   const float *data = pyplot_colors_get_lookup_table(names[cmap_id]);
 
   if (data == NULL) {
-    printf("no cmap %s!\n", names[cmap_id]);
+    luaL_error(__lua_state, "no color map named %s!\n", names[cmap_id]);
   }
 
   int n = z * 256.0; if (n >= 256) n = 255;
@@ -122,14 +127,6 @@ MatplotlibColormaps::__getattr__(std::string &method_name)
 int MatplotlibColormaps::_get_output_(lua_State *L)
 {
   MatplotlibColormaps *self = checkarg<MatplotlibColormaps>(L, 1);
-
-  const char **names = pyplot_colors_get_names();
-  const float *data = pyplot_colors_get_lookup_table(names[self->cmap_id]);
-
-  if (data == NULL) {
-    luaL_error(L, "no cmap %s!\n", names[self->cmap_id]);
-  }
-  self->color_table->set_points(data, 256, 4);
   self->retrieve(self->color_table);
   return 1;
 }
@@ -137,6 +134,23 @@ void MatplotlibColormaps::__init_lua_objects()
 {
   hold(color_table = create<PointsSource>(__lua_state));
 }
+void MatplotlibColormaps::refresh_output()
+{
+  lua_State *L = __lua_state;
+  const char **names = pyplot_colors_get_names();
+  const float *data = pyplot_colors_get_lookup_table(names[cmap_id]);
+  if (data == NULL) {
+    luaL_error(L, "no color map named %s\n", names[cmap_id]);
+  }
+  ctable_data = data;
+  color_table->set_points(ctable_data, 256, 4);
+}
+
+
+
+
+
+
 
 
 void get_rgb(double val, double *rp, double *gp, double *bp, int COLORBAR)
