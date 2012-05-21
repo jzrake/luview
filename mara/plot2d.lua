@@ -2,6 +2,7 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
+local shaders = require 'shaders'
 
 local window = luview.Window()
 local image_src = luview.MultiImageSource()
@@ -9,13 +10,14 @@ local normalize = luview.GlobalLinearTransformation()
 --local cmap = luview.TessColormaps()
 local cmap = luview.MatplotlibColormaps()
 local scolors = luview.FunctionMapping()
+local cmshade = shaders.load_shader("cbar")
 
 
 local function load_frame(fname)
    collectgarbage()
    h5_open_file(fname, "r")
 
-   local dsets = { "rho" }--, "pre", "vx", "vy", "vz" }
+   local dsets = { "rho", "pre", "vx", "vy"}--, "vz" }
    local shape = h5_get_ndims("prim/"..dsets[1])
    local data = lunum.zeros{shape[0], shape[1], #dsets}
 
@@ -33,12 +35,15 @@ local function load_frame(fname)
 
    image_src:set_array(data)
    normalize:set_input(image_src)
-   scolors:set_input(normalize)
-   scolors:set_transform(cmap)
+
+--   scolors:set_input(normalize)
+--   scolors:set_transform(cmap)
 
    local image = luview.ImagePlane()
-   image:set_data("rgba", scolors)
+--   image:set_data("rgba", scolors)
+   image:set_data("rgba", normalize)
    image:set_orientation(0,0,-90)
+   image:set_shader(cmshade)
    return image
 end
 

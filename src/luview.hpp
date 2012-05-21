@@ -270,6 +270,7 @@ public:
   void unset_program();
   void activate();
   void deactivate();
+  void set_uniform(const char *name, GLint value);
 
 private:
   void printShaderInfoLog(GLuint obj);

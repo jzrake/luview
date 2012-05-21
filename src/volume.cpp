@@ -102,7 +102,7 @@ static void draw_cube_front()
 VolumeRendering::VolumeRendering()
 {
   gl_modes.push_back(GL_TEXTURE_2D);
-  //  gl_modes.push_back(GL_CULL_FACE);
+  // gl_modes.push_back(GL_CULL_FACE);
   // gl_modes.push_back(GL_LIGHTING);
   // gl_modes.push_back(GL_LIGHT0);
   // gl_modes.push_back(GL_BLEND);

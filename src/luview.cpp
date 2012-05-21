@@ -8,6 +8,7 @@
 #include <algorithm>
 
 #include "luview.hpp"
+#include "pyplotcm.h"
 
 extern "C" {
 #define LUNUM_API_NOCOMPLEX
@@ -481,7 +482,7 @@ private:
   {
     EntryCB cb = Callbacks.find(key);
     if (cb != Callbacks.end()) {
-      cb->second->call(0);
+      cb->second->call();
       return 1;
     }
     else {
@@ -1234,7 +1235,7 @@ private:
 class ImagePlane : public DrawableObject
 {
 private:
-  GLuint TextureMap;
+  GLuint TextureMap, ColortableTex;
   double Lx0, Lx1, Ly0, Ly1;
   int staged;
 
@@ -1248,6 +1249,7 @@ public:
     gl_modes.push_back(GL_COLOR_MATERIAL);
 
     glGenTextures(1, &TextureMap);
+    glGenTextures(1, &ColortableTex);
 
     Lx0 = -0.5;
     Lx1 = +0.5;
@@ -1259,6 +1261,7 @@ public:
   ~ImagePlane()
   {
     glDeleteTextures(1, &TextureMap);
+    glDeleteTextures(1, &ColortableTex);
   }
   void load_texture()
   {
@@ -1289,6 +1292,13 @@ public:
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
     glTexImage2D(GL_TEXTURE_2D, 0, 4, Nx, Ny, 0, GL_RGBA, GL_FLOAT, rgba);
+
+    const GLfloat *table = pyplot_colors_get_lookup_table("gnuplot");
+    glBindTexture(GL_TEXTURE_1D, ColortableTex);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+    glTexParameteri(GL_TEXTURE_1D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+    glTexParameterf(GL_TEXTURE_1D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+    glTexImage1D(GL_TEXTURE_1D, 0, 4, 256, 0, GL_RGBA, GL_FLOAT, table);
   }
   void draw_local()
   {
@@ -1297,7 +1307,15 @@ public:
       staged = 0;
     }
 
-    glBindTexture(GL_TEXTURE_2D, TextureMap);
+    if (shader) {
+      shader->set_uniform("tex1d", 0);
+      glActiveTexture(GL_TEXTURE0 + 0);
+      glBindTexture(GL_TEXTURE_1D, ColortableTex);
+
+      shader->set_uniform("tex2d", 2);
+      glActiveTexture(GL_TEXTURE0 + 2);
+      glBindTexture(GL_TEXTURE_2D, TextureMap);
+    }
 
     glBegin(GL_QUADS);
     glNormal3f(0, 0, 1);

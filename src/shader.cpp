@@ -87,7 +87,17 @@ void ShaderProgram::printProgramInfoLog(GLuint obj)
   }
 }
 
+void ShaderProgram::set_uniform(const char *name, GLint value)
+{
+  GLint loc = glGetUniformLocation(prog, name);
+  GLint existing_pro; // save the existing program state
+  glGetIntegerv(GL_CURRENT_PROGRAM, &existing_pro);
 
+  glUseProgram(prog);
+  glUniform1i(loc, value);
+
+  glUseProgram(existing_pro); // replace the existing program
+}
 
 ShaderProgram::LuaInstanceMethod ShaderProgram::__getattr__
 (std::string &method_name)
