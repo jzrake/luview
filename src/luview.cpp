@@ -1514,4 +1514,3 @@ extern "C" int luaopen_luview(lua_State *L)
 
   return 1;
 }
-

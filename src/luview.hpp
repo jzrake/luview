@@ -38,6 +38,13 @@ protected:
   int __num_indices;
   int __num_points[__DATASOURCE_MAXDIMS];
 
+  // Maintains the largest and smallest values over the last data axis.
+  std::map<int, GLfloat> __maxval;
+  std::map<int, GLfloat> __minval;
+
+  // If true for component i, then map that componen to (0,1).
+  std::map<int, bool> __normalize;
+
   void __refresh_cpu();   // re-compile data from sources into cpu buffer
   void __cp_gpu_to_cpu(); // copy data from texture memory to cpu buffer
   void __cp_cpu_to_gpu(); // copy data from cpu buffer to texture memory
@@ -66,6 +73,7 @@ public:
      indices -> __ind_data
      ni -> __num_indices */
   void set_indices(const GLuint *indices, int ni);
+  void set_normalize(int comp, bool mode);
 
   void check_num_dimensions(int ndims, const char *name);
   void check_num_points(int npnts, int dim, const char *name);
@@ -85,7 +93,9 @@ protected:
   static int _set_input_(lua_State *L);
   static int _get_transform_(lua_State *L);
   static int _set_transform_(lua_State *L);
+  static int _set_normalize_(lua_State *L);
 } ;
+
 
 class DataSource : public LuaCppObject
 {

@@ -64,7 +64,10 @@ void NewDataSource::set_indices(const GLuint *indices, int ni)
   __ind_data = (GLuint*) realloc(__ind_data, sz);
   std::memcpy(__ind_data, indices, sz);
 }
-
+void NewDataSource::set_normalize(int comp, bool mode)
+{
+  __normalize[comp] = mode;
+}
 void NewDataSource::check_num_dimensions(int ndims, const char *name)
 {
   if (ndims != __num_dimensions) {
@@ -103,7 +106,7 @@ NewDataSource::__getattr__(std::string &method_name)
   attr["set_input"] = _set_input_;
   attr["get_transform"] = _get_transform_;
   attr["set_transform"] = _set_transform_;
-  RETURN_ATTR_OR_CALL_SUPER(NewDataSource);
+  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 
 int NewDataSource::_get_output_(lua_State *L)
@@ -157,5 +160,14 @@ int NewDataSource::_set_transform_(lua_State *L)
   NewDataSource *self = checkarg<NewDataSource>(L, 1);
   CallbackFunction *cb = checkarg<CallbackFunction>(L, 2);
   self->__cpu_transform = self->replace(self->__cpu_transform, cb);
+  return 0;
+}
+int NewDataSource::_set_normalize_(lua_State *L)
+{
+  NewDataSource *self = checkarg<NewDataSource>(L, 1);
+  int comp = luaL_checkinteger(L, 2);
+  bool mode = lua_toboolean(L, 3);
+  luaL_checktype(L, 3, LUA_TBOOLEAN);
+  self->set_normalize(comp, mode);
   return 0;
 }
