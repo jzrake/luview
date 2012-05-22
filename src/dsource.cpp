@@ -64,14 +64,16 @@ void DataSource::__trigger_refresh()
 {
   if (this->__ancestor_is_staged()) {
     this->__input_ds->__trigger_refresh();
+    this->__staged = false;
     this->__refresh_cpu();
     this->__cp_cpu_to_gpu();
-    this->__staged = false;
+    this->__execute_gpu_transform();
   }
   else if (this->__staged) {
+    this->__staged = false;
     this->__refresh_cpu();
     this->__cp_cpu_to_gpu();
-    this->__staged = false;
+    this->__execute_gpu_transform();
   }
 }
 const GLfloat *DataSource::get_data()
@@ -206,37 +208,41 @@ void DataSource::__cp_cpu_to_gpu()
 
 void DataSource::__execute_gpu_transform()
 {
-  if (__input_ds == NULL || __gpu_transform == NULL) return;
+  if (__gpu_transform == NULL) return;
 
-  const int *N = __input_ds->__num_points;
-  const GLfloat *input_data = __input_ds->get_data();
+  printf("executing the gpu thing\n");
+  const int *N = __num_points;
 
-  //  code to eventually do the data transfer all in hardware
-  //
-  //  GLuint read_buf;
-  //  glGenBuffers(1, &read_buf);
-  //  glBindBuffer(GL_PIXEL_PACK_BUFFER, read_buf);
-  //  __input_ds->become_texture();
-
-  ren2tex_start(N[0], N[1], __texture_id); // binds a new fbo
-  __gpu_transform->activate();
-
+  GLuint tex;
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushMatrix();
+
+  __gpu_transform->activate();
+  glGenTextures(1, &tex);
+  //  ren2tex_start(N[0], N[1], tex); // binds a new fbo
+
+  /*
+
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glViewport(0, 0, N[0], N[1]);
   glLoadIdentity();
 
   glWindowPos2i(0, 0);
-  glDrawPixels(N[0], N[1], GL_RGBA, GL_FLOAT, input_data);
+
+  //  glDrawPixels(N[0], N[1], GL_LUMINANCE, GL_FLOAT, __cpu_data);
+  //  glGetTexImage(GL_TEXTURE_2D, 0, GL_LUMINANCE, GL_FLOAT, __cpu_data);
+
+
+  */
+  //  ren2tex_finish(); // unbinds and frees the fbo
+  glDeleteTextures(1, &tex);
+  __gpu_transform->deactivate();
 
   glPopMatrix();
   glPopAttrib();
 
-  __gpu_transform->deactivate();
-
-  ren2tex_finish(); // unbinds and frees the fbo
+  __staged = true;
 }
 
 
@@ -251,6 +257,8 @@ DataSource::__getattr__(std::string &method_name)
   attr["set_input"] = _set_input_;
   attr["get_transform"] = _get_transform_;
   attr["set_transform"] = _set_transform_;
+  attr["get_program"] = _get_program_;
+  attr["set_program"] = _set_program_;
   attr["get_mode"] = _get_mode_;
   attr["set_mode"] = _set_mode_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);

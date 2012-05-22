@@ -14,6 +14,24 @@ local cmshade = shaders.load_shader("cbar")
 
 local cbar = require 'cbar'
 local lutdata = lunum.array(cbar):resize{256,4}
+local program = luview.ShaderProgram()
+
+local vert = [[
+void main() {
+  gl_Position = ftransform();
+}
+]]
+local frag = [[
+void main() {
+   gl_FragColor = vec4(1.0, 1.0, 1.0, 1.0);
+}
+]]
+program:set_program(vert, frag)
+
+local lumdata = lunum.fromfile("data/rhoJ.bin"):resize{1024,1024} / 3.0
+lumsrc:set_mode("luminance")
+lumsrc:set_data(lumdata)
+lumsrc:set_program(program)
 
 lut:set_data(lutdata)
 lut:set_mode("rgba")
@@ -23,11 +41,6 @@ box:set_alpha(1.0)
 box:set_linewidth(2.0)
 box:set_shader(shade)
 box:set_color(0.2, 0.2, 0.0)
-
-local lumdata = lunum.fromfile("data/rhoJ.bin"):resize{1024,1024} / 3.0
-
-lumsrc:set_mode("luminance")
-lumsrc:set_data(lumdata)
 
 image:set_data("color_table", lut)
 image:set_data("image", lumsrc)

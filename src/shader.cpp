@@ -35,11 +35,12 @@ void ShaderProgram::set_program(const char *vert_src, const char *frag_src)
 
 void ShaderProgram::activate()
 {
+  glGetIntegerv(GL_CURRENT_PROGRAM, &prev_prog);
   glUseProgram(prog);
 }
 void ShaderProgram::deactivate()
 {
-  glUseProgram(0);
+  glUseProgram(prev_prog);
 }
 
 void ShaderProgram::unset_program()

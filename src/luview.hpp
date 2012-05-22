@@ -358,6 +358,7 @@ class ShaderProgram : public LuaCppObject
 {
 private:
   GLuint vert, frag, prog;
+  GLint prev_prog;
 
 public:
   ShaderProgram();
