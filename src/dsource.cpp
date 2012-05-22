@@ -219,9 +219,8 @@ void DataSource::__execute_gpu_transform()
 
   __gpu_transform->activate();
   glGenTextures(1, &tex);
-  //  ren2tex_start(N[0], N[1], tex); // binds a new fbo
+  ren2tex_start(N[0], N[1], tex); // binds a new fbo
 
-  /*
 
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
@@ -229,13 +228,10 @@ void DataSource::__execute_gpu_transform()
   glLoadIdentity();
 
   glWindowPos2i(0, 0);
-
-  //  glDrawPixels(N[0], N[1], GL_LUMINANCE, GL_FLOAT, __cpu_data);
+  glDrawPixels(N[0], N[1], GL_LUMINANCE, GL_FLOAT, __cpu_data);
   //  glGetTexImage(GL_TEXTURE_2D, 0, GL_LUMINANCE, GL_FLOAT, __cpu_data);
 
-
-  */
-  //  ren2tex_finish(); // unbinds and frees the fbo
+  ren2tex_finish(); // unbinds and frees the fbo
   glDeleteTextures(1, &tex);
   __gpu_transform->deactivate();
 
