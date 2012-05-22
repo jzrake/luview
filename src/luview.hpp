@@ -10,13 +10,82 @@ extern "C" {
 #include "GL/glfw.h"
 }
 
+#define __DATASOURCE_MAXDIMS 3
+
 
 // Forward declarations
 // -----------------------------------------------------------------------------
 class CallbackFunction;
+class DataSource;
 class PointsSource;
+class ShaderProgram;
 // -----------------------------------------------------------------------------
 
+class NewDataSource : public LuaCppObject
+{
+protected:
+  typedef std::map<std::string, NewDataSource*> DataSourceMap;
+
+  CallbackFunction*  __cpu_transform;
+  ShaderProgram*     __gpu_transform;
+  NewDataSource*     __input_ds;
+  DataSourceMap      __output_ds;
+  GLfloat*           __cpu_data;
+  GLuint             __tex_id;
+  GLuint*            __ind_data;
+
+  int __num_dimensions;
+  int __num_indices;
+  int __num_points[__DATASOURCE_MAXDIMS];
+
+  void __refresh_cpu();   // re-compile data from sources into cpu buffer
+  void __cp_gpu_to_cpu(); // copy data from texture memory to cpu buffer
+  void __cp_cpu_to_gpu(); // copy data from cpu buffer to texture memory
+
+public:
+  NewDataSource();
+  virtual ~NewDataSource(); // will free any non-null data buffers
+
+  const GLfloat*  get_data();                // return the cpu data buffer
+  const GLuint*   get_indices();             // return the list of indices
+  GLuint          get_texture_id();          // return the texture id
+  NewDataSource*  get_output(const char *n); // return an entry of __output_ds
+
+  int get_size();
+  int get_num_points(int d);
+  int get_num_dimensions();
+  int get_num_indices();
+
+  /* sets the data buffer manually
+     data -> __cpu_data (deep copy)
+     np -> __num_points
+     nd -> __num_dimensions */
+  void set_data(const GLfloat *data, const int *np, int nd);
+
+  /* sets the index buffer manually
+     indices -> __ind_data
+     ni -> __num_indices */
+  void set_indices(const GLuint *indices, int ni);
+
+  void check_num_dimensions(int ndims, const char *name);
+  void check_num_points(int npnts, int dim, const char *name);
+  void check_has_data(const char *name);
+  void check_has_indices(const char *name);
+
+protected:
+  // ---------------------------------------------------------------------------
+  // Lua API methods
+  //
+  // ---------------------------------------------------------------------------
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _get_output_(lua_State *L); // return a named DataSource object
+  static int _get_data_(lua_State *L); // read from a lunum array
+  static int _set_data_(lua_State *L); // return a lunum array
+  static int _get_input_(lua_State *L);
+  static int _set_input_(lua_State *L);
+  static int _get_transform_(lua_State *L);
+  static int _set_transform_(lua_State *L);
+} ;
 
 class DataSource : public LuaCppObject
 {

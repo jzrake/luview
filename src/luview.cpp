@@ -1463,6 +1463,26 @@ protected:
 } ;
 
 
+class TestDrawpixels : public DrawableObject
+{
+  void draw_local()
+  {
+    int N = 512;
+    GLfloat *rgba = new GLfloat[4*N*N];
+    for (int i=0; i<N; ++i) {
+      for (int j=0; j<N; ++j) {
+	rgba[(i*N + j)*4 + 0] = 1.0;
+	rgba[(i*N + j)*4 + 1] = 0.0;
+	rgba[(i*N + j)*4 + 2] = 0.0;
+	rgba[(i*N + j)*4 + 3] = 1.0;
+      }
+    }
+    glWindowPos2i(0,0);
+    glDrawPixels(N, N, GL_RGBA, GL_FLOAT, rgba);
+    delete [] rgba;
+  }
+} ;
+
 extern "C" int luaopen_luview(lua_State *L)
 {
   lua_newtable(L);
@@ -1487,6 +1507,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<SegmentsEnsemble>(L);
   LuaCppObject::Register<VolumeRendering>(L);
+  LuaCppObject::Register<NewDataSource>(L);
+  LuaCppObject::Register<TestDrawpixels>(L);
 
   LuaCppObject::Register<NbodySimulation>(L);
 

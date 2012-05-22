@@ -11,6 +11,7 @@ OBJ = 	luview.o \
 	nbody.o \
 	volume.o \
 	glInfo.o \
+	dsource.o \
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 
