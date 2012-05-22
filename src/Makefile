@@ -3,7 +3,7 @@
 GL_INCL = -I/usr/X11/include
 LUA = ../bin/lua
 LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
-OBJ = 	luview.o \
+#OBJ = 	luview.o \
 	tesselate.o \
 	shader.o \
 	colorbar.o \
@@ -12,6 +12,11 @@ OBJ = 	luview.o \
 	volume.o \
 	glInfo.o \
 	dsource.o \
+
+OBJ = 	luview.o \
+	shader.o \
+	dsource.o \
+	glInfo.o \
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 

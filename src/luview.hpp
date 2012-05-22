@@ -21,14 +21,14 @@ class PointsSource;
 class ShaderProgram;
 // -----------------------------------------------------------------------------
 
-class NewDataSource : public LuaCppObject
+class DataSource : public LuaCppObject
 {
 protected:
-  typedef std::map<std::string, NewDataSource*> DataSourceMap;
+  typedef std::map<std::string, DataSource*> DataSourceMap;
 
   CallbackFunction*  __cpu_transform;
   ShaderProgram*     __gpu_transform;
-  NewDataSource*     __input_ds;
+  DataSource*        __input_ds;
   DataSourceMap      __output_ds;
   GLfloat*           __cpu_data;
   GLuint             __tex_id;
@@ -45,18 +45,22 @@ protected:
   // If true for component i, then map that componen to (0,1).
   std::map<int, bool> __normalize;
 
-  void __refresh_cpu();   // re-compile data from sources into cpu buffer
+  bool __ancestor_is_staged();
+  void __trigger_refresh();
+  bool __staged;
+
+  virtual void __refresh_cpu() { } // re-compile data from sources into cpu buffer
   void __cp_gpu_to_cpu(); // copy data from texture memory to cpu buffer
   void __cp_cpu_to_gpu(); // copy data from cpu buffer to texture memory
 
 public:
-  NewDataSource();
-  virtual ~NewDataSource(); // will free any non-null data buffers
+  DataSource();
+  virtual ~DataSource(); // will free any non-null data buffers
 
   const GLfloat*  get_data();                // return the cpu data buffer
   const GLuint*   get_indices();             // return the list of indices
   GLuint          get_texture_id();          // return the texture id
-  NewDataSource*  get_output(const char *n); // return an entry of __output_ds
+  DataSource*     get_output(const char *n); // return an entry of __output_ds
 
   int get_size();
   int get_num_points(int d);
@@ -96,32 +100,6 @@ protected:
   static int _set_normalize_(lua_State *L);
 } ;
 
-
-class DataSource : public LuaCppObject
-{
-protected:
-  DataSource *input;
-  GLfloat *output;
-  GLuint *indices;
-  CallbackFunction *transform;
-
-public:
-  DataSource();
-  virtual ~DataSource();
-  virtual GLfloat *get_data() { return output; }
-  virtual GLuint *get_indices() { return indices; }
-  virtual int get_num_points(int d) = 0;
-  virtual int get_size() = 0;
-  virtual int get_num_components() = 0;
-  virtual int get_num_dimensions() = 0;
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _get_transform_(lua_State *L);
-  static int _set_transform_(lua_State *L);
-  static int _get_input_(lua_State *L);
-  static int _set_input_(lua_State *L);
-} ;
 
 class CallbackFunction : public LuaCppObject
 {
