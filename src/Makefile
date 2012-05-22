@@ -17,6 +17,7 @@ OBJ = 	luview.o \
 	shader.o \
 	dsource.o \
 	artists.o \
+	ren2tex.o \
 	glInfo.o \
 
 
@@ -24,6 +25,9 @@ default : $(LUVIEW_A) $(LUVIEW_SO)
 
 volume.o : volume.cpp
 	$(CXX) $(CFLAGS) -c $< -I../include $(GL_INCL)
+
+ren2tex.o : ren2tex.c
+	$(CC) $(CFLAGS) -c $< -I../include $(GL_INCL)
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $<

@@ -44,11 +44,12 @@ protected:
   std::map<int, GLfloat> __maxval;
   std::map<int, GLfloat> __minval;
 
-  // If true for component i, then map that componen to (0,1).
+  // If true for component i, then map that component into [0,1).
   std::map<int, bool> __normalize;
 
-  bool __ancestor_is_staged();
   void __trigger_refresh();
+  void __execute_gpu_transform();
+  bool __ancestor_is_staged();
   bool __staged;
 
   virtual void __refresh_cpu() { } // re-compile data from sources into cpu buffer
@@ -94,6 +95,7 @@ protected:
   // ---------------------------------------------------------------------------
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _get_output_(lua_State *L); // return a named DataSource object
+  static int _set_normalize_(lua_State *L);
   static int _get_data_(lua_State *L); // read from a lunum array
   static int _set_data_(lua_State *L); // return a lunum array
   static int _get_mode_(lua_State *L);
@@ -102,7 +104,8 @@ protected:
   static int _set_input_(lua_State *L);
   static int _get_transform_(lua_State *L);
   static int _set_transform_(lua_State *L);
-  static int _set_normalize_(lua_State *L);
+  static int _get_program_(lua_State *L);
+  static int _set_program_(lua_State *L);
 } ;
 
 

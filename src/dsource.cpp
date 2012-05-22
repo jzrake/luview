@@ -7,6 +7,11 @@ extern "C" {
 #include "lunum.h"
 }
 
+extern "C" {
+void ren2tex_start(int Nx, int Ny, GLuint texture_target);
+void ren2tex_finish();
+}
+
 struct TextureFormat
 {
   GLenum fmt;
@@ -199,6 +204,42 @@ void DataSource::__cp_cpu_to_gpu()
 }
 
 
+void DataSource::__execute_gpu_transform()
+{
+  if (__input_ds == NULL || __gpu_transform == NULL) return;
+
+  const int *N = __input_ds->__num_points;
+  const GLfloat *input_data = __input_ds->get_data();
+
+  //  code to eventually do the data transfer all in hardware
+  //
+  //  GLuint read_buf;
+  //  glGenBuffers(1, &read_buf);
+  //  glBindBuffer(GL_PIXEL_PACK_BUFFER, read_buf);
+  //  __input_ds->become_texture();
+
+  ren2tex_start(N[0], N[1], __texture_id); // binds a new fbo
+  __gpu_transform->activate();
+
+  glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushMatrix();
+  glClearColor(0.0, 0.0, 0.0, 1.0);
+  glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
+  glViewport(0, 0, N[0], N[1]);
+  glLoadIdentity();
+
+  glWindowPos2i(0, 0);
+  glDrawPixels(N[0], N[1], GL_RGBA, GL_FLOAT, input_data);
+
+  glPopMatrix();
+  glPopAttrib();
+
+  __gpu_transform->deactivate();
+
+  ren2tex_finish(); // unbinds and frees the fbo
+}
+
+
 DataSource::LuaInstanceMethod
 DataSource::__getattr__(std::string &method_name)
 {
@@ -221,6 +262,16 @@ int DataSource::_get_output_(lua_State *L)
   const char *key = luaL_checkstring(L, 2);
   self->retrieve(self->get_output(key));
   return 1;
+}
+int DataSource::_set_normalize_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  int comp = luaL_checkinteger(L, 2);
+  bool mode = lua_toboolean(L, 3);
+  luaL_checktype(L, 3, LUA_TBOOLEAN);
+  self->__normalize[comp] = mode;
+  self->__staged = true;
+  return 0;
 }
 int DataSource::_get_data_(lua_State *L)
 {
@@ -288,17 +339,20 @@ int DataSource::_set_transform_(lua_State *L)
   self->__staged = true;
   return 0;
 }
-int DataSource::_set_normalize_(lua_State *L)
+int DataSource::_get_program_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-  int comp = luaL_checkinteger(L, 2);
-  bool mode = lua_toboolean(L, 3);
-  luaL_checktype(L, 3, LUA_TBOOLEAN);
-  self->__normalize[comp] = mode;
+  self->retrieve(self->__gpu_transform);
+  return 1;
+}
+int DataSource::_set_program_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  ShaderProgram *sp = checkarg<ShaderProgram>(L, 2);
+  self->__gpu_transform = self->replace(self->__gpu_transform, sp);
   self->__staged = true;
   return 0;
 }
-
 
 
 GridSource2D::GridSource2D()
