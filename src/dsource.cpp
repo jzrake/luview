@@ -28,14 +28,14 @@ DataSource::DataSource()
     __input_ds(NULL),
     __output_ds(),
     __cpu_data(NULL),
-    __tex_id(0),
     __ind_data(NULL),
+    __texture_id(0),
     __texture_format(GL_LUMINANCE),
     __num_dimensions(0),
     __num_indices(0),
     __staged(true)
 {
-  glGenTextures(1, &__tex_id);
+  glGenTextures(1, &__texture_id);
   for (int i=0; i<__DATASOURCE_MAXDIMS; ++i) __num_points[i] = 0;
 }
 
@@ -43,7 +43,7 @@ DataSource::~DataSource()
 {
   if (__cpu_data) free(__cpu_data);
   if (__ind_data) free(__ind_data);
-  glDeleteTextures(1, &__tex_id);
+  glDeleteTextures(1, &__texture_id);
 }
 
 bool DataSource::__ancestor_is_staged()
@@ -60,10 +60,12 @@ void DataSource::__trigger_refresh()
   if (this->__ancestor_is_staged()) {
     this->__input_ds->__trigger_refresh();
     this->__refresh_cpu();
+    this->__cp_cpu_to_gpu();
     this->__staged = false;
   }
   else if (this->__staged) {
     this->__refresh_cpu();
+    this->__cp_cpu_to_gpu();
     this->__staged = false;
   }
 }
@@ -78,9 +80,7 @@ const GLuint *DataSource::get_indices()
 }
 GLuint DataSource::get_texture_id()
 {
-  //  this->__trigger_refresh();
-  //  this->__cp_cpu_to_gpu();
-  return __tex_id;
+  return __texture_id;
 }
 DataSource *DataSource::get_output(const char *n)
 {
@@ -130,42 +130,74 @@ void DataSource::check_num_points(const char *name, int npnts, int dim)
 void DataSource::check_has_data(const char *name)
 {
   if (__cpu_data == NULL) {
-    luaL_error(__lua_state, "%s must provide a floating point data buffer");
+    luaL_error(__lua_state, "%s must provide a floating point data buffer",
+	       name);
   }
 }
 void DataSource::check_has_indices(const char *name)
 {
   if (__ind_data == NULL) {
-    luaL_error(__lua_state, "%s must provide an index buffer");
+    luaL_error(__lua_state, "%s must provide an index buffer", name);
   }
+}
+void DataSource::become_texture()
+{
+  this->__trigger_refresh();
+  glBindTexture(__texture_target, __texture_id);
+  glTexParameteri(__texture_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+  glTexParameteri(__texture_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 }
 void DataSource::__cp_cpu_to_gpu()
 {
-
-}
-/*
-void DataSource::become_texture(GLenum format)
-{
   const int *N = __num_points;
   const GLfloat *buf = __cpu_data;
+  const GLenum fmt = textureFormats[__texture_format].fmt;
+  const int sz = textureFormats[__texture_format].size;
 
   glPushAttrib(GL_TEXTURE_BIT);
 
   switch (__num_dimensions) {
   case 1:
     glBindTexture(GL_TEXTURE_1D, __texture_id);
-    glTexImage1D(GL_TEXTURE_1D, 0, 1, N[0], format, GL_FLOAT, buf);
+    glTexImage1D(GL_TEXTURE_1D, 0, 1, N[0], 0, fmt, GL_FLOAT, buf);
+    __texture_target = GL_TEXTURE_1D;
     break;
   case 2:
-    glBindTexture(GL_TEXTURE_2D, __texture_id);
-    glTexImage2D(GL_TEXTURE_2D, 0, 1, N[0], N[1], format, GL_FLOAT, buf);
+    // Check whether this data source contains (1) 2d luminance data, or (2) a
+    // 1d array of e.g. RGB values.
+    if (sz == 1) {
+      // (1): it's a 2d texture of scalar data
+      glBindTexture(GL_TEXTURE_2D, __texture_id);
+      glTexImage2D(GL_TEXTURE_2D, 0, 1, N[0], N[1], 0, fmt, GL_FLOAT, buf);
+      __texture_target = GL_TEXTURE_2D;
+    }
+    else {
+      // (2): the last axis must have size sz
+      glBindTexture(GL_TEXTURE_1D, __texture_id);
+      glTexImage1D(GL_TEXTURE_1D, 0, sz, N[0], 0, fmt, GL_FLOAT, buf);
+      __texture_target = GL_TEXTURE_1D;
+    }
     break;
   case 3:
+    // Check whether this data source contains (1) 3d luminance data, or (2) a
+    // 2d array of e.g. RGB values.
+    if (sz == 1) {
+      // (1): it's a 3d texture of scalar data
+      glBindTexture(GL_TEXTURE_3D, __texture_id);
+      glTexImage3D(GL_TEXTURE_3D, 0, 1, N[0], N[1], N[2], 0, fmt, GL_FLOAT, buf);
+      __texture_target = GL_TEXTURE_3D;
+    }
+    else {
+      // (2): the last axis must have size sz
+      glBindTexture(GL_TEXTURE_2D, __texture_id);
+      glTexImage2D(GL_TEXTURE_2D, 0, sz, N[0], N[1], 0, fmt, GL_FLOAT, buf);
+      __texture_target = GL_TEXTURE_2D;
+    }
     break;
   }
   glPopAttrib();
 }
-*/
+
 
 DataSource::LuaInstanceMethod
 DataSource::__getattr__(std::string &method_name)
@@ -178,6 +210,7 @@ DataSource::__getattr__(std::string &method_name)
   attr["set_input"] = _set_input_;
   attr["get_transform"] = _get_transform_;
   attr["set_transform"] = _set_transform_;
+  attr["get_mode"] = _get_mode_;
   attr["set_mode"] = _set_mode_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
@@ -208,6 +241,23 @@ int DataSource::_set_data_(lua_State *L)
   Array *A = lunum_checkarray1(L, 2);
   self->set_data((GLfloat*)A->data, A->shape, A->ndims);
   self->__staged = true;
+  return 0;
+}
+int DataSource::_get_mode_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  lua_pushstring(L, textureFormats[self->__texture_format].name);
+  return 1;
+}
+int DataSource::_set_mode_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  std::vector<const char*> modes;
+  for (int n=0; ; ++n) {
+    if (textureFormats[n].name == NULL) break;
+    modes.push_back(textureFormats[n].name);
+  }
+  self->__texture_format = luaL_checkoption(L, 2, NULL, &modes[0]);
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)
@@ -246,18 +296,6 @@ int DataSource::_set_normalize_(lua_State *L)
   luaL_checktype(L, 3, LUA_TBOOLEAN);
   self->__normalize[comp] = mode;
   self->__staged = true;
-  return 0;
-}
-int DataSource::_set_mode_(lua_State *L)
-{
-  std::vector<const char*> modes;
-  for (int n=0; ; ++n) {
-    if (textureFormats[n].name == NULL) break;
-    modes.push_back(textureFormats[n].name);
-  }
-  DataSource *self = checkarg<DataSource>(L, 1);
-  const int nfmt = luaL_checkoption(L, 2, NULL, &modes[0]);
-  self->__texture_format = textureFormats[nfmt].fmt;
   return 0;
 }
 

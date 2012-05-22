@@ -31,9 +31,10 @@ protected:
   DataSource*        __input_ds;
   DataSourceMap      __output_ds;
   GLfloat*           __cpu_data;
-  GLuint             __tex_id;
   GLuint*            __ind_data;
-  GLenum             __texture_format; // luminance, alpha, rgba, etc
+  GLuint             __texture_id;
+  int                __texture_format; // luminance, alpha, rgba, etc
+  GLenum             __texture_target; // e.g. GL_TEXTURE_1D inferred internally
 
   int __num_dimensions;
   int __num_indices;
@@ -84,6 +85,8 @@ public:
   void check_has_data(const char *name);
   void check_has_indices(const char *name);
 
+  void become_texture();
+
 protected:
   // ---------------------------------------------------------------------------
   // Lua API methods
@@ -93,12 +96,13 @@ protected:
   static int _get_output_(lua_State *L); // return a named DataSource object
   static int _get_data_(lua_State *L); // read from a lunum array
   static int _set_data_(lua_State *L); // return a lunum array
+  static int _get_mode_(lua_State *L);
+  static int _set_mode_(lua_State *L);
   static int _get_input_(lua_State *L);
   static int _set_input_(lua_State *L);
   static int _get_transform_(lua_State *L);
   static int _set_transform_(lua_State *L);
   static int _set_normalize_(lua_State *L);
-  static int _set_mode_(lua_State *L);
 } ;
 
 
