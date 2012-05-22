@@ -208,20 +208,19 @@ void DataSource::__cp_cpu_to_gpu()
 
 void DataSource::__execute_gpu_transform()
 {
+  /*
   if (__gpu_transform == NULL) return;
 
   printf("executing the gpu thing\n");
   const int *N = __num_points;
-
   GLuint tex;
+
+  glGenTextures(1, &tex);
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushMatrix();
-
   __gpu_transform->activate();
-  glGenTextures(1, &tex);
+
   ren2tex_start(N[0], N[1], tex); // binds a new fbo
-
-
   glClearColor(0.0, 0.0, 0.0, 1.0);
   glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
   glViewport(0, 0, N[0], N[1]);
@@ -229,16 +228,16 @@ void DataSource::__execute_gpu_transform()
 
   glWindowPos2i(0, 0);
   glDrawPixels(N[0], N[1], GL_LUMINANCE, GL_FLOAT, __cpu_data);
-  //  glGetTexImage(GL_TEXTURE_2D, 0, GL_LUMINANCE, GL_FLOAT, __cpu_data);
+  glGetTexImage(GL_TEXTURE_2D, 0, GL_LUMINANCE, GL_FLOAT, __cpu_data);
 
   ren2tex_finish(); // unbinds and frees the fbo
-  glDeleteTextures(1, &tex);
-  __gpu_transform->deactivate();
-
-  glPopMatrix();
-  glPopAttrib();
 
   __staged = true;
+  __gpu_transform->deactivate();
+  glPopMatrix();
+  glPopAttrib();
+  glDeleteTextures(1, &tex);
+  */
 }
 
 
