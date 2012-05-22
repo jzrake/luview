@@ -103,7 +103,9 @@ protected:
   {
     void *object_p = lua_touserdata(L, pos);
     if (object_p == NULL) {
-      luaL_error(L, "invalid type");
+      luaL_error(L, "object of type '%s' is not a subtype of '%s'",
+		 luaL_typename(L, pos),
+		 demangle(typeid(T).name()).c_str());
     }
 
     LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);

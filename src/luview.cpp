@@ -3,7 +3,6 @@
 #include <cstdio>
 #include <cstdlib>
 #include <ctime>
-#include <cmath>
 #include <vector>
 #include <algorithm>
 
@@ -17,33 +16,6 @@ extern "C" {
 #include "GL/glfw.h"
 }
 #include "glInfo.hpp"
-
-
-template <class T> static void draw_cylinder(T *x0, T *x1, T rad0, T rad1)
-{
-  T r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-  T mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
-  r[0] /= mag;
-  r[1] /= mag;
-  r[2] /= mag;
-
-  T a[3], zhat[3] = { 0, 0, 1 };
-  a[0] = zhat[1]*r[2] - zhat[2]*r[1];
-  a[1] = zhat[2]*r[0] - zhat[0]*r[2];
-  a[2] = zhat[0]*r[1] - zhat[1]*r[0];
-
-  T angle = acos(r[2]) * 180.0 / M_PI;
-
-  glPushMatrix();
-  glTranslated(x0[0], x0[1], x0[2]);
-  glRotated(angle, a[0], a[1], a[2]);
-
-  GLUquadric *quad = gluNewQuadric();
-  gluCylinder(quad, rad0, rad1, mag, 72, 1);
-  gluDeleteQuadric(quad);
-
-  glPopMatrix();
-}
 
 
 
@@ -365,8 +337,8 @@ private:
     glfwEnable(GLFW_KEY_REPEAT);
 
 
-    GLfloat light_ambient[] = { 0.4, 0.4, 0.4, 1.0 };
-    GLfloat light_diffuse[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_ambient [] = { 0.4, 0.4, 0.4, 1.0 };
+    GLfloat light_diffuse [] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
     GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
 
@@ -534,143 +506,7 @@ protected:
 Window *Window::CurrentWindow;
 
 
-class BoundingBox : public DrawableObject
-{
-public:
-  BoundingBox()
-  {
-    gl_modes.push_back(GL_DEPTH_TEST);
-    gl_modes.push_back(GL_LIGHTING);
-    gl_modes.push_back(GL_LIGHT0);
-    gl_modes.push_back(GL_BLEND);
-    gl_modes.push_back(GL_COLOR_MATERIAL);
-    gl_modes.push_back(GL_AUTO_NORMAL);
-    gl_modes.push_back(GL_NORMALIZE);
-  }
-  void draw_local()
-  {
-    GLfloat x0[3], x1[3];
-    GLfloat lw = LineWidth * 0.01;
 
-    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
-    x1[0] = +0.5; x1[1] = -0.5; x1[2] = -0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
-    x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
-    x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = -0.5; x0[1] = +0.5; x0[2] = +0.5;
-    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-
-    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
-    x1[0] = -0.5; x1[1] = +0.5; x1[2] = -0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
-    x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
-    x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = +0.5; x0[1] = -0.5; x0[2] = +0.5;
-    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-
-    x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
-    x1[0] = -0.5; x1[1] = -0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
-    x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
-    x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-    x0[0] = +0.5; x0[1] = +0.5; x0[2] = -0.5;
-    x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-    draw_cylinder<GLfloat>(x0, x1, lw, lw);
-  }
-} ;
-
-
-
-
-class GridSource2D :  public DataSource
-{
-private:
-  int Nu, Nv;
-  double u0, u1, v0, v1;
-
-public:
-  GridSource2D()
-  {
-    u0 = -0.5;
-    u1 =  0.5;
-    v0 = -0.5;
-    v1 =  0.5;
-
-    Nu = 16;
-    Nv = 16;
-
-    __refresh_cpu();
-  }
-
-private:
-  void __refresh_cpu()
-  // ---------------------------------------------------------------------------
-  // Creates to a uniform cartesian grid
-  // ---------------------------------------------------------------------------
-  {
-    __cpu_data = (GLfloat*) realloc(__cpu_data, 2*Nu*Nv*sizeof(GLfloat));
-    const int su = Nv;
-    const int sv = 1;
-    const double du = (u1 - u0) / (Nu - 1);
-    const double dv = (v1 - v0) / (Nv - 1);
-
-    for (int i=0; i<Nu; ++i) {
-      for (int j=0; j<Nv; ++j) {
-        const int m = i*su + j*sv;
-        __cpu_data[2*m + 0] = u0 + i*du;
-        __cpu_data[2*m + 1] = v0 + j*dv;
-      }
-    }
-  }
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name)
-  {
-    AttributeMap attr;
-    attr["set_num_points"] = _set_num_points_;
-    attr["set_u_range"] = _set_u_range_;
-    attr["set_v_range"] = _set_v_range_;
-    RETURN_ATTR_OR_CALL_SUPER(DataSource);
-  }
-  static int _set_num_points_(lua_State *L)
-  {
-    GridSource2D *self = checkarg<GridSource2D>(L, 1);
-    self->Nu = luaL_checkinteger(L, 2);
-    self->Nv = luaL_checkinteger(L, 3);
-    self->__staged = true;
-    return 0;
-  }
-  static int _set_u_range_(lua_State *L)
-  {
-    GridSource2D *self = checkarg<GridSource2D>(L, 1);
-    self->u0 = luaL_checknumber(L, 2);
-    self->u1 = luaL_checknumber(L, 3);
-    self->__staged = true;
-    return 0;
-  }
-  static int _set_v_range_(lua_State *L)
-  {
-    GridSource2D *self = checkarg<GridSource2D>(L, 1);
-    self->v0 = luaL_checknumber(L, 2);
-    self->v1 = luaL_checknumber(L, 3);
-    self->__staged = true;
-    return 0;
-  }
-} ;
 
 extern "C" int luaopen_luview(lua_State *L)
 {
@@ -684,6 +520,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<DataSource>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<ShaderProgram>(L);
+  LuaCppObject::Register<ImagePlane>(L);
 
   return 1;
 }

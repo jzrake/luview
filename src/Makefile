@@ -16,7 +16,9 @@ LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
 OBJ = 	luview.o \
 	shader.o \
 	dsource.o \
+	artists.o \
 	glInfo.o \
+
 
 default : $(LUVIEW_A) $(LUVIEW_SO)
 

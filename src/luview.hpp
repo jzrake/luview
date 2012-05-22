@@ -33,6 +33,7 @@ protected:
   GLfloat*           __cpu_data;
   GLuint             __tex_id;
   GLuint*            __ind_data;
+  GLenum             __texture_format; // luminance, alpha, rgba, etc
 
   int __num_dimensions;
   int __num_indices;
@@ -77,10 +78,9 @@ public:
      indices -> __ind_data
      ni -> __num_indices */
   void set_indices(const GLuint *indices, int ni);
-  void set_normalize(int comp, bool mode);
 
-  void check_num_dimensions(int ndims, const char *name);
-  void check_num_points(int npnts, int dim, const char *name);
+  void check_num_dimensions(const char *name, int ndims);
+  void check_num_points(const char *name, int npnts, int dim);
   void check_has_data(const char *name);
   void check_has_indices(const char *name);
 
@@ -98,6 +98,25 @@ protected:
   static int _get_transform_(lua_State *L);
   static int _set_transform_(lua_State *L);
   static int _set_normalize_(lua_State *L);
+  static int _set_mode_(lua_State *L);
+} ;
+
+
+
+
+class GridSource2D :  public DataSource
+{
+public:
+  GridSource2D();
+private:
+  int Nu, Nv;
+  double u0, u1, v0, v1;
+  void __refresh_cpu();
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_num_points_(lua_State *L);
+  static int _set_u_range_(lua_State *L);
+  static int _set_v_range_(lua_State *L);
 } ;
 
 
@@ -418,5 +437,23 @@ protected:
   static int _advance_(lua_State *L);
   static int _get_output_(lua_State *L);
 } ;
+
+
+class BoundingBox : public DrawableObject
+{
+public:
+  BoundingBox();
+  void draw_local();
+} ;
+
+class ImagePlane : public DrawableObject
+{
+private:
+  GLfloat Lx0, Lx1, Ly0, Ly1;
+public:
+  ImagePlane();
+  void draw_local();
+} ;
+
 
 #endif // __LuviewObjects_HEADER__

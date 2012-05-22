@@ -7,6 +7,21 @@ extern "C" {
 #include "lunum.h"
 }
 
+struct TextureFormat
+{
+  GLenum fmt;
+  int size;
+  const char *name;
+} ;
+static TextureFormat textureFormats[] =
+  {{GL_LUMINANCE, 1, "luminance"},
+   {GL_ALPHA, 1, "alpha"},
+   {GL_RGB, 3, "rgb"},
+   {GL_RGBA, 4, "rgba"},
+   {0, 0, NULL}};
+
+
+
 DataSource::DataSource()
   : __cpu_transform(NULL),
     __gpu_transform(NULL),
@@ -15,6 +30,7 @@ DataSource::DataSource()
     __cpu_data(NULL),
     __tex_id(0),
     __ind_data(NULL),
+    __texture_format(GL_LUMINANCE),
     __num_dimensions(0),
     __num_indices(0),
     __staged(true)
@@ -56,8 +72,16 @@ const GLfloat *DataSource::get_data()
   this->__trigger_refresh();
   return __cpu_data;
 }
-const GLuint *DataSource::get_indices() { return __ind_data; }
-GLuint DataSource::get_texture_id() { return __tex_id; }
+const GLuint *DataSource::get_indices()
+{
+  return __ind_data;
+}
+GLuint DataSource::get_texture_id()
+{
+  //  this->__trigger_refresh();
+  //  this->__cp_cpu_to_gpu();
+  return __tex_id;
+}
 DataSource *DataSource::get_output(const char *n)
 {
   DataSourceMap::iterator v = __output_ds.find(n);
@@ -90,21 +114,17 @@ void DataSource::set_indices(const GLuint *indices, int ni)
   __ind_data = (GLuint*) realloc(__ind_data, sz);
   std::memcpy(__ind_data, indices, sz);
 }
-void DataSource::set_normalize(int comp, bool mode)
-{
-  __normalize[comp] = mode;
-}
-void DataSource::check_num_dimensions(int ndims, const char *name)
+void DataSource::check_num_dimensions(const char *name, int ndims)
 {
   if (ndims != __num_dimensions) {
     luaL_error(__lua_state, "%s must have %d dimensions", name, ndims);
   }
 }
-void DataSource::check_num_points(int npnts, int dim, const char *name)
+void DataSource::check_num_points(const char *name, int npnts, int dim)
 {
   if (npnts != this->get_num_points(dim)) {
     luaL_error(__lua_state, "%s must have %d points along dimension %d",
-	       name, npnts, dim);
+               name, npnts, dim);
   }
 }
 void DataSource::check_has_data(const char *name)
@@ -119,7 +139,33 @@ void DataSource::check_has_indices(const char *name)
     luaL_error(__lua_state, "%s must provide an index buffer");
   }
 }
+void DataSource::__cp_cpu_to_gpu()
+{
 
+}
+/*
+void DataSource::become_texture(GLenum format)
+{
+  const int *N = __num_points;
+  const GLfloat *buf = __cpu_data;
+
+  glPushAttrib(GL_TEXTURE_BIT);
+
+  switch (__num_dimensions) {
+  case 1:
+    glBindTexture(GL_TEXTURE_1D, __texture_id);
+    glTexImage1D(GL_TEXTURE_1D, 0, 1, N[0], format, GL_FLOAT, buf);
+    break;
+  case 2:
+    glBindTexture(GL_TEXTURE_2D, __texture_id);
+    glTexImage2D(GL_TEXTURE_2D, 0, 1, N[0], N[1], format, GL_FLOAT, buf);
+    break;
+  case 3:
+    break;
+  }
+  glPopAttrib();
+}
+*/
 
 DataSource::LuaInstanceMethod
 DataSource::__getattr__(std::string &method_name)
@@ -132,6 +178,7 @@ DataSource::__getattr__(std::string &method_name)
   attr["set_input"] = _set_input_;
   attr["get_transform"] = _get_transform_;
   attr["set_transform"] = _set_transform_;
+  attr["set_mode"] = _set_mode_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 
@@ -160,6 +207,7 @@ int DataSource::_set_data_(lua_State *L)
   }
   Array *A = lunum_checkarray1(L, 2);
   self->set_data((GLfloat*)A->data, A->shape, A->ndims);
+  self->__staged = true;
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)
@@ -173,6 +221,7 @@ int DataSource::_set_input_(lua_State *L)
   DataSource *self = checkarg<DataSource>(L, 1);
   DataSource *inpt = checkarg<DataSource>(L, 2);
   self->__input_ds = self->replace(self->__input_ds, inpt);
+  self->__staged = true;
   return 0;
 }
 int DataSource::_get_transform_(lua_State *L)
@@ -186,6 +235,7 @@ int DataSource::_set_transform_(lua_State *L)
   DataSource *self = checkarg<DataSource>(L, 1);
   CallbackFunction *cb = checkarg<CallbackFunction>(L, 2);
   self->__cpu_transform = self->replace(self->__cpu_transform, cb);
+  self->__staged = true;
   return 0;
 }
 int DataSource::_set_normalize_(lua_State *L)
@@ -194,6 +244,89 @@ int DataSource::_set_normalize_(lua_State *L)
   int comp = luaL_checkinteger(L, 2);
   bool mode = lua_toboolean(L, 3);
   luaL_checktype(L, 3, LUA_TBOOLEAN);
-  self->set_normalize(comp, mode);
+  self->__normalize[comp] = mode;
+  self->__staged = true;
   return 0;
 }
+int DataSource::_set_mode_(lua_State *L)
+{
+  std::vector<const char*> modes;
+  for (int n=0; ; ++n) {
+    if (textureFormats[n].name == NULL) break;
+    modes.push_back(textureFormats[n].name);
+  }
+  DataSource *self = checkarg<DataSource>(L, 1);
+  const int nfmt = luaL_checkoption(L, 2, NULL, &modes[0]);
+  self->__texture_format = textureFormats[nfmt].fmt;
+  return 0;
+}
+
+
+
+GridSource2D::GridSource2D()
+{
+  u0 = -0.5;
+  u1 =  0.5;
+  v0 = -0.5;
+  v1 =  0.5;
+
+  Nu = 16;
+  Nv = 16;
+}
+
+void GridSource2D::__refresh_cpu()
+{
+  __num_dimensions = 2;
+  __num_indices = 0;
+  __num_points[0] = Nu;
+  __num_points[1] = Nv;
+  __cpu_data = (GLfloat*) realloc(__cpu_data, 2*Nu*Nv*sizeof(GLfloat));
+
+  const int su = Nv;
+  const int sv = 1;
+  const double du = (u1 - u0) / (Nu - 1);
+  const double dv = (v1 - v0) / (Nv - 1);
+
+  for (int i=0; i<Nu; ++i) {
+    for (int j=0; j<Nv; ++j) {
+      const int m = i*su + j*sv;
+      __cpu_data[2*m + 0] = u0 + i*du;
+      __cpu_data[2*m + 1] = v0 + j*dv;
+    }
+  }
+}
+
+GridSource2D::LuaInstanceMethod
+GridSource2D::__getattr__(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_num_points"] = _set_num_points_;
+  attr["set_u_range"] = _set_u_range_;
+  attr["set_v_range"] = _set_v_range_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+}
+int GridSource2D::_set_num_points_(lua_State *L)
+{
+  GridSource2D *self = checkarg<GridSource2D>(L, 1);
+  self->Nu = luaL_checkinteger(L, 2);
+  self->Nv = luaL_checkinteger(L, 3);
+  self->__staged = true;
+  return 0;
+}
+int GridSource2D::_set_u_range_(lua_State *L)
+{
+  GridSource2D *self = checkarg<GridSource2D>(L, 1);
+  self->u0 = luaL_checknumber(L, 2);
+  self->u1 = luaL_checknumber(L, 3);
+  self->__staged = true;
+  return 0;
+}
+int GridSource2D::_set_v_range_(lua_State *L)
+{
+  GridSource2D *self = checkarg<GridSource2D>(L, 1);
+  self->v0 = luaL_checknumber(L, 2);
+  self->v1 = luaL_checknumber(L, 3);
+  self->__staged = true;
+  return 0;
+}
+
