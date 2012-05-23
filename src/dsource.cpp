@@ -37,7 +37,7 @@ DataSource::DataSource()
     __ind_data(NULL),
     __texture_id(0),
     __texture_format(GL_LUMINANCE),
-    __num_dimensions(0),
+    __num_dimensions(1),
     __num_indices(0),
     __normalize(false),
     __staged(true)

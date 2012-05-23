@@ -170,17 +170,20 @@ private:
   void __refresh_cpu();
 } ;
 
+class tetgenio;
 class Tesselation3D : public DataSource
 {
 public:
+  tetgenio *inp, *out;
   Tesselation3D();
   virtual ~Tesselation3D();
 private:
   void __refresh_cpu();
-  void __refresh_cpu1();
 protected:
   void __init_lua_objects();
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _load_node_(lua_State *L);
+  static int _load_poly_(lua_State *L);
 } ;
 
 
