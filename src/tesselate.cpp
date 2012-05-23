@@ -44,13 +44,19 @@ Tesselation3D::~Tesselation3D()
 
 }
 
+void Tesselation3D::__init_lua_objects()
+{
+  hold(__output_ds["triangles"] = create<DataSource>(__lua_state));
+  hold(__output_ds["segments"] = create<DataSource>(__lua_state));
+}
 
 void Tesselation3D::__refresh_cpu()
 {
   inp.initialize();
   out.initialize();
 
-  inp.load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
+  //  inp.load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
+  inp.load_plc("/Users/jzrake/Work/luview/data/hinge", tetgenbehavior::MESH);
   //  inp.load_node("/Users/jzrake/Work/luview/data/brain");
 
   // z: number indices from zero
@@ -59,58 +65,50 @@ void Tesselation3D::__refresh_cpu()
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("zveeQ", &inp, &out);
 
-  GLuint *indices = new GLuint[3 * out.numberofedges];
-  GLfloat *verts = new GLfloat[3 * out.numberofpoints];
+  // ---------------------------------------------------------------------------
+  // Get the triangle faces
+  // ---------------------------------------------------------------------------
+  {
+    GLuint *indices = new GLuint[3 * out.numberofedges];
+    GLfloat *verts = new GLfloat[3 * out.numberofpoints];
 
-  for (int n=0; n<3*out.numberoftrifaces; ++n) {
-    indices[n] = out.trifacelist[n];
+    for (int n=0; n<3*out.numberoftrifaces; ++n) {
+      indices[n] = out.trifacelist[n];
+    }
+    for (int n=0; n<3*out.numberofpoints; ++n) {
+      verts[n] = out.pointlist[n];
+    }
+
+    int N[2] = { out.numberofpoints, 3 };
+    __output_ds["triangles"]->set_data(verts, N, 2);
+    __output_ds["triangles"]->set_indices(indices, 3*out.numberoftrifaces);
+
+    delete [] verts;
+    delete [] indices;
   }
-  for (int n=0; n<3*out.numberofpoints; ++n) {
-    verts[n] = out.pointlist[n];
+
+  // ---------------------------------------------------------------------------
+  // Get the segments
+  // ---------------------------------------------------------------------------
+  {
+    GLuint *indices = new GLuint[2 * out.numberofedges];
+    GLfloat *verts = new GLfloat[3 * out.numberofpoints];
+
+    for (int n=0; n<2*out.numberofedges; ++n) {
+      indices[n] = out.edgelist[n];
+    }
+    for (int n=0; n<3*out.numberofpoints; ++n) {
+      verts[n] = out.pointlist[n];
+    }
+
+    int N[2] = { out.numberofpoints, 3 };
+    __output_ds["segments"]->set_data(verts, N, 2);
+    __output_ds["segments"]->set_indices(indices, 2*out.numberofedges);
+
+    delete [] verts;
+    delete [] indices;
   }
-
-  int N[2] = { out.numberofpoints, 3 };
-  this->set_data(verts, N, 2);
-  this->set_indices(indices, 3*out.numberofedges);
-
-  delete [] verts;
-  delete [] indices;
 }
-
-
-void Tesselation3D::__refresh_cpu1()
-{
-  inp.initialize();
-  out.initialize();
-
-  //  inp.load_plc("/Users/jzrake/Work/luview/data/hinge", tetgenbehavior::MESH);
-  //  inp.load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
-  inp.load_node("/Users/jzrake/Work/luview/data/brain");
-
-  // z: number indices from zero
-  // v: generate voronoi
-  // Q: quiet
-  // ee: generate edges (NOTE: e -> subedges breaks)
-  tetrahedralize("zveeQ", &inp, &out);
-
-  GLuint *indices = new GLuint[2 * out.numberofedges];
-  GLfloat *verts = new GLfloat[3 * out.numberofpoints];
-
-  for (int n=0; n<2*out.numberofedges; ++n) {
-    indices[n] = out.edgelist[n];
-  }
-  for (int n=0; n<3*out.numberofpoints; ++n) {
-    verts[n] = out.pointlist[n];
-  }
-
-  int N[2] = { out.numberofpoints, 3 };
-  this->set_data(verts, N, 2);
-  this->set_indices(indices, 2*out.numberofedges);
-
-  delete [] verts;
-  delete [] indices;
-}
-
 
 Tesselation3D::LuaInstanceMethod Tesselation3D::__getattr__(std::string &method_name)
 {

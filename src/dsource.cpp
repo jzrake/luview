@@ -95,6 +95,7 @@ GLuint DataSource::get_texture_id()
 }
 DataSource *DataSource::get_output(const char *n)
 {
+  __trigger_refresh();
   DataSourceMap::iterator v = __output_ds.find(n);
   return v == __output_ds.end() ? NULL : v->second;
 }
@@ -324,9 +325,10 @@ int DataSource::_set_normalize_(lua_State *L)
 int DataSource::_get_data_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
+  const GLfloat *data = self->get_data();
   const int N = self->get_size();
   struct Array A = array_new_zeros(N, ARRAY_TYPE_FLOAT);
-  std::memcpy(A.data, self->get_data(), N*array_sizeof(ARRAY_TYPE_FLOAT));
+  std::memcpy(A.data, data, N*array_sizeof(ARRAY_TYPE_FLOAT));
   array_resize(&A, self->__num_points, self->__num_dimensions);
   lunum_pusharray1(L, &A);
   return 1;

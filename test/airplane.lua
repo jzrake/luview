@@ -59,18 +59,14 @@ local phong = shaders.load_shader("phong")
 local lights = shaders.load_shader("multlights")
 
 
-segments:set_data("segments", tess)
-segments:set_shader(shade)
-segments:set_alpha(1.0)
-segments:set_color(0.7, 0.8, 0.9)
-segments:set_linewidth(0.1)
 
-triangles:set_position(-1, -1, -1)
-triangles:set_data("triangles", tess)
+
+triangles:set_data("triangles", tess:get_output("triangles"))
 triangles:set_shader(lights)
 triangles:set_alpha(1.0)
-triangles:set_color(0.1, 0.5, 0.1)
-triangles:set_scale(2, 2, 2)
+triangles:set_color(0.5, 0.5, 1.0)
+triangles:set_scale(0.04, 0.04, 0.04)
+triangles:set_orientation(-90,0,0)
 box:set_shader(shade)
 window:set_color(0.2, 0.2, 0.2)
 

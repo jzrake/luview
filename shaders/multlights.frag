@@ -8,7 +8,7 @@ uniform vec3 color;
 void main()
 {
   float amb = 0.1;
-  vec3 color = vec3(0, 1, 0);
+  vec3 color = gl_Color.rgb;
 
   vec3 N = normalize(v_N);
   vec3 V = normalize(v_V);
