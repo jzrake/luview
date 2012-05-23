@@ -18,6 +18,8 @@ OBJ = 	luview.o \
 	dsource.o \
 	artists.o \
 	ren2tex.o \
+	colorbar.o \
+	pyplotcm.o \
 	glInfo.o \
 
 

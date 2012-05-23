@@ -14,16 +14,17 @@ void ren2tex_finish();
 
 struct TextureFormat
 {
+  int ind;
   GLenum fmt;
   int size;
   const char *name;
 } ;
 static TextureFormat textureFormats[] =
-  {{GL_LUMINANCE, 1, "luminance"},
-   {GL_ALPHA, 1, "alpha"},
-   {GL_RGB, 3, "rgb"},
-   {GL_RGBA, 4, "rgba"},
-   {0, 0, NULL}};
+  {{ 0, GL_LUMINANCE, 1, "luminance"},
+   { 1, GL_ALPHA, 1, "alpha"},
+   { 2, GL_RGB, 3, "rgb"},
+   { 3, GL_RGBA, 4, "rgba"},
+   { 4, 0, 0, NULL}};
 
 
 
@@ -38,6 +39,7 @@ DataSource::DataSource()
     __texture_format(GL_LUMINANCE),
     __num_dimensions(0),
     __num_indices(0),
+    __normalize(false),
     __staged(true)
 {
   glGenTextures(1, &__texture_id);
@@ -64,16 +66,18 @@ void DataSource::__trigger_refresh()
 {
   if (this->__ancestor_is_staged()) {
     this->__input_ds->__trigger_refresh();
-    this->__staged = false;
     this->__refresh_cpu();
+    this->__do_normalize();
     this->__cp_cpu_to_gpu();
     this->__execute_gpu_transform();
+    this->__staged = false;
   }
   else if (this->__staged) {
-    this->__staged = false;
     this->__refresh_cpu();
+    this->__do_normalize();
     this->__cp_cpu_to_gpu();
     this->__execute_gpu_transform();
+    this->__staged = false;
   }
 }
 const GLfloat *DataSource::get_data()
@@ -106,6 +110,19 @@ int DataSource::get_num_points(int d)
 }
 int DataSource::get_num_dimensions() { return __num_dimensions; }
 int DataSource::get_num_indices() { return __num_indices; }
+void DataSource::set_mode(const char *mode)
+{
+  std::map<std::string, TextureFormat> modes;
+  for (int n=0; ; ++n) {
+    if (textureFormats[n].name == NULL) break;
+    modes[textureFormats[n].name] = textureFormats[n];
+  }
+  std::map<std::string, TextureFormat>::iterator m = modes.find(mode);
+  if (m == modes.end()) {
+    luaL_error(__lua_state, "no texture format mode %s", mode);
+  }
+  __texture_format = m->second.ind;
+}
 void DataSource::set_data(const GLfloat *data, const int *np, int nd)
 {
   __num_dimensions = nd;
@@ -123,12 +140,14 @@ void DataSource::set_indices(const GLuint *indices, int ni)
 }
 void DataSource::check_num_dimensions(const char *name, int ndims)
 {
+  __trigger_refresh();
   if (ndims != __num_dimensions) {
     luaL_error(__lua_state, "%s must have %d dimensions", name, ndims);
   }
 }
 void DataSource::check_num_points(const char *name, int npnts, int dim)
 {
+  __trigger_refresh();
   if (npnts != this->get_num_points(dim)) {
     luaL_error(__lua_state, "%s must have %d points along dimension %d",
                name, npnts, dim);
@@ -136,6 +155,7 @@ void DataSource::check_num_points(const char *name, int npnts, int dim)
 }
 void DataSource::check_has_data(const char *name)
 {
+  __trigger_refresh();
   if (__cpu_data == NULL) {
     luaL_error(__lua_state, "%s must provide a floating point data buffer",
 	       name);
@@ -143,16 +163,19 @@ void DataSource::check_has_data(const char *name)
 }
 void DataSource::check_has_indices(const char *name)
 {
+  __trigger_refresh();
   if (__ind_data == NULL) {
     luaL_error(__lua_state, "%s must provide an index buffer", name);
   }
 }
 void DataSource::become_texture()
 {
-  this->__trigger_refresh();
+  __trigger_refresh();
   glBindTexture(__texture_target, __texture_id);
   glTexParameteri(__texture_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(__texture_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+  glTexParameteri(__texture_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+  glTexParameteri(__texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
 }
 void DataSource::__cp_cpu_to_gpu()
 {
@@ -205,6 +228,28 @@ void DataSource::__cp_cpu_to_gpu()
   glPopAttrib();
 }
 
+void DataSource::__do_normalize()
+{
+  if (!__normalize) return;
+
+  int Nt = this->get_size();
+  double x0 = 0.0;
+  double x1 = 1.0;
+  double xmin = +1e16;
+  double xmax = -1e16;
+  for (int n=0; n<Nt; ++n) {
+    const GLfloat x = __cpu_data[n];
+    if (x > xmax) xmax = x;
+    if (x < xmin) xmin = x;
+  }
+  for (int n=0; n<Nt; ++n) {
+    __cpu_data[n] -= xmin;
+    __cpu_data[n] /= xmax - xmin;
+    __cpu_data[n] *= x1 - x0;
+    __cpu_data[n] += x0;
+  }
+}
+
 
 void DataSource::__execute_gpu_transform()
 {
@@ -246,6 +291,7 @@ DataSource::__getattr__(std::string &method_name)
 {
   AttributeMap attr;
   attr["get_output"] = _get_output_;
+  attr["set_normalize"] = _set_normalize_;
   attr["get_data"] = _get_data_;
   attr["set_data"] = _set_data_;
   attr["get_input"] = _get_input_;
@@ -269,10 +315,9 @@ int DataSource::_get_output_(lua_State *L)
 int DataSource::_set_normalize_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-  int comp = luaL_checkinteger(L, 2);
-  bool mode = lua_toboolean(L, 3);
-  luaL_checktype(L, 3, LUA_TBOOLEAN);
-  self->__normalize[comp] = mode;
+  bool mode = lua_toboolean(L, 2);
+  luaL_checktype(L, 2, LUA_TBOOLEAN);
+  self->__normalize = mode;
   self->__staged = true;
   return 0;
 }
@@ -281,7 +326,7 @@ int DataSource::_get_data_(lua_State *L)
   DataSource *self = checkarg<DataSource>(L, 1);
   const int N = self->get_size();
   struct Array A = array_new_zeros(N, ARRAY_TYPE_FLOAT);
-  std::memcpy(A.data, self->__cpu_data, N*array_sizeof(ARRAY_TYPE_FLOAT));
+  std::memcpy(A.data, self->get_data(), N*array_sizeof(ARRAY_TYPE_FLOAT));
   array_resize(&A, self->__num_points, self->__num_dimensions);
   lunum_pusharray1(L, &A);
   return 1;
@@ -306,12 +351,9 @@ int DataSource::_get_mode_(lua_State *L)
 int DataSource::_set_mode_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-  std::vector<const char*> modes;
-  for (int n=0; ; ++n) {
-    if (textureFormats[n].name == NULL) break;
-    modes.push_back(textureFormats[n].name);
-  }
-  self->__texture_format = luaL_checkoption(L, 2, NULL, &modes[0]);
+  const char *mode = luaL_checkstring(L, 2);
+  self->set_mode(mode);
+  self->__staged = true;
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)

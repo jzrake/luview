@@ -521,6 +521,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<ImagePlane>(L);
+  LuaCppObject::Register<MatplotlibColormaps>(L);
 
   return 1;
 }

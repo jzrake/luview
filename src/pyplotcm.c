@@ -17439,3 +17439,7 @@ const float *pyplot_colors_get_lookup_table(const char *key)
   if (strcmp(key, "bone") == 0) return bone[0];
   return NULL;
 }
+const float *pyplot_colors_get_lookup_table_by_id(int id)
+{
+  return pyplot_colors_get_lookup_table(names[id]);
+}

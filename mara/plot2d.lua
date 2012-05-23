@@ -5,31 +5,29 @@ local lunum = require 'lunum'
 local shaders = require 'shaders'
 
 local window = luview.Window()
-local image_src = luview.MultiImageSource()
-local normalize = luview.GlobalLinearTransformation()
-local cmap = luview.MatplotlibColormaps()
+local lumsrc = luview.DataSource()
+local pyluts = luview.MatplotlibColormaps()
 local cmshade = shaders.load_shader("cbar")
 
 
-normalize:set_input(image_src)
-normalize:set_range(0, 0.0, 1.0)
-cmap:set_colormap(4)
-
-
 local function load_frame(fname, var)
-   local image = luview.ImagePlaneGpuShaded()
+   local image = luview.ImagePlane()
 
    collectgarbage()
    h5_open_file(fname, "r")
-   local data = h5_read_array("prim/"..var)
+   local lumdata = h5_read_array("prim/"..var)
    h5_close_file()
 
-   image_src:set_array(data)
-   image:set_data("data", normalize)
-   image:set_data("color_table", cmap:get_output())
+   lumsrc:set_mode("luminance")
+   lumsrc:set_data(lumdata)
+   lumsrc:set_normalize(true)
 
+   image:set_data("image", lumsrc)
+   image:set_data("color_table", pyluts)
+   image:set_alpha(1.0)
    image:set_orientation(0,0,-90)
    image:set_shader(cmshade)
+
    collectgarbage()
    return image
 end
@@ -37,19 +35,15 @@ end
 
 window:set_color(0,0,0)
 window:set_orientation(0,0,0)
-window:set_position(0,0,-1.3)
+--window:set_position(0,0,-1.3)
 
 local auto_movie = false
 local narg = 1
 local status = "continue"
-local key
 local actors = { }
 
 actors[1] = load_frame(cmdline.args[narg], "rho")
 
-local function stage()
-   actors[1]:stage()
-end
 local function next_frame()
    narg = narg + 1
    local fn = cmdline.args[narg]
@@ -63,8 +57,8 @@ local function idle()
    end
 end
 
-window:set_callback("]", function() cmap:next_colormap(); stage() end, "next colormap")
-window:set_callback("[", function() cmap:prev_colormap(); stage() end, "previous colormap")
+window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
+window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
 window:set_callback("n", next_frame, "next frame")
 window:set_callback("idle", idle)
 

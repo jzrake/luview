@@ -40,13 +40,10 @@ protected:
   int __num_indices;
   int __num_points[__DATASOURCE_MAXDIMS];
 
-  // Maintains the largest and smallest values over the last data axis.
-  std::map<int, GLfloat> __maxval;
-  std::map<int, GLfloat> __minval;
+  // if true for component then map output into [0,1]
+  bool __normalize;
 
-  // If true for component i, then map that component into [0,1).
-  std::map<int, bool> __normalize;
-
+  void __do_normalize();
   void __trigger_refresh();
   void __execute_gpu_transform();
   bool __ancestor_is_staged();
@@ -70,6 +67,7 @@ public:
   int get_num_dimensions();
   int get_num_indices();
 
+  void set_mode(const char *mode);
   /* sets the data buffer manually
      data -> __cpu_data (deep copy)
      np -> __num_points
@@ -150,47 +148,30 @@ private:
   virtual std::vector<double> call_priv(double *x, int narg);
 } ;
 
-class ColormapCollection : public CallbackFunction
+class ColormapCollection : public DataSource
 {
 public:
-  ColormapCollection();
-  virtual void next_colormap() = 0;
-  virtual void prev_colormap() = 0;
-protected:
-  int cmap_id;
-  int var_index;
-  virtual void refresh_output() { }
+  virtual void set_colormap(const char *name) { }
+  virtual void next_colormap() { }
+  virtual void prev_colormap() { }
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _set_cmap_(lua_State *L);
-  static int _set_component_(lua_State *L);
+  static int _set_colormap_(lua_State *L);
   static int _next_colormap_(lua_State *L);
   static int _prev_colormap_(lua_State *L);
-} ;
-
-class TessColormaps : public ColormapCollection
-{
-public:
-  void next_colormap();
-  void prev_colormap();
-private:
-  virtual std::vector<double> call_priv(double *x, int narg);
 } ;
 
 class MatplotlibColormaps : public ColormapCollection
 {
 public:
+  MatplotlibColormaps();
+  void set_colormap(const char *name);
   void next_colormap();
   void prev_colormap();
 private:
-  PointsSource *color_table;
-  const float *ctable_data;
-  virtual std::vector<double> call_priv(double *x, int narg);
-protected:
-  void refresh_output();
-  void __init_lua_objects();
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _get_output_(lua_State *L);
+  const float *cmap_data;
+  int cmap_id;
+  void __refresh_cpu();
 } ;
 
 class GlobalLinearTransformation : public DataSource
