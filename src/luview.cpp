@@ -139,7 +139,7 @@ LuviewTraitedObject::LuviewTraitedObject()
   Scale[1] = 1.0;
   Scale[2] = 1.0;
 
-  Alpha = 0.9;
+  Alpha = 1.0;
   LineWidth = 1.0;
 }
 LuviewTraitedObject::LuaInstanceMethod LuviewTraitedObject::__getattr__
