@@ -305,7 +305,7 @@ private:
   bool first_frame;
 
 public:
-  Window() : WindowWidth(1024),
+  Window() : WindowWidth(768),
              WindowHeight(768), character_input(0), first_frame(true)
   {
     Orientation[0] = 9.0;

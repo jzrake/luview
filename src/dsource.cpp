@@ -198,7 +198,7 @@ void DataSource::__cp_cpu_to_gpu()
     if (sz == 1) {
       // (1): it's a 2d texture of scalar data
       glBindTexture(GL_TEXTURE_2D, __texture_id);
-      glTexImage2D(GL_TEXTURE_2D, 0, 1, N[0], N[1], 0, fmt, GL_FLOAT, buf);
+      glTexImage2D(GL_TEXTURE_2D, 0, 1, N[1], N[0], 0, fmt, GL_FLOAT, buf);
       __texture_target = GL_TEXTURE_2D;
     }
     else {
@@ -214,13 +214,13 @@ void DataSource::__cp_cpu_to_gpu()
     if (sz == 1) {
       // (1): it's a 3d texture of scalar data
       glBindTexture(GL_TEXTURE_3D, __texture_id);
-      glTexImage3D(GL_TEXTURE_3D, 0, 1, N[0], N[1], N[2], 0, fmt, GL_FLOAT, buf);
+      glTexImage3D(GL_TEXTURE_3D, 0, 1, N[2], N[1], N[0], 0, fmt, GL_FLOAT, buf);
       __texture_target = GL_TEXTURE_3D;
     }
     else {
       // (2): the last axis must have size sz
       glBindTexture(GL_TEXTURE_2D, __texture_id);
-      glTexImage2D(GL_TEXTURE_2D, 0, sz, N[0], N[1], 0, fmt, GL_FLOAT, buf);
+      glTexImage2D(GL_TEXTURE_2D, 0, sz, N[1], N[0], 0, fmt, GL_FLOAT, buf);
       __texture_target = GL_TEXTURE_2D;
     }
     break;

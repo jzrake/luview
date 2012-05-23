@@ -16,6 +16,7 @@ local function load_frame(fname, var)
    collectgarbage()
    h5_open_file(fname, "r")
    local lumdata = h5_read_array("prim/"..var)
+   local Nx, Ny = unpack(lumdata:shape())
    h5_close_file()
 
    lumsrc:set_mode("luminance")
@@ -26,6 +27,7 @@ local function load_frame(fname, var)
    image:set_data("color_table", pyluts)
    image:set_alpha(1.0)
    image:set_orientation(0,0,-90)
+   image:set_scale(-1, Nx/Ny, 1)
    image:set_shader(cmshade)
 
    collectgarbage()
@@ -35,7 +37,7 @@ end
 
 window:set_color(0,0,0)
 window:set_orientation(0,0,0)
---window:set_position(0,0,-1.3)
+window:set_position(0,0,-1.3)
 
 local auto_movie = false
 local narg = 1
@@ -43,6 +45,7 @@ local status = "continue"
 local actors = { }
 
 actors[1] = load_frame(cmdline.args[narg], "rho")
+pyluts:set_colormap("afmhot")
 
 local function next_frame()
    narg = narg + 1
