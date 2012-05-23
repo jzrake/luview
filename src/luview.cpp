@@ -337,17 +337,6 @@ private:
     glfwSetCharCallback(CharacterInput);
     glfwEnable(GLFW_STICKY_KEYS);
     glfwEnable(GLFW_KEY_REPEAT);
-
-
-    GLfloat light_ambient [] = { 0.4, 0.4, 0.4, 1.0 };
-    GLfloat light_diffuse [] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
-    GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
-
-    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
-    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
-    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
-    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
   }
 
   const char *render_scene(std::vector<DrawableObject*> &actors)
@@ -369,6 +358,16 @@ private:
     glClearColor(Color[0], Color[1], Color[2], 1.0);
     glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
     glLoadIdentity();
+
+    GLfloat light_ambient [] = { 0.4, 0.4, 0.4, 1.0 };
+    GLfloat light_diffuse [] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_specular[] = { 1.0, 1.0, 1.0, 1.0 };
+    GLfloat light_position[] = { 0.0, 0.0, 1.0, 0.0 };
+
+    glLightfv(GL_LIGHT0, GL_AMBIENT, light_ambient);
+    glLightfv(GL_LIGHT0, GL_DIFFUSE, light_diffuse);
+    glLightfv(GL_LIGHT0, GL_SPECULAR, light_specular);
+    glLightfv(GL_LIGHT0, GL_POSITION, light_position);
 
     glTranslated(Position[0], Position[1], Position[2]);
     glRotated(Orientation[0], 1, 0, 0);

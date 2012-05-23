@@ -1,6 +1,6 @@
 
 varying vec3 N;
-varying vec3 v;    
+varying vec3 v;
 
 void main(void)  
 {  

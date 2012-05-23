@@ -8,6 +8,7 @@ local window = luview.Window()
 local box = luview.BoundingBox()
 local tess = luview.Tesselation3D()
 local segments = luview.SegmentsEnsemble()
+local triangles = luview.TrianglesEnsemble()
 
 local pointlist = lunum.zeros{8,3}
 local n
@@ -54,6 +55,8 @@ pointlist[{n,2}] =-1.0
 
 
 local shade = shaders.load_shader("lambertian")
+local phong = shaders.load_shader("phong")
+local lights = shaders.load_shader("multlights")
 
 
 segments:set_data("segments", tess)
@@ -61,7 +64,14 @@ segments:set_shader(shade)
 segments:set_alpha(1.0)
 segments:set_color(0.7, 0.8, 0.9)
 segments:set_linewidth(0.1)
+
+triangles:set_position(-1, -1, -1)
+triangles:set_data("triangles", tess)
+triangles:set_shader(lights)
+triangles:set_alpha(1.0)
+triangles:set_color(0.1, 0.5, 0.1)
+triangles:set_scale(2, 2, 2)
 box:set_shader(shade)
 window:set_color(0.2, 0.2, 0.2)
 
-while window:render_scene{box, segments} == "continue" do end
+while window:render_scene{box, triangles} == "continue" do end

@@ -177,6 +177,7 @@ public:
   virtual ~Tesselation3D();
 private:
   void __refresh_cpu();
+  void __refresh_cpu1();
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
 } ;

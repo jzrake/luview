@@ -44,7 +44,41 @@ Tesselation3D::~Tesselation3D()
 
 }
 
+
 void Tesselation3D::__refresh_cpu()
+{
+  inp.initialize();
+  out.initialize();
+
+  inp.load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
+  //  inp.load_node("/Users/jzrake/Work/luview/data/brain");
+
+  // z: number indices from zero
+  // v: generate voronoi
+  // Q: quiet
+  // ee: generate edges (NOTE: e -> subedges breaks)
+  tetrahedralize("zveeQ", &inp, &out);
+
+  GLuint *indices = new GLuint[3 * out.numberofedges];
+  GLfloat *verts = new GLfloat[3 * out.numberofpoints];
+
+  for (int n=0; n<3*out.numberoftrifaces; ++n) {
+    indices[n] = out.trifacelist[n];
+  }
+  for (int n=0; n<3*out.numberofpoints; ++n) {
+    verts[n] = out.pointlist[n];
+  }
+
+  int N[2] = { out.numberofpoints, 3 };
+  this->set_data(verts, N, 2);
+  this->set_indices(indices, 3*out.numberofedges);
+
+  delete [] verts;
+  delete [] indices;
+}
+
+
+void Tesselation3D::__refresh_cpu1()
 {
   inp.initialize();
   out.initialize();
