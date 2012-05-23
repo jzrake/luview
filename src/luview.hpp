@@ -106,9 +106,6 @@ protected:
   static int _set_program_(lua_State *L);
 } ;
 
-
-
-
 class GridSource2D :  public DataSource
 {
 public:
@@ -123,7 +120,6 @@ protected:
   static int _set_u_range_(lua_State *L);
   static int _set_v_range_(lua_State *L);
 } ;
-
 
 class CallbackFunction : public LuaCppObject
 {
@@ -174,90 +170,13 @@ private:
   void __refresh_cpu();
 } ;
 
-class GlobalLinearTransformation : public DataSource
-{
-protected:
-  // map component index to min value for normalization
-  std::map<int, std::pair<double, double> > output_range;
-
-public:
-  GLfloat *get_data();
-  int get_num_points(int d);
-  int get_size();
-  int get_num_components();
-  int get_num_dimensions();
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _set_range_(lua_State *L);
-} ;
-
-
-class FunctionMapping : public DataSource
-{
-public:
-  int get_num_points(int d);
-  int get_size();
-  int get_num_components();
-  int get_num_dimensions();
-  GLfloat *get_data();
-} ;
-
-
-class PointsSource :  public DataSource
-{
-protected:
-  int Np, Nc;
-
-public:
-  PointsSource(lua_State *L, int pos);
-  PointsSource();
-
-  void set_points(double *data, int np, int nc);
-  void set_points(const GLfloat *data, int np, int nc);
-  int get_num_points(int d);
-  int get_size();
-  int get_num_components();
-  int get_num_dimensions();
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _set_points_(lua_State *L);
-} ;
-
-
-class MultiImageSource :  public DataSource
-{
-protected:
-  int Nx, Ny, Nc;
-
-public:
-  MultiImageSource();
-
-  int get_num_points(int d);
-  int get_size();
-  int get_num_components();
-  int get_num_dimensions();
-  void set_array(double *data, int nx, int ny, int nc);
-
-protected:
-  virtual LuaInstanceMethod __getattr__(std::string &method_name);
-  static int _set_array_(lua_State *L);
-} ;
-
-
-class Tesselation3D : public PointsSource
+class Tesselation3D : public DataSource
 {
 public:
   Tesselation3D();
   virtual ~Tesselation3D();
-
-  int get_num_points(int d);
-  int get_size();
-  int get_num_components();
-  int get_num_dimensions();
-
-  GLfloat *get_data();
+private:
+  void __refresh_cpu();
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
 } ;
@@ -360,7 +279,6 @@ protected:
   static int _set_program_(lua_State *L);
 } ;
 
-
 class DrawableObject : public LuviewTraitedObject
 {
 protected:
@@ -387,7 +305,6 @@ public:
 private:
   void draw_local();
 } ;
-
 
 class NbodySimulation : public LuaCppObject
 {
@@ -427,7 +344,6 @@ protected:
   static int _get_output_(lua_State *L);
 } ;
 
-
 class BoundingBox : public DrawableObject
 {
 public:
@@ -441,6 +357,22 @@ private:
   GLfloat Lx0, Lx1, Ly0, Ly1;
 public:
   ImagePlane();
+  void draw_local();
+} ;
+
+class SegmentsEnsemble : public DrawableObject
+{
+public:
+  SegmentsEnsemble();
+private:
+  void draw_local();
+} ;
+
+class TrianglesEnsemble : public DrawableObject
+{
+public:
+  TrianglesEnsemble();
+private:
   void draw_local();
 } ;
 

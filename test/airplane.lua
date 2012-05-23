@@ -2,12 +2,11 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
-local utils = require 'test.utils'
+local shaders = require 'shaders'
 
 local window = luview.Window()
 local box = luview.BoundingBox()
 local tess = luview.Tesselation3D()
-local points = luview.PointsSource()
 local segments = luview.SegmentsEnsemble()
 
 local pointlist = lunum.zeros{8,3}
@@ -53,17 +52,16 @@ pointlist[{n,0}] = 0.5
 pointlist[{n,1}] = 0.25
 pointlist[{n,2}] =-1.0
 
-local shade = luview.ShaderProgram()
-utils.load_shader("lambertian", shade)
 
-points:set_points(pointlist)
-tess:set_input(points)
-segments:set_data("vertices", tess)
+local shade = shaders.load_shader("lambertian")
+
+
+segments:set_data("segments", tess)
 segments:set_shader(shade)
 segments:set_alpha(1.0)
 segments:set_color(0.7, 0.8, 0.9)
-segments:set_linewidth(5)
---segments:set_scale(0.5, 0.5, 0.75)
-
+segments:set_linewidth(0.1)
+box:set_shader(shade)
 window:set_color(0.2, 0.2, 0.2)
-while window:render_scene({box, segments}) == "continue" do end
+
+while window:render_scene{box, segments} == "continue" do end

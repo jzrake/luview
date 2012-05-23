@@ -299,13 +299,13 @@ int DrawableObject::_set_shader_(lua_State *L)
 class Window : public LuviewTraitedObject
 {
 private:
-  double WindowWidth, WindowHeight;
+  int WindowWidth, WindowHeight;
   int character_input;
   static Window *CurrentWindow;
   bool first_frame;
 
 public:
-  Window() : WindowWidth(768),
+  Window() : WindowWidth(1024),
              WindowHeight(768), character_input(0), first_frame(true)
   {
     Orientation[0] = 9.0;
@@ -319,6 +319,7 @@ private:
   {
     glfwInit();
     glfwOpenWindow(WindowWidth, WindowHeight, 5, 6, 5, 0, 8, 0, GLFW_WINDOW);
+    glfwSetWindowTitle("Mythos science visualizer");
 
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
@@ -328,9 +329,10 @@ private:
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluPerspective(45.0, WindowWidth/WindowHeight, 0.01, 200.0);
+    gluPerspective(45.0, (float)WindowWidth/WindowHeight, 0.01, 200.0);
     glMatrixMode(GL_MODELVIEW);
 
+    glfwSetWindowSizeCallback(Reshape);
     glfwSetKeyCallback(KeyboardInput);
     glfwSetCharCallback(CharacterInput);
     glfwEnable(GLFW_STICKY_KEYS);
@@ -470,6 +472,13 @@ private:
     }
     CurrentWindow->character_input = key;
   }
+  static void Reshape(int newWidth, int newHeight)
+  {
+    glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+    gluPerspective(45.0, (float)newWidth/newHeight, 0.01, 200.0);
+    glMatrixMode(GL_MODELVIEW);
+  }
 
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
@@ -522,6 +531,10 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<ImagePlane>(L);
   LuaCppObject::Register<MatplotlibColormaps>(L);
+
+  LuaCppObject::Register<Tesselation3D>(L);
+  LuaCppObject::Register<SegmentsEnsemble>(L);
+  LuaCppObject::Register<TrianglesEnsemble>(L);
 
   return 1;
 }

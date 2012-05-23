@@ -3,15 +3,6 @@
 GL_INCL = -I/usr/X11/include
 LUA = ../bin/lua
 LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
-#OBJ = 	luview.o \
-	tesselate.o \
-	shader.o \
-	colorbar.o \
-	pyplotcm.o \
-	nbody.o \
-	volume.o \
-	glInfo.o \
-	dsource.o \
 
 OBJ = 	luview.o \
 	shader.o \
@@ -20,6 +11,7 @@ OBJ = 	luview.o \
 	ren2tex.o \
 	colorbar.o \
 	pyplotcm.o \
+	tesselate.o \
 	glInfo.o \
 
 

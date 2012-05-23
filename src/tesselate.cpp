@@ -36,6 +36,16 @@ static tetgenio inp, out;
 
 Tesselation3D::Tesselation3D()
 {
+
+}
+
+Tesselation3D::~Tesselation3D()
+{
+
+}
+
+void Tesselation3D::__refresh_cpu()
+{
   inp.initialize();
   out.initialize();
 
@@ -48,65 +58,28 @@ Tesselation3D::Tesselation3D()
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
   tetrahedralize("zveeQ", &inp, &out);
-}
 
-Tesselation3D::~Tesselation3D()
-{
-
-}
-
-int Tesselation3D::get_num_points(int d)
-{
-  switch (d) {
-  case 0: return Np;
-  default: return 0;
-  }
-}
-int Tesselation3D::get_size() { return Np; }
-int Tesselation3D::get_num_components() { return 3; }
-int Tesselation3D::get_num_dimensions() { return 1; }
-
-
-
-GLfloat *Tesselation3D::get_data()
-{
-  if (!input) {
-    return NULL;
-  }
-
-  inp.initialize();
-  out.initialize();
-
-  inp.numberofpoints = input->get_size();
-  inp.pointlist = new double[inp.numberofpoints*3];
-
-  GLfloat *points = input->get_data();
-  for (int n=0; n<inp.numberofpoints*3; ++n) inp.pointlist[n] = points[n];
-
-  // z: number indices from zero
-  // v: generate voronoi
-  // Q: quiet
-  // ee: generate edges (NOTE: e -> subedges breaks)
-  tetrahedralize("zveeQ", &inp, &out);
-
-
-  // super returns these on get_size() and get_indices
-  Np = out.numberofedges;
-  indices = (GLuint*) realloc(indices, 2 * out.numberofedges * sizeof(GLuint));
-  output = (GLfloat*) realloc(output, 3 * out.numberofpoints * sizeof(GLfloat));
+  GLuint *indices = new GLuint[2 * out.numberofedges];
+  GLfloat *verts = new GLfloat[3 * out.numberofpoints];
 
   for (int n=0; n<2*out.numberofedges; ++n) {
     indices[n] = out.edgelist[n];
   }
   for (int n=0; n<3*out.numberofpoints; ++n) {
-    output[n] = out.pointlist[n];
+    verts[n] = out.pointlist[n];
   }
-  return output;
+
+  int N[2] = { out.numberofpoints, 3 };
+  this->set_data(verts, N, 2);
+  this->set_indices(indices, 2*out.numberofedges);
+
+  delete [] verts;
+  delete [] indices;
 }
 
 
 Tesselation3D::LuaInstanceMethod Tesselation3D::__getattr__(std::string &method_name)
 {
   AttributeMap attr;
-  RETURN_ATTR_OR_CALL_SUPER(PointsSource);
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
 }
