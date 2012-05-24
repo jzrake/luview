@@ -306,6 +306,7 @@ DataSource::__getattr__(std::string &method_name)
   attr["set_program"] = _set_program_;
   attr["get_mode"] = _get_mode_;
   attr["set_mode"] = _set_mode_;
+  attr["compile"] = _compile_;
   RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
 }
 
@@ -400,7 +401,12 @@ int DataSource::_set_program_(lua_State *L)
   self->__staged = true;
   return 0;
 }
-
+int DataSource::_compile_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  self->compile();
+  return 0;
+}
 
 GridSource2D::GridSource2D()
 {
@@ -469,3 +475,45 @@ int GridSource2D::_set_v_range_(lua_State *L)
   return 0;
 }
 
+
+ParametricVertexSource3D::ParametricVertexSource3D()
+  : GridSource2D()
+{
+
+}
+void ParametricVertexSource3D::__refresh_cpu()
+{
+  if (__input_ds == NULL) {
+    luaL_error(__lua_state, "need an input data source\n");
+  }
+  std::string tname = _get_type();
+  __input_ds->check_has_data(tname.c_str());
+  __input_ds->check_num_dimensions(tname.c_str(), 2);
+
+  Nu = __input_ds->get_num_points(0);
+  Nv = __input_ds->get_num_points(1);
+
+  __num_dimensions = 2;
+  //  __num_indices = 
+
+  __num_points[0] = Nu*Nv;
+  __num_points[1] = 3;
+  __cpu_data = (GLfloat*) realloc(__cpu_data, 3*Nu*Nv*sizeof(GLfloat));
+
+  printf("%d %d\n", __num_points[0], __num_points[1]);
+
+  const GLfloat *input = __input_ds->get_data();
+  const int su = Nv;
+  const int sv = 1;
+  const double du = (u1 - u0) / (Nu - 1);
+  const double dv = (v1 - v0) / (Nv - 1);
+
+  for (int i=0; i<Nu; ++i) {
+    for (int j=0; j<Nv; ++j) {
+      const int m = i*su + j*sv;
+      __cpu_data[3*m + 0] = u0 + i*du;
+      __cpu_data[3*m + 1] = v0 + j*dv;
+      __cpu_data[3*m + 2] = input[m];
+    }
+  }
+}

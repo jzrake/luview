@@ -245,10 +245,10 @@ void DrawableObject::draw()
   glPushAttrib(GL_ALL_ATTRIB_BITS);
 
   glTranslated(Position[0], Position[1], Position[2]);
+  glScaled(Scale[0], Scale[1], Scale[2]);
   glRotated(Orientation[0], 1, 0, 0);
   glRotated(Orientation[1], 0, 1, 0);
   glRotated(Orientation[2], 0, 0, 1);
-  glScaled(Scale[0], Scale[1], Scale[2]);
 
   glColor4d(Color[0], Color[1], Color[2], Alpha);
   glLineWidth(LineWidth);
@@ -524,8 +524,9 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<GpuInformation>(L);
   LuaCppObject::Register<Window>(L);
 
-  LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<DataSource>(L);
+  LuaCppObject::Register<GridSource2D>(L);
+  LuaCppObject::Register<ParametricVertexSource3D>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<ImagePlane>(L);
@@ -535,6 +536,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SegmentsEnsemble>(L);
   LuaCppObject::Register<ParametricSurface>(L);
   LuaCppObject::Register<TrianglesEnsemble>(L);
+
 
   return 1;
 }

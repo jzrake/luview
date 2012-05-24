@@ -10,8 +10,6 @@ local box = luview.BoundingBox()
 local grid2d = luview.GridSource2D()
 local surface = luview.ParametricSurface()
 local points = luview.DataSource()
---local scolors = luview.FunctionMapping()
---local normalize = luview.GlobalLinearTransformation()
 local shader = shaders.load_shader("multlights")
 
 
@@ -36,8 +34,8 @@ local function cmap2(x,y,z)
    return math.exp(-a*(z-0.3)^b), math.exp(-a*(z-0.5)^b), math.exp(-a*(z-0.7)^b), 0.8
 end
 
-local Nx = 64
-local Ny = 64
+local Nx = 128
+local Ny = 128
 local A = lunum.zeros{Nx,Ny,3}
 for i,j,k in A:indices() do
    local u = -0.5 + i/Nx

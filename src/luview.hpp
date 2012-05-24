@@ -105,21 +105,30 @@ protected:
   static int _set_transform_(lua_State *L);
   static int _get_program_(lua_State *L);
   static int _set_program_(lua_State *L);
+  static int _compile_(lua_State *L);
 } ;
 
 class GridSource2D :  public DataSource
 {
 public:
   GridSource2D();
-private:
+protected:
   int Nu, Nv;
   double u0, u1, v0, v1;
-  void __refresh_cpu();
+  virtual void __refresh_cpu();
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_num_points_(lua_State *L);
   static int _set_u_range_(lua_State *L);
   static int _set_v_range_(lua_State *L);
+} ;
+
+class ParametricVertexSource3D :  public GridSource2D
+{
+public:
+  ParametricVertexSource3D();
+protected:
+  void __refresh_cpu();
 } ;
 
 class CallbackFunction : public LuaCppObject
