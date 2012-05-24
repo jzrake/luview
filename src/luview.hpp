@@ -265,21 +265,17 @@ class ShaderProgram : public LuaCppObject
 private:
   GLuint vert, frag, prog;
   GLint prev_prog;
-
 public:
   ShaderProgram();
   virtual ~ShaderProgram();
-
+  void set_uniform(const char *name, GLint value);
   void set_program(const char *vert_src, const char *frag_src);
   void unset_program();
   void activate();
   void deactivate();
-  void set_uniform(const char *name, GLint value);
-
 private:
   void printShaderInfoLog(GLuint obj);
   void printProgramInfoLog(GLuint obj);
-
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _set_program_(lua_State *L);
@@ -290,14 +286,11 @@ class DrawableObject : public LuviewTraitedObject
 protected:
   std::vector<int> gl_modes;
   ShaderProgram *shader;
-
 public:
   DrawableObject();
   virtual void draw();
-
 protected:
   virtual void draw_local() = 0;
-
 protected:
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _get_shader_(lua_State *L);
@@ -318,7 +311,6 @@ public:
   NbodySimulation();
   virtual ~NbodySimulation();
   void advance();
-
 private:
   struct MassiveParticle
   {
@@ -326,23 +318,18 @@ private:
     double m;
     double x[3], v[3], a[3];
   } ;
-
   int NumberOfParticles;
   double TimeStep;
   PointsSource *output_points;
   MassiveParticle *particles;
-
   void init_particles();
   void refresh_output();
-
   void ComputeForces(struct MassiveParticle *P0, int N);
   void ComputeForces2(struct MassiveParticle *P0, int N);
   void MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt);
   void MoveParticlesRK2(struct MassiveParticle *P0, int N, double dt);
   void MoveParticlesRK4(struct MassiveParticle *P0, int N, double dt);
-
   double RandomDouble(double a, double b);
-
 protected:
   void __init_lua_objects();
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
@@ -354,15 +341,25 @@ class BoundingBox : public DrawableObject
 {
 public:
   BoundingBox();
+private:
   void draw_local();
 } ;
 
 class ImagePlane : public DrawableObject
 {
-private:
-  GLfloat Lx0, Lx1, Ly0, Ly1;
 public:
   ImagePlane();
+private:
+  GLfloat Lx0, Lx1, Ly0, Ly1;
+  void draw_local();
+} ;
+
+class ParametricSurface : public DrawableObject
+{
+public:
+  ParametricSurface();
+private:
+  GLfloat Lx0, Lx1, Ly0, Ly1;
   void draw_local();
 } ;
 

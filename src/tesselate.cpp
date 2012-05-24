@@ -67,7 +67,7 @@ void Tesselation3D::__refresh_cpu()
   out->deinitialize();
   out->initialize();
   try {
-    tetrahedralize("ffnnzee", inp, out);
+    tetrahedralize("nnfzee", inp, out);
   }
   catch (int) {
     luaL_error(__lua_state, "need to load some data before tesselating");

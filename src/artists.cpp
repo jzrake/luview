@@ -141,6 +141,69 @@ void ImagePlane::draw_local()
   glEnd();
 }
 
+ParametricSurface::ParametricSurface()
+{
+  gl_modes.push_back(GL_DEPTH_TEST);
+  gl_modes.push_back(GL_LIGHTING);
+  gl_modes.push_back(GL_LIGHT0);
+  gl_modes.push_back(GL_BLEND);
+  gl_modes.push_back(GL_COLOR_MATERIAL);
+  gl_modes.push_back(GL_AUTO_NORMAL);
+  gl_modes.push_back(GL_NORMALIZE);
+}
+void ParametricSurface::draw_local()
+{
+  EntryDS cp = DataSources.find("points");
+
+  if (cp != DataSources.end()) {
+    cp->second->compile();
+    cp->second->check_has_data("points");
+    cp->second->check_num_dimensions("points", 3);
+    cp->second->check_num_points("points", 3, 2); // 3 components on dimension 2
+  }
+  else {
+    return;
+  }
+  int Nx = cp->second->get_num_points(0);
+  int Ny = cp->second->get_num_points(1);
+  const GLfloat *data = cp->second->get_data();
+
+  glBegin(GL_TRIANGLES);
+  for (int i=0; i<Nx-1; ++i) {
+    for (int j=0; j<Ny-1; ++j) {
+      const GLfloat *u = &data[((i+0)*Ny + j+0)*3];
+      const GLfloat *v = &data[((i+0)*Ny + j+1)*3];
+      const GLfloat *w = &data[((i+1)*Ny + j+0)*3];
+      const GLfloat *q = &data[((i+1)*Ny + j+1)*3];
+
+      const GLfloat d1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
+      const GLfloat d2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
+      const GLfloat d3[3] = {q[0]-w[0], q[1]-w[1], q[2]-w[2]};
+
+      GLfloat n1[3];
+      n1[0] = d1[2]*d2[1] - d1[1]*d2[2];
+      n1[1] = d1[0]*d2[2] - d1[2]*d2[0];
+      n1[2] = d1[1]*d2[0] - d1[0]*d2[1];
+
+      GLfloat n2[3];
+      n2[0] = d3[2]*d2[1] - d3[1]*d2[2];
+      n2[1] = d3[0]*d2[2] - d3[2]*d2[0];
+      n2[2] = d3[1]*d2[0] - d3[0]*d2[1];
+
+      glNormal3fv(n1);
+      glVertex3fv(u);
+      glVertex3fv(v);
+      glVertex3fv(w);
+
+      glNormal3fv(n2);
+      glVertex3fv(v);
+      glVertex3fv(w);
+      glVertex3fv(q);
+    }
+  }
+  glEnd();
+}
+
 
 SegmentsEnsemble::SegmentsEnsemble()
 {
@@ -152,7 +215,6 @@ SegmentsEnsemble::SegmentsEnsemble()
   gl_modes.push_back(GL_AUTO_NORMAL);
   gl_modes.push_back(GL_NORMALIZE);
 }
-
 void SegmentsEnsemble::draw_local()
 {
   EntryDS seg = DataSources.find("segments");
@@ -185,9 +247,9 @@ void SegmentsEnsemble::draw_local()
       const GLfloat *u = &verts[3*indices[2*n + 0]];
       const GLfloat *v = &verts[3*indices[2*n + 1]];
       const GLfloat n[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
+      glNormal3fv(n);
       glVertex3fv(u);
       glVertex3fv(v);
-      glNormal3fv(n);
     }
     glEnd();
   }
