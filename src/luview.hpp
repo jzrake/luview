@@ -67,6 +67,7 @@ public:
   int get_num_dimensions();
   int get_num_indices();
 
+  void set_input(DataSource *inpt);
   void set_mode(const char *mode);
   /* sets the data buffer manually
      data -> __cpu_data (deep copy)

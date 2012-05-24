@@ -60,7 +60,7 @@ bool DataSource::__ancestor_is_staged()
     return false;
   }
   else {
-    return __input_ds->__ancestor_is_staged();
+    return __input_ds->__staged || __input_ds->__ancestor_is_staged();
   }
 }
 void DataSource::__trigger_refresh()
@@ -110,6 +110,11 @@ int DataSource::get_num_points(int d)
 }
 int DataSource::get_num_dimensions() { return __num_dimensions; }
 int DataSource::get_num_indices() { return __num_indices; }
+void DataSource::set_input(DataSource *inpt)
+{
+  __input_ds = replace(__input_ds, inpt);
+  __staged = true;
+}
 void DataSource::set_mode(const char *mode)
 {
   std::map<std::string, TextureFormat> modes;
@@ -368,8 +373,7 @@ int DataSource::_set_input_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
   DataSource *inpt = checkarg<DataSource>(L, 2);
-  self->__input_ds = self->replace(self->__input_ds, inpt);
-  self->__staged = true;
+  self->set_input(inpt);
   return 0;
 }
 int DataSource::_get_transform_(lua_State *L)

@@ -49,6 +49,8 @@ void Tesselation3D::__init_lua_objects()
 {
   hold(__output_ds["triangles"] = create<DataSource>(__lua_state));
   hold(__output_ds["segments"] = create<DataSource>(__lua_state));
+  //  __output_ds["triangles"]->set_input(this);
+  //  __output_ds["segments"]->set_input(this);
 }
 
 void Tesselation3D::__refresh_cpu()
