@@ -62,15 +62,16 @@ void Tesselation3D::__refresh_cpu()
   // v: generate voronoi
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
+  // nn: neighbor list (needed for adjtetlist)
+  // f: write faces (also needed for nn to work)
   out->deinitialize();
   out->initialize();
   try {
-    tetrahedralize("zveeQ", inp, out);
+    tetrahedralize("ffnnzee", inp, out);
   }
   catch (int) {
     luaL_error(__lua_state, "need to load some data before tesselating");
   }
-
 
   // ---------------------------------------------------------------------------
   // Refresh the output data sources
@@ -79,21 +80,33 @@ void Tesselation3D::__refresh_cpu()
   std::vector<GLuint> indtri;
   std::vector<GLuint> indseg;
 
+  int leftout=0;
+
   for (int n=0; n<3*out->numberofpoints; ++n) {
     verts.push_back(out->pointlist[n]);
   }
-  for (int n=0; n<3*out->numberoftrifaces; ++n) {
-    indtri.push_back(out->trifacelist[n]);
+  for (int n=0; n<out->numberoftrifaces; ++n) {
+    //    if (out->adjtetlist[2*n] != -1 && out->adjtetlist[2*n+1] != -1) {
+    //    if ((double)rand() / RAND_MAX < 0.01) {
+    if (1) {
+      indtri.push_back(out->trifacelist[3*n+0]);
+      indtri.push_back(out->trifacelist[3*n+1]);
+      indtri.push_back(out->trifacelist[3*n+2]);
+    }
+    else {
+      ++leftout;
+    }
   }
   for (int n=0; n<2*out->numberofedges; ++n) {
     indseg.push_back(out->edgelist[n]);
   }
+  printf("leftout=%d\n", leftout);
 
   int N[2] = { verts.size()/3, 3 };
   __output_ds["triangles"]->set_data(&verts[0], N, 2);
   __output_ds["triangles"]->set_indices(&indtri[0], indtri.size());
   __output_ds["segments"]->set_data(&verts[0], N, 2);
-  __output_ds["segments"]->set_indices(&indtri[0], indseg.size());
+  __output_ds["segments"]->set_indices(&indseg[0], indseg.size());
 }
 
 Tesselation3D::LuaInstanceMethod Tesselation3D::__getattr__(std::string &method_name)
@@ -109,8 +122,8 @@ int Tesselation3D::_load_node_(lua_State *L)
   const char *fname_ = luaL_checkstring(L, 2);
   char *fname = new char[strlen(fname_)];
   strcpy(fname, fname_);
-  self->inp->deinitialize();
-  self->inp->initialize();
+  //  self->inp->deinitialize();
+  //  self->inp->initialize();
   self->inp->load_node(fname); // doesn't accept const char*
   delete [] fname;
   self->__staged = true;
@@ -122,8 +135,8 @@ int Tesselation3D::_load_poly_(lua_State *L)
   const char *fname_ = luaL_checkstring(L, 2);
   char *fname = new char[strlen(fname_)];
   strcpy(fname, fname_);
-  self->inp->deinitialize();
-  self->inp->initialize();
+  //  self->inp->deinitialize();
+  //  self->inp->initialize();
   self->inp->load_poly(fname); // doesn't accept const char*
   delete [] fname;
   self->__staged = true;
