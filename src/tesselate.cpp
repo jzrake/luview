@@ -37,6 +37,9 @@ Tesselation3D::Tesselation3D()
 {
   inp = new tetgenio;
   out = new tetgenio;
+
+  inp->initialize();
+  out->initialize();
 }
 
 Tesselation3D::~Tesselation3D()
@@ -59,7 +62,7 @@ void Tesselation3D::__refresh_cpu()
   // v: generate voronoi
   // Q: quiet
   // ee: generate edges (NOTE: e -> subedges breaks)
-
+  out->deinitialize();
   out->initialize();
   try {
     tetrahedralize("zveeQ", inp, out);
@@ -110,6 +113,8 @@ int Tesselation3D::_load_node_(lua_State *L)
   const char *fname_ = luaL_checkstring(L, 2);
   char *fname = new char[strlen(fname_)];
   strcpy(fname, fname_);
+  self->inp->deinitialize();
+  self->inp->initialize();
   self->inp->load_node(fname); // doesn't accept const char*
   delete [] fname;
   self->__staged = true;
@@ -121,6 +126,8 @@ int Tesselation3D::_load_poly_(lua_State *L)
   const char *fname_ = luaL_checkstring(L, 2);
   char *fname = new char[strlen(fname_)];
   strcpy(fname, fname_);
+  self->inp->deinitialize();
+  self->inp->initialize();
   self->inp->load_poly(fname); // doesn't accept const char*
   delete [] fname;
   self->__staged = true;
