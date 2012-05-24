@@ -75,29 +75,25 @@ void Tesselation3D::__refresh_cpu()
   // ---------------------------------------------------------------------------
   // Refresh the output data sources
   // ---------------------------------------------------------------------------
-  GLfloat *verts = new GLfloat[3 * out->numberofpoints];
-  GLuint *indtri = new GLuint[3 * out->numberoftrifaces];
-  GLuint *indseg = new GLuint[2 * out->numberofedges];
+  std::vector<GLfloat> verts;
+  std::vector<GLuint> indtri;
+  std::vector<GLuint> indseg;
 
   for (int n=0; n<3*out->numberofpoints; ++n) {
-    verts[n] = out->pointlist[n];
+    verts.push_back(out->pointlist[n]);
   }
   for (int n=0; n<3*out->numberoftrifaces; ++n) {
-    indtri[n] = out->trifacelist[n];
+    indtri.push_back(out->trifacelist[n]);
   }
   for (int n=0; n<2*out->numberofedges; ++n) {
-    indseg[n] = out->edgelist[n];
+    indseg.push_back(out->edgelist[n]);
   }
 
-  int N[2] = { out->numberofpoints, 3 };
-  __output_ds["triangles"]->set_data(verts, N, 2);
-  __output_ds["triangles"]->set_indices(indtri, 3*out->numberoftrifaces);
-  __output_ds["segments"]->set_data(verts, N, 2);
-  __output_ds["segments"]->set_indices(indtri, 2*out->numberofedges);
-
-  delete [] verts;
-  delete [] indtri;
-  delete [] indseg;
+  int N[2] = { verts.size()/3, 3 };
+  __output_ds["triangles"]->set_data(&verts[0], N, 2);
+  __output_ds["triangles"]->set_indices(&indtri[0], indtri.size());
+  __output_ds["segments"]->set_data(&verts[0], N, 2);
+  __output_ds["segments"]->set_indices(&indtri[0], indseg.size());
 }
 
 Tesselation3D::LuaInstanceMethod Tesselation3D::__getattr__(std::string &method_name)
