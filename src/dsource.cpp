@@ -20,11 +20,12 @@ struct TextureFormat
   const char *name;
 } ;
 static TextureFormat textureFormats[] =
-  {{ 0, GL_LUMINANCE, 1, "luminance"},
-   { 1, GL_ALPHA, 1, "alpha"},
-   { 2, GL_RGB, 3, "rgb"},
-   { 3, GL_RGBA, 4, "rgba"},
-   { 4, 0, 0, NULL}};
+  {{0, GL_NONE, 0, "none"},
+   {1, GL_LUMINANCE, 1, "luminance"},
+   {2, GL_ALPHA, 1, "alpha"},
+   {3, GL_RGB, 3, "rgb"},
+   {4, GL_RGBA, 4, "rgba"},
+   {5, 0, 0, NULL}};
 
 
 
@@ -36,7 +37,7 @@ DataSource::DataSource()
     __cpu_data(NULL),
     __ind_data(NULL),
     __texture_id(0),
-    __texture_format(GL_LUMINANCE),
+    __texture_format(0),
     __num_dimensions(1),
     __num_indices(0),
     __normalize(false),
@@ -82,7 +83,6 @@ void DataSource::__trigger_refresh()
 }
 const GLfloat *DataSource::get_data()
 {
-  this->__trigger_refresh();
   return __cpu_data;
 }
 const GLuint *DataSource::get_indices()
@@ -95,7 +95,6 @@ GLuint DataSource::get_texture_id()
 }
 DataSource *DataSource::get_output(const char *n)
 {
-  __trigger_refresh();
   DataSourceMap::iterator v = __output_ds.find(n);
   return v == __output_ds.end() ? NULL : v->second;
 }
@@ -123,32 +122,33 @@ void DataSource::set_mode(const char *mode)
     luaL_error(__lua_state, "no texture format mode %s", mode);
   }
   __texture_format = m->second.ind;
+  __staged = true;
 }
 void DataSource::set_data(const GLfloat *data, const int *np, int nd)
 {
-  __num_dimensions = nd;
   for (int i=0; i<__num_dimensions; ++i) __num_points[i] = np[i];
   size_t sz = this->get_size() * sizeof(GLfloat);
   __cpu_data = (GLfloat*) realloc(__cpu_data, sz);
   std::memcpy(__cpu_data, data, sz);
+  __num_dimensions = nd;
+  __staged = true;
 }
 void DataSource::set_indices(const GLuint *indices, int ni)
 {
-  __num_indices = ni;
   size_t sz = ni * sizeof(GLuint);
   __ind_data = (GLuint*) realloc(__ind_data, sz);
   std::memcpy(__ind_data, indices, sz);
+  __num_indices = ni;
+  __staged = true;
 }
 void DataSource::check_num_dimensions(const char *name, int ndims)
 {
-  __trigger_refresh();
   if (ndims != __num_dimensions) {
     luaL_error(__lua_state, "%s must have %d dimensions", name, ndims);
   }
 }
 void DataSource::check_num_points(const char *name, int npnts, int dim)
 {
-  __trigger_refresh();
   if (npnts != this->get_num_points(dim)) {
     luaL_error(__lua_state, "%s must have %d points along dimension %d",
                name, npnts, dim);
@@ -156,7 +156,6 @@ void DataSource::check_num_points(const char *name, int npnts, int dim)
 }
 void DataSource::check_has_data(const char *name)
 {
-  __trigger_refresh();
   if (__cpu_data == NULL) {
     luaL_error(__lua_state, "%s must provide a floating point data buffer",
 	       name);
@@ -164,19 +163,21 @@ void DataSource::check_has_data(const char *name)
 }
 void DataSource::check_has_indices(const char *name)
 {
-  __trigger_refresh();
   if (__ind_data == NULL) {
     luaL_error(__lua_state, "%s must provide an index buffer", name);
   }
 }
 void DataSource::become_texture()
 {
-  __trigger_refresh();
   glBindTexture(__texture_target, __texture_id);
   glTexParameteri(__texture_target, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
   glTexParameteri(__texture_target, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
   glTexParameteri(__texture_target, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
   glTexParameteri(__texture_target, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+void DataSource::compile()
+{
+  __trigger_refresh();
 }
 void DataSource::__cp_cpu_to_gpu()
 {
@@ -185,6 +186,7 @@ void DataSource::__cp_cpu_to_gpu()
   const GLenum fmt = textureFormats[__texture_format].fmt;
   const int sz = textureFormats[__texture_format].size;
 
+  if (fmt == GL_NONE) return;
   glPushAttrib(GL_TEXTURE_BIT);
 
   switch (__num_dimensions) {
@@ -341,7 +343,6 @@ int DataSource::_set_data_(lua_State *L)
   }
   Array *A = lunum_checkarray1(L, 2);
   self->set_data((GLfloat*)A->data, A->shape, A->ndims);
-  self->__staged = true;
   return 0;
 }
 int DataSource::_get_mode_(lua_State *L)
@@ -355,7 +356,6 @@ int DataSource::_set_mode_(lua_State *L)
   DataSource *self = checkarg<DataSource>(L, 1);
   const char *mode = luaL_checkstring(L, 2);
   self->set_mode(mode);
-  self->__staged = true;
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)

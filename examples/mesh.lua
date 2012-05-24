@@ -31,4 +31,5 @@ triangles:set_orientation(-90,0,0)
 box:set_shader(shade)
 window:set_color(0.2, 0.2, 0.2)
 
+window:set_callback("]", function() tess:load_poly("data/CutSphere") end)
 while window:render_scene{box, triangles, segments} == "continue" do end

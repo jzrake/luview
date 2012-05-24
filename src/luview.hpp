@@ -85,7 +85,7 @@ public:
   void check_has_indices(const char *name);
 
   void become_texture();
-
+  void compile();
 protected:
   // ---------------------------------------------------------------------------
   // Lua API methods

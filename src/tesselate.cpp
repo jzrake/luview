@@ -53,11 +53,6 @@ void Tesselation3D::__init_lua_objects()
 
 void Tesselation3D::__refresh_cpu()
 {
-  //  inp->load_poly("/Users/jzrake/Work/luview/data/balls3astr_12_16");
-  //  inp->load_poly("/Users/jzrake/Work/luview/data/CutSphere");
-  //  inp->load_poly("/Users/jzrake/Work/luview/data/hinge");//, tetgenbehavior::MESH);
-  //  inp->load_node("/Users/jzrake/Work/luview/data/brain");
-
   // z: number indices from zero
   // v: generate voronoi
   // Q: quiet
