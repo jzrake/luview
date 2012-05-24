@@ -65,20 +65,16 @@ bool DataSource::__ancestor_is_staged()
 }
 void DataSource::__trigger_refresh()
 {
-  if (this->__ancestor_is_staged()) {
-    this->__input_ds->__trigger_refresh();
-    this->__refresh_cpu();
-    this->__do_normalize();
-    this->__cp_cpu_to_gpu();
-    this->__execute_gpu_transform();
-    this->__staged = false;
+  if (__ancestor_is_staged()) {
+    __input_ds->__trigger_refresh();
+    __staged = true;
   }
-  else if (this->__staged) {
-    this->__refresh_cpu();
-    this->__do_normalize();
-    this->__cp_cpu_to_gpu();
-    this->__execute_gpu_transform();
-    this->__staged = false;
+  if (__staged) {
+    __refresh_cpu();
+    __do_normalize();
+    __cp_cpu_to_gpu();
+    //    __execute_gpu_transform();
+    __staged = false;
   }
 }
 const GLfloat *DataSource::get_data()
@@ -131,11 +127,11 @@ void DataSource::set_mode(const char *mode)
 }
 void DataSource::set_data(const GLfloat *data, const int *np, int nd)
 {
+  __num_dimensions = nd;
   for (int i=0; i<__num_dimensions; ++i) __num_points[i] = np[i];
   size_t sz = this->get_size() * sizeof(GLfloat);
   __cpu_data = (GLfloat*) realloc(__cpu_data, sz);
   std::memcpy(__cpu_data, data, sz);
-  __num_dimensions = nd;
   __staged = true;
 }
 void DataSource::set_indices(const GLuint *indices, int ni)
@@ -238,7 +234,7 @@ void DataSource::__cp_cpu_to_gpu()
 
 void DataSource::__do_normalize()
 {
-  if (!__normalize) return;
+  if (!__normalize || __cpu_data == NULL) return;
 
   int Nt = this->get_size();
   double x0 = 0.0;

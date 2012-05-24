@@ -209,9 +209,7 @@ void TrianglesEnsemble::draw_local()
   EntryDS tri = DataSources.find("triangles");
 
   if (tri != DataSources.end()) {
-    //    printf("%s::%s (compiling triangles)\n", _get_type().c_str(), __FUNCTION__);
     tri->second->compile();
-    //    printf("%s::%s (done)\n", _get_type().c_str(), __FUNCTION__);
     tri->second->check_has_data("triangles");
     tri->second->check_has_indices("triangles");
     tri->second->check_num_dimensions("triangles", 2);
@@ -220,16 +218,12 @@ void TrianglesEnsemble::draw_local()
     return;
   }
 
-  //  printf("%s::%s (really done)\n", _get_type().c_str(), __FUNCTION__);
-
   const GLfloat *verts = tri->second->get_data();
   const GLuint *indices = tri->second->get_indices();
   const int Np = tri->second->get_num_indices() / 3;
 
   glBegin(GL_TRIANGLES);
   for (int n=0; n<Np; ++n) {
-    //    printf("%s::%s (B)\n", _get_type().c_str(), __FUNCTION__);
-
     const GLfloat *u = &verts[3*indices[3*n + 0]];
     const GLfloat *v = &verts[3*indices[3*n + 1]];
     const GLfloat *w = &verts[3*indices[3*n + 2]];
@@ -248,6 +242,5 @@ void TrianglesEnsemble::draw_local()
     glVertex3fv(w);
   }
   glEnd();
-  //  printf("%s::%s (done drawing)\n", _get_type().c_str(), __FUNCTION__);
 }
 

@@ -32,4 +32,4 @@ box:set_shader(shade)
 window:set_color(0.2, 0.2, 0.2)
 
 window:set_callback("]", function() tess:load_poly("data/CutSphere") end)
-while window:render_scene{box, triangles, segments} == "continue" do end
+while window:render_scene{box, triangles} == "continue" do end
