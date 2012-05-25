@@ -7,6 +7,41 @@ local shaders = require 'shaders'
 
 local window = luview.Window()
 local box = luview.BoundingBox()
+local height = luview.DataSource()
+local verts = luview.ParametricVertexSource3D()
+local triangles = luview.TrianglesEnsemble()
+local points = luview.DataSource()
+local lights = shaders.load_shader("multlights")
+
+h5_open_file(cmdline.args[1], "r")
+local data = h5_read_array("prim/rho")
+h5_close_file()
+
+height:set_data(data)
+verts:set_input(height)
+
+triangles:set_data("triangles", verts:get_output("triangles"))
+triangles:set_data("normals", verts:get_output("normals"))
+triangles:set_shader(lights)
+triangles:set_alpha(1.0)
+--triangles:set_color(0.3, 0.8, 0.3)
+triangles:set_color(1.0, 0.5, 0.3)
+triangles:set_orientation(-90,0,0)
+triangles:set_scale(1.0, 0.1, 1.0)
+window:set_color(0.2, 0.2, 0.2)
+box:set_color(0.5, 0.9, 0.9)
+box:set_shader(lights)
+
+while window:render_scene{box, triangles} == "continue" do end
+
+
+--[[
+local luview = require 'luview'
+local lunum = require 'lunum'
+local shaders = require 'shaders'
+
+local window = luview.Window()
+local box = luview.BoundingBox()
 local grid2d = luview.GridSource2D()
 local surface = luview.ParametricSurface()
 local points = luview.DataSource()
@@ -45,3 +80,4 @@ box:set_color(0.5, 0.9, 0.9)
 box:set_shader(shader)
 
 while window:render_scene{box, surface} == "continue" do end
+ ]]--

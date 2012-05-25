@@ -258,6 +258,7 @@ void SegmentsEnsemble::draw_local()
 
 TrianglesEnsemble::TrianglesEnsemble()
 {
+  gl_modes.push_back(GL_CULL_FACE);
   gl_modes.push_back(GL_DEPTH_TEST);
   gl_modes.push_back(GL_LIGHTING);
   gl_modes.push_back(GL_LIGHT0);
@@ -292,12 +293,48 @@ void TrianglesEnsemble::draw_local()
   const GLuint *indices = tri->second->get_indices();
   const int Np = tri->second->get_num_indices() / 3;
 
+  const int Nvert = tri->second->get_size();
+
+  //  glEnable(GL_CULL_FACE);
+  //  glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+  //  glFrontFace(GL_CCW);
+  glCullFace(GL_FRONT);
+
+  static int first = 1;
+  static GLuint vbos[3];
+
+  if (first) {
+    glGenBuffers(3, vbos);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3*Np*sizeof(GLuint), indices, GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
+    glBufferData(GL_ARRAY_BUFFER, Nvert*sizeof(GLfloat), verts, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
+    glBufferData(GL_ARRAY_BUFFER, Nvert*sizeof(GLfloat), norms, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+    first = 0;
+  }
   if (norms) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
-    glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), verts);
-    glNormalPointer(GL_FLOAT, 3*sizeof(GLfloat), norms);
-    glDrawElements(GL_TRIANGLES, 3*Np, GL_UNSIGNED_INT, indices);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
+    glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
+    glNormalPointer(GL_FLOAT, 3*sizeof(GLfloat), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
+    glDrawElements(GL_TRIANGLES, 3*Np, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
   }

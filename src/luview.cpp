@@ -257,9 +257,9 @@ void DrawableObject::draw()
   GLfloat mat_spec[] = { 1.0, 1.0, 1.0, Alpha };
   GLfloat mat_shin[] = { 128.0 };
 
-  glMaterialfv(GL_FRONT_AND_BACK, GL_DIFFUSE, mat_diff);
-  glMaterialfv(GL_FRONT_AND_BACK, GL_SPECULAR, mat_spec);
-  glMaterialfv(GL_FRONT_AND_BACK, GL_SHININESS, mat_shin);
+  glMaterialfv(GL_FRONT, GL_DIFFUSE, mat_diff);
+  glMaterialfv(GL_FRONT, GL_SPECULAR, mat_spec);
+  glMaterialfv(GL_FRONT, GL_SHININESS, mat_shin);
 
   this->draw_local();
 
