@@ -6,7 +6,7 @@ local lunum = require 'lunum'
 local shaders = require 'shaders'
 
 local window = luview.Window()
-local scolors = luview.MultiImageSource()
+local lumsrc = luview.DataSource()
 local image = luview.ImagePlane()
 local shade = luview.ShaderProgram()
 

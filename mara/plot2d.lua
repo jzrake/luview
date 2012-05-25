@@ -44,14 +44,14 @@ local narg = 1
 local status = "continue"
 local actors = { }
 
-actors[1] = load_frame(cmdline.args[narg], "vx")
+actors[1] = load_frame(cmdline.args[narg], "rho")
 pyluts:set_colormap("afmhot")
 
 local function next_frame()
    narg = narg + 1
    local fn = cmdline.args[narg]
    if not fn then os.exit() end
-   actors[1] = load_frame(fn, "vx")
+   actors[1] = load_frame(fn, "rho")
 end
 local function idle()
    if auto_movie then
