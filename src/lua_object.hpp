@@ -47,6 +47,7 @@ class LuaCppObject
   // objects at global key `LuaCppObject`.
   int __refid;
   lua_State *__lua_state;
+  std::string __type_name;
 
  public:
 
@@ -113,7 +114,7 @@ protected:
 
     if (result == NULL) {
       luaL_error(L, "object of type '%s' is not a subtype of '%s'",
-                 cpp_object->_get_type().c_str(),
+                 cpp_object->__type_name.c_str(),
 		 demangle(typeid(T).name()).c_str());
     }
     return result;
@@ -156,6 +157,7 @@ protected:
     lua_pushvalue(L, -2);
     object->__refid = luaL_ref(L, -2);
     object->__lua_state = L;
+    object->__type_name = demangle(typeid(*object).name());
     object->__init_lua_objects();
     lua_pop(L, 1);
 
@@ -333,7 +335,7 @@ private:
   // desired. This function is called by the default `tostring` metamethod.
   // ---------------------------------------------------------------------------
   {
-    return demangle(typeid(*this).name());
+    return __type_name;
   }
   virtual int _call()
   {
@@ -385,7 +387,7 @@ private:
     LuaInstanceMethod m = object->__getattr__(method_name);
 
     if (m == NULL) {
-      luaL_error(L, "'%s' has no attribute '%s'", object->_get_type().c_str(),
+      luaL_error(L, "'%s' has no attribute '%s'", object->__type_name.c_str(),
                  method_name.c_str());
     }
 
@@ -419,7 +421,7 @@ private:
   static int _get_type_(lua_State *L)
   {
     LuaCppObject *self = checkarg<LuaCppObject>(L, 1);
-    lua_pushstring(L, self->_get_type().c_str());
+    lua_pushstring(L, self->__type_name.c_str());
     return 1;
   }
 

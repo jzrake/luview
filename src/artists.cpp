@@ -110,7 +110,7 @@ void ImagePlane::draw_local()
   EntryDS cm = DataSources.find("color_table");
 
   if (shader) {
-    shader->set_uniform("tex1", 0);
+    shader->set_uniform("tex1d", 0);
     shader->set_uniform("tex2d", 2);
   }
   if (im != DataSources.end()) {
@@ -258,7 +258,7 @@ void SegmentsEnsemble::draw_local()
 
 TrianglesEnsemble::TrianglesEnsemble()
 {
-  gl_modes.push_back(GL_CULL_FACE);
+  //  gl_modes.push_back(GL_CULL_FACE);
   gl_modes.push_back(GL_DEPTH_TEST);
   gl_modes.push_back(GL_LIGHTING);
   gl_modes.push_back(GL_LIGHT0);
@@ -271,7 +271,12 @@ void TrianglesEnsemble::draw_local()
 {
   EntryDS tri = DataSources.find("triangles");
   EntryDS nrm = DataSources.find("normals");
+  EntryDS lut = DataSources.find("color_table");
+  EntryDS sca = DataSources.find("scalars");
 
+  if (shader) {
+    shader->set_uniform("tex1d", 0);
+  }
   if (tri != DataSources.end()) {
     tri->second->compile();
     tri->second->check_has_data("triangles");
@@ -287,36 +292,50 @@ void TrianglesEnsemble::draw_local()
     nrm->second->check_has_indices("normals");
     nrm->second->check_num_dimensions("normals", 2);
   }
+  if (sca != DataSources.end()) {
+    sca->second->compile();
+    sca->second->check_has_data("scalars");
+  }
+  if (lut != DataSources.end()) {
+    glActiveTexture(GL_TEXTURE0 + 0);
+    lut->second->compile();
+    lut->second->check_has_data("color_table");
+    lut->second->check_num_dimensions("color_table", 2);
+    lut->second->check_num_points("color_table", 256, 0);
+    lut->second->check_num_points("color_table", 4, 1);
+    lut->second->become_texture();
+  }
 
   const GLfloat *verts = tri->second->get_data();
   const GLfloat *norms = nrm != DataSources.end() ? nrm->second->get_data() : NULL;
+  const GLfloat *scals = sca != DataSources.end() ? sca->second->get_data() : NULL;
   const GLuint *indices = tri->second->get_indices();
   const int Np = tri->second->get_num_indices() / 3; // number of triangles
   const int Nvert = tri->second->get_size(); // number of vertices
+  const int Nnorm = nrm->second->get_size(); // number of scalars
+  const int Nscal = sca->second->get_size(); // number of scalars
 
   static int first = 1;
-  static GLuint vbos[3];
+  static GLuint vbos[4];
 
-  glCullFace(GL_BACK);
   if (first) {
-    glGenBuffers(3, vbos);
-
+    glGenBuffers(4, vbos);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
     glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3*Np*sizeof(GLuint), indices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
     glBufferData(GL_ARRAY_BUFFER, Nvert*sizeof(GLfloat), verts, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
     glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
-    glBufferData(GL_ARRAY_BUFFER, Nvert*sizeof(GLfloat), norms, GL_STATIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, Nnorm*sizeof(GLfloat), norms, GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[3]);
+    glBufferData(GL_ARRAY_BUFFER, Nscal*sizeof(GLfloat), scals, GL_STATIC_DRAW);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
     first = 0;
   }
+
   if (norms) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
+    glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
     glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
     glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), 0);
@@ -326,10 +345,15 @@ void TrianglesEnsemble::draw_local()
     glNormalPointer(GL_FLOAT, 3*sizeof(GLfloat), 0);
     glBindBuffer(GL_ARRAY_BUFFER, 0);
 
+    glBindBuffer(GL_ARRAY_BUFFER, vbos[3]);
+    glTexCoordPointer(1, GL_FLOAT, sizeof(GLfloat), 0);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
     glDrawElements(GL_TRIANGLES, 3*Np, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
+    glDisableClientState(GL_TEXTURE_COORD_ARRAY);
     glDisableClientState(GL_NORMAL_ARRAY);
     glDisableClientState(GL_VERTEX_ARRAY);
   }

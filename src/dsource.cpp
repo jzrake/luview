@@ -485,8 +485,10 @@ void ParametricVertexSource3D::__init_lua_objects()
 {
   hold(__output_ds["triangles"] = create<DataSource>(__lua_state));
   hold(__output_ds["normals"] = create<DataSource>(__lua_state));
+  hold(__output_ds["scalars"] = create<DataSource>(__lua_state));
   __output_ds["triangles"]->set_input(this);
   __output_ds["normals"]->set_input(this);
+  __output_ds["scalars"]->set_input(this);
 }
 void ParametricVertexSource3D::__refresh_cpu()
 {
@@ -502,6 +504,7 @@ void ParametricVertexSource3D::__refresh_cpu()
 
   std::vector<GLfloat> verts(3*Nu*Nv);
   std::vector<GLfloat> normals;
+  std::vector<GLfloat> scalars;
   std::vector<GLuint> indices;
 
   const GLfloat *input = __input_ds->get_data();
@@ -525,6 +528,7 @@ void ParametricVertexSource3D::__refresh_cpu()
       const int i1 = i==Nu-1 ? Nu-1 : i+1;
       const int j0 = j==0    ?    0 : j-1;
       const int j1 = j==Nv-1 ? Nv-1 : j+1;
+      const int m0 = i *su + j *sv;
       const int mu = i0*su + j0*sv;
       const int mv = i0*su + j1*sv;
       const int mw = i1*su + j0*sv;
@@ -539,6 +543,8 @@ void ParametricVertexSource3D::__refresh_cpu()
       normals.push_back(d1[2]*d2[1] - d1[1]*d2[2]);
       normals.push_back(d1[0]*d2[2] - d1[2]*d2[0]);
       normals.push_back(d1[1]*d2[0] - d1[0]*d2[1]);
+
+      scalars.push_back(verts[3*m0+2]); // take height as last component for now
     }
   }
 
@@ -563,12 +569,16 @@ void ParametricVertexSource3D::__refresh_cpu()
     }
   }
 
-  int Nvert[2] = { verts.size()/3, 3 };
-  int Nnorm[2] = { normals.size()/3, 3 };
+  int Nvert[] = { verts.size()/3, 3 };
+  int Nnorm[] = { normals.size()/3, 3 };
+  int Nscal[] = { scalars.size() };
 
   __output_ds["triangles"]->set_data(&verts[0], Nvert, 2);
   __output_ds["triangles"]->set_indices(&indices[0], indices.size());
 
   __output_ds["normals"]->set_data(&normals[0], Nnorm, 2);
   __output_ds["normals"]->set_indices(&indices[0], indices.size());
+
+  __output_ds["scalars"]->set_data(&scalars[0], Nscal, 1);
+  __output_ds["scalars"]->set_indices(&indices[0], indices.size());
 }

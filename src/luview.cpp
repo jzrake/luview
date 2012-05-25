@@ -537,6 +537,5 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<ParametricSurface>(L);
   LuaCppObject::Register<TrianglesEnsemble>(L);
 
-
   return 1;
 }
