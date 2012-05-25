@@ -243,6 +243,7 @@ void DrawableObject::draw()
 
   glPushMatrix();
   glPushAttrib(GL_ALL_ATTRIB_BITS);
+  glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
 
   glTranslated(Position[0], Position[1], Position[2]);
   glScaled(Scale[0], Scale[1], Scale[2]);
@@ -263,6 +264,7 @@ void DrawableObject::draw()
 
   this->draw_local();
 
+  glPopClientAttrib();
   glPopAttrib();
   glPopMatrix();
 

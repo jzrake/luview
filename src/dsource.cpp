@@ -532,6 +532,7 @@ void ParametricVertexSource3D::__refresh_cpu()
       const int mu = i0*su + j0*sv;
       const int mv = i0*su + j1*sv;
       const int mw = i1*su + j0*sv;
+      const int mq = i1*su + j1*sv;
 
       const GLfloat *u = &verts[3*mu];
       const GLfloat *v = &verts[3*mv];
@@ -544,21 +545,6 @@ void ParametricVertexSource3D::__refresh_cpu()
       normals.push_back(d1[0]*d2[2] - d1[2]*d2[0]);
       normals.push_back(d1[1]*d2[0] - d1[0]*d2[1]);
 
-      scalars.push_back(verts[3*m0+2]); // take height as last component for now
-    }
-  }
-
-  for (int i=0; i<Nu; ++i) {
-    for (int j=0; j<Nv; ++j) {
-      const int i0 = i==0    ?    0 : i-1;
-      const int i1 = i==Nu-1 ? Nu-1 : i+1;
-      const int j0 = j==0    ?    0 : j-1;
-      const int j1 = j==Nv-1 ? Nv-1 : j+1;
-      const int mu = i0*su + j0*sv;
-      const int mv = i0*su + j1*sv;
-      const int mw = i1*su + j0*sv;
-      const int mq = i1*su + j1*sv;
-
       indices.push_back(mv);
       indices.push_back(mu);
       indices.push_back(mw);
@@ -566,6 +552,8 @@ void ParametricVertexSource3D::__refresh_cpu()
       indices.push_back(mv);
       indices.push_back(mw);
       indices.push_back(mq);
+
+      scalars.push_back(verts[3*m0+2]); // take scalars as last component for now
     }
   }
 
