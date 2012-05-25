@@ -7,6 +7,7 @@ local shaders = require 'shaders'
 
 local window = luview.Window()
 local lumsrc = luview.DataSource()
+local color = luview.DataSource()
 local image = luview.ImagePlane()
 local shade = luview.ShaderProgram()
 
@@ -45,9 +46,9 @@ void main() {
 end
 
 local coords = lunum.zeros{8,8,4}
-scolors:set_array(coords)
+color:set_data(coords)
 
-image:set_data("rgba", scolors)
+image:set_data("image", color)
 image:set_orientation(0,0,-90)
 image:set_shader(shade)
 window:set_color(0,0,0)
