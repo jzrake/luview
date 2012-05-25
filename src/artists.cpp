@@ -264,7 +264,6 @@ TrianglesEnsemble::TrianglesEnsemble()
   gl_modes.push_back(GL_BLEND);
   gl_modes.push_back(GL_COLOR_MATERIAL);
   gl_modes.push_back(GL_NORMALIZE);
-  gl_modes.push_back(GL_AUTO_NORMAL);
 }
 
 void TrianglesEnsemble::draw_local()
@@ -290,33 +289,39 @@ void TrianglesEnsemble::draw_local()
 
   const GLfloat *verts = tri->second->get_data();
   const GLfloat *norms = nrm != DataSources.end() ? nrm->second->get_data() : NULL;
-  const GLuint *tindices = tri->second->get_indices();
-  const GLuint *nindices = nrm->second->get_indices();
+  const GLuint *indices = tri->second->get_indices();
   const int Np = tri->second->get_num_indices() / 3;
 
-  glBegin(GL_TRIANGLES);
-  for (int n=0; n<Np; ++n) {
-    const GLfloat *u = &verts[3*tindices[3*n + 0]];
-    const GLfloat *v = &verts[3*tindices[3*n + 1]];
-    const GLfloat *w = &verts[3*tindices[3*n + 2]];
+  if (norms) {
+    glEnableClientState(GL_VERTEX_ARRAY);
+    glEnableClientState(GL_NORMAL_ARRAY);
+    glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), verts);
+    glNormalPointer(GL_FLOAT, 3*sizeof(GLfloat), norms);
+    glDrawElements(GL_TRIANGLES, 3*Np, GL_UNSIGNED_INT, indices);
+    glDisableClientState(GL_NORMAL_ARRAY);
+    glDisableClientState(GL_VERTEX_ARRAY);
+  }
+  else {
+    glBegin(GL_TRIANGLES);
+    for (int n=0; n<Np; ++n) {
+      const GLfloat *u = &verts[3*indices[3*n + 0]];
+      const GLfloat *v = &verts[3*indices[3*n + 1]];
+      const GLfloat *w = &verts[3*indices[3*n + 2]];
 
-    if (norms == NULL) {
       const GLfloat n1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
       const GLfloat n2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
+      
       GLfloat n[3];
       n[0] = n1[2]*n2[1] - n1[1]*n2[2];
       n[1] = n1[0]*n2[2] - n1[2]*n2[0];
       n[2] = n1[1]*n2[0] - n1[0]*n2[1];
+      
       glNormal3fv(n);
+      glVertex3fv(u);
+      glVertex3fv(v);
+      glVertex3fv(w);
     }
-    else {
-      glNormal3fv(&norms[3*nindices[n]]);
-    }
-
-    glVertex3fv(u);
-    glVertex3fv(v);
-    glVertex3fv(w);
+    glEnd();
   }
-  glEnd();
 }
 

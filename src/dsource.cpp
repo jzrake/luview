@@ -502,8 +502,7 @@ void ParametricVertexSource3D::__refresh_cpu()
 
   std::vector<GLfloat> verts(3*Nu*Nv);
   std::vector<GLfloat> normals;
-  std::vector<GLuint> vindices;
-  std::vector<GLuint> nindices;
+  std::vector<GLuint> indices;
 
   const GLfloat *input = __input_ds->get_data();
   const int su = Nv;
@@ -520,38 +519,49 @@ void ParametricVertexSource3D::__refresh_cpu()
     }
   }
 
-  int nind = 0;
-  for (int i=0; i<Nu-1; ++i) {
-    for (int j=0; j<Nv-1; ++j) {
-      const int mu = (i+0)*su + (j+0)*sv;
-      const int mv = (i+0)*su + (j+1)*sv;
-      const int mw = (i+1)*su + (j+0)*sv;
-      const int mq = (i+1)*su + (j+1)*sv;
+  for (int i=0; i<Nu; ++i) {
+    for (int j=0; j<Nv; ++j) {
+
+      const int i0 = i==0    ?    0 : i-1;
+      const int i1 = i==Nu-1 ? Nu-1 : i+1;
+      const int j0 = j==0    ?    0 : j-1;
+      const int j1 = j==Nv-1 ? Nv-1 : j+1;
+      const int mu = i0*su + j0*sv;
+      const int mv = i0*su + j1*sv;
+      const int mw = i1*su + j0*sv;
 
       const GLfloat *u = &verts[3*mu];
       const GLfloat *v = &verts[3*mv];
       const GLfloat *w = &verts[3*mw];
-      const GLfloat *q = &verts[3*mq];
 
       const GLfloat d1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
       const GLfloat d2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
-      const GLfloat d3[3] = {q[0]-w[0], q[1]-w[1], q[2]-w[2]};
 
       normals.push_back(d1[2]*d2[1] - d1[1]*d2[2]);
       normals.push_back(d1[0]*d2[2] - d1[2]*d2[0]);
       normals.push_back(d1[1]*d2[0] - d1[0]*d2[1]);
-      nindices.push_back(nind++);
-      vindices.push_back(mu);
-      vindices.push_back(mv);
-      vindices.push_back(mw);
+    }
+  }
 
-      normals.push_back(d3[2]*d2[1] - d3[1]*d2[2]);
-      normals.push_back(d3[0]*d2[2] - d3[2]*d2[0]);
-      normals.push_back(d3[1]*d2[0] - d3[0]*d2[1]);
-      nindices.push_back(nind++);
-      vindices.push_back(mq);
-      vindices.push_back(mw);
-      vindices.push_back(mv);
+  for (int i=0; i<Nu; ++i) {
+    for (int j=0; j<Nv; ++j) {
+
+      const int i0 = i==0    ?    0 : i-1;
+      const int i1 = i==Nu-1 ? Nu-1 : i+1;
+      const int j0 = j==0    ?    0 : j-1;
+      const int j1 = j==Nv-1 ? Nv-1 : j+1;
+      const int mu = i0*su + j0*sv;
+      const int mv = i0*su + j1*sv;
+      const int mw = i1*su + j0*sv;
+      const int mq = i1*su + j1*sv;
+
+      indices.push_back(mu);
+      indices.push_back(mv);
+      indices.push_back(mw);
+
+      indices.push_back(mv);
+      indices.push_back(mw);
+      indices.push_back(mq);
     }
   }
 
@@ -559,8 +569,8 @@ void ParametricVertexSource3D::__refresh_cpu()
   int Nnorm[2] = { normals.size()/3, 3 };
 
   __output_ds["triangles"]->set_data(&verts[0], Nvert, 2);
-  __output_ds["triangles"]->set_indices(&vindices[0], vindices.size());
+  __output_ds["triangles"]->set_indices(&indices[0], indices.size());
 
   __output_ds["normals"]->set_data(&normals[0], Nnorm, 2);
-  __output_ds["normals"]->set_indices(&nindices[0], nindices.size());
+  __output_ds["normals"]->set_indices(&indices[0], indices.size());
 }
