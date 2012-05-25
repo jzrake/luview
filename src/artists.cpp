@@ -344,13 +344,13 @@ void TrianglesEnsemble::draw_local()
       const GLfloat n2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
       
       GLfloat n[3];
-      n[0] = -n1[2]*n2[1] + n1[1]*n2[2];
-      n[1] = -n1[0]*n2[2] + n1[2]*n2[0];
-      n[2] = -n1[1]*n2[0] + n1[0]*n2[1];
+      n[0] = n1[2]*n2[1] - n1[1]*n2[2];
+      n[1] = n1[0]*n2[2] - n1[2]*n2[0];
+      n[2] = n1[1]*n2[0] - n1[0]*n2[1];
       
       glNormal3fv(n);
-      glVertex3fv(u);
       glVertex3fv(v);
+      glVertex3fv(u);
       glVertex3fv(w);
     }
     glEnd();
