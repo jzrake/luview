@@ -521,7 +521,6 @@ void ParametricVertexSource3D::__refresh_cpu()
 
   for (int i=0; i<Nu; ++i) {
     for (int j=0; j<Nv; ++j) {
-
       const int i0 = i==0    ?    0 : i-1;
       const int i1 = i==Nu-1 ? Nu-1 : i+1;
       const int j0 = j==0    ?    0 : j-1;
@@ -545,7 +544,6 @@ void ParametricVertexSource3D::__refresh_cpu()
 
   for (int i=0; i<Nu; ++i) {
     for (int j=0; j<Nv; ++j) {
-
       const int i0 = i==0    ?    0 : i-1;
       const int i1 = i==Nu-1 ? Nu-1 : i+1;
       const int j0 = j==0    ?    0 : j-1;
@@ -555,8 +553,8 @@ void ParametricVertexSource3D::__refresh_cpu()
       const int mw = i1*su + j0*sv;
       const int mq = i1*su + j1*sv;
 
-      indices.push_back(mu);
       indices.push_back(mv);
+      indices.push_back(mu);
       indices.push_back(mw);
 
       indices.push_back(mv);
