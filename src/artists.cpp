@@ -264,11 +264,13 @@ TrianglesEnsemble::TrianglesEnsemble()
   gl_modes.push_back(GL_BLEND);
   gl_modes.push_back(GL_COLOR_MATERIAL);
   gl_modes.push_back(GL_NORMALIZE);
+  gl_modes.push_back(GL_AUTO_NORMAL);
 }
 
 void TrianglesEnsemble::draw_local()
 {
   EntryDS tri = DataSources.find("triangles");
+  EntryDS nrm = DataSources.find("normals");
 
   if (tri != DataSources.end()) {
     tri->second->compile();
@@ -279,26 +281,38 @@ void TrianglesEnsemble::draw_local()
   else {
     return;
   }
+  if (nrm != DataSources.end()) {
+    nrm->second->compile();
+    nrm->second->check_has_data("normals");
+    nrm->second->check_has_indices("normals");
+    nrm->second->check_num_dimensions("normals", 2);
+  }
 
   const GLfloat *verts = tri->second->get_data();
-  const GLuint *indices = tri->second->get_indices();
+  const GLfloat *norms = nrm != DataSources.end() ? nrm->second->get_data() : NULL;
+  const GLuint *tindices = tri->second->get_indices();
+  const GLuint *nindices = nrm->second->get_indices();
   const int Np = tri->second->get_num_indices() / 3;
 
   glBegin(GL_TRIANGLES);
   for (int n=0; n<Np; ++n) {
-    const GLfloat *u = &verts[3*indices[3*n + 0]];
-    const GLfloat *v = &verts[3*indices[3*n + 1]];
-    const GLfloat *w = &verts[3*indices[3*n + 2]];
+    const GLfloat *u = &verts[3*tindices[3*n + 0]];
+    const GLfloat *v = &verts[3*tindices[3*n + 1]];
+    const GLfloat *w = &verts[3*tindices[3*n + 2]];
 
-    const GLfloat n1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
-    const GLfloat n2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
+    if (norms == NULL) {
+      const GLfloat n1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
+      const GLfloat n2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
+      GLfloat n[3];
+      n[0] = n1[2]*n2[1] - n1[1]*n2[2];
+      n[1] = n1[0]*n2[2] - n1[2]*n2[0];
+      n[2] = n1[1]*n2[0] - n1[0]*n2[1];
+      glNormal3fv(n);
+    }
+    else {
+      glNormal3fv(&norms[3*nindices[n]]);
+    }
 
-    GLfloat n[3];
-    n[0] = n1[2]*n2[1] - n1[1]*n2[2];
-    n[1] = n1[0]*n2[2] - n1[2]*n2[0];
-    n[2] = n1[1]*n2[0] - n1[0]*n2[1];
-
-    glNormal3fv(n);
     glVertex3fv(u);
     glVertex3fv(v);
     glVertex3fv(w);

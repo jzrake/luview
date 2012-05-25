@@ -481,6 +481,13 @@ ParametricVertexSource3D::ParametricVertexSource3D()
 {
 
 }
+void ParametricVertexSource3D::__init_lua_objects()
+{
+  hold(__output_ds["triangles"] = create<DataSource>(__lua_state));
+  hold(__output_ds["normals"] = create<DataSource>(__lua_state));
+  __output_ds["triangles"]->set_input(this);
+  __output_ds["normals"]->set_input(this);
+}
 void ParametricVertexSource3D::__refresh_cpu()
 {
   if (__input_ds == NULL) {
@@ -493,17 +500,11 @@ void ParametricVertexSource3D::__refresh_cpu()
   Nu = __input_ds->get_num_points(0);
   Nv = __input_ds->get_num_points(1);
 
-  __num_dimensions = 2;
-  __num_indices = 0; // filled in automatically by set_indices call at end
-
-  __num_points[0] = Nu*Nv;
-  __num_points[1] = 3;
-  __cpu_data = (GLfloat*) realloc(__cpu_data, 3*Nu*Nv*sizeof(GLfloat));
-
+  std::vector<GLfloat> verts(3*Nu*Nv);
   std::vector<GLfloat> normals;
-  std::vector<GLuint> indices;
+  std::vector<GLuint> vindices;
+  std::vector<GLuint> nindices;
 
-  GLfloat *data = __cpu_data;
   const GLfloat *input = __input_ds->get_data();
   const int su = Nv;
   const int sv = 1;
@@ -513,12 +514,13 @@ void ParametricVertexSource3D::__refresh_cpu()
   for (int i=0; i<Nu; ++i) {
     for (int j=0; j<Nv; ++j) {
       const int m = i*su + j*sv;
-      data[3*m + 0] = u0 + i*du;
-      data[3*m + 1] = v0 + j*dv;
-      data[3*m + 2] = input[m];
+      verts[3*m + 0] = u0 + i*du;
+      verts[3*m + 1] = v0 + j*dv;
+      verts[3*m + 2] = input[m];
     }
   }
 
+  int nind = 0;
   for (int i=0; i<Nu-1; ++i) {
     for (int j=0; j<Nv-1; ++j) {
       const int mu = (i+0)*su + (j+0)*sv;
@@ -526,10 +528,10 @@ void ParametricVertexSource3D::__refresh_cpu()
       const int mw = (i+1)*su + (j+0)*sv;
       const int mq = (i+1)*su + (j+1)*sv;
 
-      const GLfloat *u = data + 3*mu;
-      const GLfloat *v = data + 3*mv;
-      const GLfloat *w = data + 3*mw;
-      const GLfloat *q = data + 3*mq;
+      const GLfloat *u = &verts[3*mu];
+      const GLfloat *v = &verts[3*mv];
+      const GLfloat *w = &verts[3*mw];
+      const GLfloat *q = &verts[3*mq];
 
       const GLfloat d1[3] = {v[0]-u[0], v[1]-u[1], v[2]-u[2]};
       const GLfloat d2[3] = {w[0]-v[0], w[1]-v[1], w[2]-v[2]};
@@ -538,17 +540,27 @@ void ParametricVertexSource3D::__refresh_cpu()
       normals.push_back(d1[2]*d2[1] - d1[1]*d2[2]);
       normals.push_back(d1[0]*d2[2] - d1[2]*d2[0]);
       normals.push_back(d1[1]*d2[0] - d1[0]*d2[1]);
-      indices.push_back(mu);
-      indices.push_back(mv);
-      indices.push_back(mw);
+      nindices.push_back(nind++);
+      vindices.push_back(mu);
+      vindices.push_back(mv);
+      vindices.push_back(mw);
 
       normals.push_back(d3[2]*d2[1] - d3[1]*d2[2]);
       normals.push_back(d3[0]*d2[2] - d3[2]*d2[0]);
       normals.push_back(d3[1]*d2[0] - d3[0]*d2[1]);
-      indices.push_back(mq);
-      indices.push_back(mw);
-      indices.push_back(mv);
+      nindices.push_back(nind++);
+      vindices.push_back(mq);
+      vindices.push_back(mw);
+      vindices.push_back(mv);
     }
   }
-  set_indices(&indices[0], indices.size());
+
+  int Nvert[2] = { verts.size()/3, 3 };
+  int Nnorm[2] = { normals.size()/3, 3 };
+
+  __output_ds["triangles"]->set_data(&verts[0], Nvert, 2);
+  __output_ds["triangles"]->set_indices(&vindices[0], vindices.size());
+
+  __output_ds["normals"]->set_data(&normals[0], Nnorm, 2);
+  __output_ds["normals"]->set_indices(&nindices[0], nindices.size());
 }

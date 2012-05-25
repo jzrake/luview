@@ -129,6 +129,7 @@ public:
   ParametricVertexSource3D();
 protected:
   void __refresh_cpu();
+  void __init_lua_objects();
 } ;
 
 class CallbackFunction : public LuaCppObject
