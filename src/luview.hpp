@@ -33,6 +33,8 @@ protected:
   GLfloat*           __cpu_data;
   GLuint*            __ind_data;
   GLuint             __texture_id;
+  GLuint             __vbo_id;
+  GLuint             __ibo_id;
   int                __texture_format; // luminance, alpha, rgba, etc
   GLenum             __texture_target; // e.g. GL_TEXTURE_1D inferred internally
 
@@ -66,6 +68,8 @@ public:
   int get_num_points(int d);
   int get_num_dimensions();
   int get_num_indices();
+  int get_vbo() { return __vbo_id; }
+  int get_ibo() { return __ibo_id; }
 
   void set_input(DataSource *inpt);
   void set_mode(const char *mode);

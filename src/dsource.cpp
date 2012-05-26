@@ -37,6 +37,8 @@ DataSource::DataSource()
     __cpu_data(NULL),
     __ind_data(NULL),
     __texture_id(0),
+    __vbo_id(0),
+    __ibo_id(0),
     __texture_format(0),
     __num_dimensions(1),
     __num_indices(0),
@@ -44,6 +46,8 @@ DataSource::DataSource()
     __staged(true)
 {
   glGenTextures(1, &__texture_id);
+  glGenBuffers(1, &__vbo_id);
+  glGenBuffers(1, &__ibo_id);
   for (int i=0; i<__DATASOURCE_MAXDIMS; ++i) __num_points[i] = 0;
 }
 
@@ -52,6 +56,8 @@ DataSource::~DataSource()
   if (__cpu_data) free(__cpu_data);
   if (__ind_data) free(__ind_data);
   glDeleteTextures(1, &__texture_id);
+  glDeleteBuffers(1, &__vbo_id);
+  glDeleteBuffers(1, &__ibo_id);
 }
 
 bool DataSource::__ancestor_is_staged()
@@ -186,6 +192,22 @@ void DataSource::__cp_cpu_to_gpu()
   const GLfloat *buf = __cpu_data;
   const GLenum fmt = textureFormats[__texture_format].fmt;
   const int sz = textureFormats[__texture_format].size;
+  const int Nt = this->get_size();
+  const int Np = this->get_num_indices();
+
+  if (__cpu_data) {
+    glBindBuffer(GL_ARRAY_BUFFER, __vbo_id);
+    glBufferData(GL_ARRAY_BUFFER, Nt*sizeof(GLfloat), __cpu_data,
+		 GL_STATIC_DRAW);
+    glBindBuffer(GL_ARRAY_BUFFER, 0);
+  }
+  if (__ind_data) {
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, __ibo_id);
+    glBufferData(GL_ELEMENT_ARRAY_BUFFER, Np*sizeof(GLuint), __ind_data,
+		 GL_STATIC_DRAW);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
+  }
+
 
   if (fmt == GL_NONE) return;
   glPushAttrib(GL_TEXTURE_BIT);

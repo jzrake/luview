@@ -239,11 +239,10 @@ void DrawableObject::draw()
   for (unsigned int i=0; i<gl_modes.size(); ++i) {
     glEnable(gl_modes[i]);
   }
-  if (shader) shader->activate();
-
   glPushMatrix();
   glPushAttrib(GL_ALL_ATTRIB_BITS);
   glPushClientAttrib(GL_CLIENT_ALL_ATTRIB_BITS);
+  if (shader) shader->activate();
 
   glTranslated(Position[0], Position[1], Position[2]);
   glScaled(Scale[0], Scale[1], Scale[2]);
@@ -262,7 +261,8 @@ void DrawableObject::draw()
   glMaterialfv(GL_FRONT, GL_SPECULAR, mat_spec);
   glMaterialfv(GL_FRONT, GL_SHININESS, mat_shin);
 
-  this->draw_local();
+  draw_local();
+  if (shader) shader->deactivate();
 
   glPopClientAttrib();
   glPopAttrib();
@@ -271,7 +271,6 @@ void DrawableObject::draw()
   for (unsigned int i=0; i<gl_modes.size(); ++i) {
     glDisable(gl_modes[i]);
   }
-  if (shader) shader->deactivate();
 }
 
 

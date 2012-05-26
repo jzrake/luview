@@ -307,50 +307,24 @@ void TrianglesEnsemble::draw_local()
   }
 
   const GLfloat *verts = tri->second->get_data();
-  const GLfloat *norms = nrm != DataSources.end() ? nrm->second->get_data() : NULL;
-  const GLfloat *scals = sca != DataSources.end() ? sca->second->get_data() : NULL;
   const GLuint *indices = tri->second->get_indices();
-  const int Np = tri->second->get_num_indices() / 3; // number of triangles
-  const int Nvert = tri->second->get_size(); // number of vertices
-  const int Nnorm = nrm->second->get_size(); // number of scalars
-  const int Nscal = sca->second->get_size(); // number of scalars
+  const int Np = tri->second->get_num_indices(); // number of indices
 
-  static int first = 1;
-  static GLuint vbos[4];
-
-  if (first) {
-    glGenBuffers(4, vbos);
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
-    glBufferData(GL_ELEMENT_ARRAY_BUFFER, 3*Np*sizeof(GLuint), indices, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
-    glBufferData(GL_ARRAY_BUFFER, Nvert*sizeof(GLfloat), verts, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
-    glBufferData(GL_ARRAY_BUFFER, Nnorm*sizeof(GLfloat), norms, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[3]);
-    glBufferData(GL_ARRAY_BUFFER, Nscal*sizeof(GLfloat), scals, GL_STATIC_DRAW);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-    first = 0;
-  }
-
-  if (norms) {
+  if (nrm != DataSources.end() && sca != DataSources.end()) {
     glEnableClientState(GL_VERTEX_ARRAY);
     glEnableClientState(GL_NORMAL_ARRAY);
     glEnableClientState(GL_TEXTURE_COORD_ARRAY);
 
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[1]);
+    // Note: glRangeDrawElements might be faster according to
+    // http://www.spec.org/gwpg/gpc.static/vbo_whitepaper.html
+    glBindBuffer(GL_ARRAY_BUFFER, tri->second->get_vbo());
     glVertexPointer(3, GL_FLOAT, 3*sizeof(GLfloat), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[2]);
+    glBindBuffer(GL_ARRAY_BUFFER, nrm->second->get_vbo());
     glNormalPointer(GL_FLOAT, 3*sizeof(GLfloat), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindBuffer(GL_ARRAY_BUFFER, vbos[3]);
+    glBindBuffer(GL_ARRAY_BUFFER, sca->second->get_vbo());
     glTexCoordPointer(1, GL_FLOAT, sizeof(GLfloat), 0);
-    glBindBuffer(GL_ARRAY_BUFFER, 0);
-
-    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, vbos[0]);
-    glDrawElements(GL_TRIANGLES, 3*Np, GL_UNSIGNED_INT, 0);
+    glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, tri->second->get_ibo());
+    glDrawElements(GL_TRIANGLES, Np, GL_UNSIGNED_INT, 0);
     glBindBuffer(GL_ELEMENT_ARRAY_BUFFER, 0);
 
     glDisableClientState(GL_TEXTURE_COORD_ARRAY);
@@ -359,7 +333,7 @@ void TrianglesEnsemble::draw_local()
   }
   else {
     glBegin(GL_TRIANGLES);
-    for (int n=0; n<Np; ++n) {
+    for (int n=0; n<Np/3; ++n) {
       const GLfloat *u = &verts[3*indices[3*n + 0]];
       const GLfloat *v = &verts[3*indices[3*n + 1]];
       const GLfloat *w = &verts[3*indices[3*n + 2]];
