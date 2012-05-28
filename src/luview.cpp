@@ -7,6 +7,7 @@
 #include <algorithm>
 
 #include "luview.hpp"
+#include "h5lua.hpp"
 #include "pyplotcm.h"
 
 extern "C" {
@@ -306,8 +307,8 @@ private:
   bool first_frame;
 
 public:
-  Window() : WindowWidth(1024),
-             WindowHeight(768), character_input(0), first_frame(true)
+  Window() : WindowWidth(1200),
+             WindowHeight(800), character_input(0), first_frame(true)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
@@ -515,7 +516,9 @@ protected:
 Window *Window::CurrentWindow;
 
 
-
+extern "C" {
+int luaopen_hdf5(lua_State *L);
+}
 
 extern "C" int luaopen_luview(lua_State *L)
 {
@@ -537,6 +540,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<SegmentsEnsemble>(L);
   LuaCppObject::Register<ParametricSurface>(L);
   LuaCppObject::Register<TrianglesEnsemble>(L);
+
+  luaL_requiref(L, "hdf5", luaopen_hdf5, false);
 
   return 1;
 }

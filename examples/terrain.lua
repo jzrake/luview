@@ -51,7 +51,7 @@ void main()
 surfshd:set_program(vert, frag)
 
 h5_open_file(cmdline.args[1], "r")
-local data = h5_read_array("prim/rho")
+local data = h5_read_array("prim/pre")
 h5_close_file()
 
 height:set_data(data)

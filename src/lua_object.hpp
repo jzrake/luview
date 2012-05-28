@@ -370,7 +370,6 @@ private:
   // ---------------------------------------------------------------------------
   {
     lua_State *L = __lua_state;
-    LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
     std::string method_name = lua_tostring(L, 2);
 
     luaL_getmetafield(L, 1, "lua_attributes");
@@ -384,12 +383,8 @@ private:
       lua_pop(L, 2);
     }
 
-    LuaInstanceMethod m = object->__getattr__(method_name);
-
-    if (m == NULL) {
-      luaL_error(L, "'%s' has no attribute '%s'", object->__type_name.c_str(),
-                 method_name.c_str());
-    }
+    LuaInstanceMethod m = __getattr__(method_name);
+    if (m == NULL) return 0;
 
     lua_pushcfunction(L, m);
     return 1;
