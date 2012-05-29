@@ -300,27 +300,33 @@ int DrawableObject::_set_shader_(lua_State *L)
 class Window : public LuviewTraitedObject
 {
 private:
-  int WindowWidth, WindowHeight;
-  int character_input;
+  static int WindowWidth, WindowHeight;
   static Window *CurrentWindow;
+  int character_input;
   bool first_frame;
+  bool end_loop;
 
 public:
-  Window() : WindowWidth(1200),
-             WindowHeight(800), character_input(0), first_frame(true)
+  Window() : character_input(0), first_frame(true), end_loop(false)
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
-    this->start_window();
   }
-  virtual ~Window() { }
-
-private:
-  void start_window()
+  virtual ~Window()
+  {
+    //    glfwTerminate();
+  }
+  static void Initialize()
   {
     glfwInit();
-    glfwOpenWindow(WindowWidth, WindowHeight, 5, 6, 5, 0, 8, 0, GLFW_WINDOW);
-    glfwSetWindowTitle("Mythos science visualizer");
+    open_window_if_needed();
+    glfwSetWindowTitle("Mythos-3d");
+
+    glfwSetWindowSizeCallback(Reshape);
+    glfwSetKeyCallback(KeyboardInput);
+    glfwSetCharCallback(CharacterInput);
+    glfwEnable(GLFW_STICKY_KEYS);
+    glfwEnable(GLFW_KEY_REPEAT);
 
     glClearDepth(1.0);
     glDepthFunc(GL_LESS);
@@ -332,27 +338,17 @@ private:
     glLoadIdentity();
     gluPerspective(45.0, (float)WindowWidth/WindowHeight, 0.01, 200.0);
     glMatrixMode(GL_MODELVIEW);
-
-    glfwSetWindowSizeCallback(Reshape);
-    glfwSetKeyCallback(KeyboardInput);
-    glfwSetCharCallback(CharacterInput);
-    glfwEnable(GLFW_STICKY_KEYS);
-    glfwEnable(GLFW_KEY_REPEAT);
+  }
+private:
+  static void open_window_if_needed()
+  {
+    if (glfwGetWindowParam(GLFW_OPENED)) return;
+    printf("opening window...\n");
+    glfwOpenWindow(WindowWidth, WindowHeight, 5, 6, 5, 0, 8, 0, GLFW_WINDOW);
   }
 
-  const char *render_scene(std::vector<DrawableObject*> &actors)
+  int render_frame(std::vector<DrawableObject*> &actors)
   {
-    if (first_frame) {
-      EntryCB cb = Callbacks.begin();
-      while (cb != Callbacks.end()) {
-	if (cb->first != "idle") {
-	  std::cout<<cb->first<<": "<<cb->second->get_message()<<std::endl;
-	}
-	++cb;
-      }
-      first_frame = false;
-    }
-
     character_input = ' ';
     CurrentWindow = this;
 
@@ -384,15 +380,31 @@ private:
     glFlush();
     glfwSwapBuffers();
 
-    if (glfwGetKey(GLFW_KEY_ESC) || !glfwGetWindowParam(GLFW_OPENED)) {
-      glfwCloseWindow();
-      return "terminate";
+    if (end_loop) { // user hit esc
+      return 0;
+    }
+    if (!glfwGetWindowParam(GLFW_OPENED)) {
+      exit(0); // GL context was destroyed, just exit
     }
 
     CurrentWindow->exec_callback("idle");
-    return "continue";
+    return 1;
   }
+  void render_scene(std::vector<DrawableObject*> &actors)
+  {
+    open_window_if_needed();
 
+    EntryCB cb = Callbacks.begin();
+    while (cb != Callbacks.end()) {
+      if (cb->first != "idle") {
+	std::cout<<cb->first<<": "<<cb->second->get_message()<<std::endl;
+      }
+      ++cb;
+    }
+
+    end_loop = false;
+    while (render_frame(actors)) { }
+  }
 private:
   void TakeScreenshot(const char *basenm)
   {
@@ -439,6 +451,10 @@ private:
     if (state != GLFW_PRESS) return;
     double *Orientation = CurrentWindow->Orientation;
     switch (key) {
+    case GLFW_KEY_ESC:
+      CurrentWindow->end_loop = true;
+      break;
+
     case GLFW_KEY_RIGHT : Orientation[1] += 3; break;
     case GLFW_KEY_LEFT  : Orientation[1] -= 3; break;
 
@@ -485,6 +501,7 @@ protected:
   {
     AttributeMap attr;
     attr["render_scene"] = _render_scene_;
+    attr["end_scene"] = _end_scene_;
     attr["print_screen"] = _print_screen_;
     RETURN_ATTR_OR_CALL_SUPER(LuviewTraitedObject);
   }
@@ -499,10 +516,14 @@ protected:
       actors.push_back(checkarg<DrawableObject>(L, -1));
       lua_pop(L, 1);
     }
-
-    lua_pushstring(L, self->render_scene(actors));
-    lua_pushlstring(L, (char*)&self->character_input, 1);
-    return 2;
+    self->render_scene(actors);
+    return 0;
+  }
+  static int _end_scene_(lua_State *L)
+  {
+    Window *self = checkarg<Window>(L, 1);
+    self->end_loop = true;
+    return 0;
   }
   static int _print_screen_(lua_State *L)
   {
@@ -513,6 +534,8 @@ protected:
   }
 } ;
 Window *Window::CurrentWindow;
+int Window::WindowWidth = 1200;
+int Window::WindowHeight = 800;
 
 
 extern "C" {
@@ -543,6 +566,8 @@ extern "C" int luaopen_luview(lua_State *L)
 
   luaL_requiref(L, "lunum", luaopen_lunum, false); lua_pop(L, 1);
   luaL_requiref(L, "hdf5", luaopen_hdf5, false); lua_pop(L, 1);
+
+  Window::Initialize();
 
   return 1;
 }

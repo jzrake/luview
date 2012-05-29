@@ -90,5 +90,7 @@ window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
 window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
 window:set_callback("H", function() triangles:inc_scale() end, "increase scale height")
 window:set_callback("h", function() triangles:dec_scale() end, "decrease scale height")
-while window:render_scene{triangles} == "continue" do end
+window:set_callback("n", function() window:end_scene() end, "next")
 
+window:render_scene{triangles}
+window:render_scene{box}
