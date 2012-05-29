@@ -1,8 +1,9 @@
-
+#!/usr/bin/env lua
 
 
 local luview = require 'luview'
 local lunum = require 'lunum'
+local hdf5 = require 'hdf5'
 local shaders = require 'shaders'
 
 local window = luview.Window()
@@ -50,9 +51,9 @@ void main()
 
 surfshd:set_program(vert, frag)
 
-h5_open_file(cmdline.args[1], "r")
-local data = h5_read_array("prim/pre")
-h5_close_file()
+hdf5.open_file(arg[1], "r")
+local data = hdf5.read_array("prim/pre")
+hdf5.close_file()
 
 height:set_data(data)
 verts:set_input(height)
@@ -60,12 +61,12 @@ verts:set_input(height)
 scalars = verts:get_output("scalars")
 scalars:set_normalize(true)
 
-triangles.inc_scale = function(self)
+function triangles:inc_scale()
    local hx, hy, hz = self:get_scale()
    hy = hy + 0.01
    self:set_scale(hx, hy, hz)
 end
-triangles.dec_scale = function(self)
+function triangles:dec_scale()
    local hx, hy, hz = self:get_scale()
    hy = hy - 0.01
    self:set_scale(hx, hy, hz)
@@ -80,7 +81,7 @@ triangles:set_alpha(1.0)
 triangles:set_color(0.3, 0.8, 0.3)
 triangles:set_orientation(-90,0,0)
 triangles:set_scale(1.0, 0.04, 1.0)
-window:set_color(0,0,0.05)--.0, 0.2, 0.2)
+window:set_color(0, 0, 0)
 box:set_color(0.5, 0.9, 0.9)
 box:set_shader(lights)
 
