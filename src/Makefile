@@ -1,9 +1,5 @@
 
 
-
-H5_INC = -I/Library/Science/hdf5/include
-H5_LIB = -L/Library/Science/hdf5/lib -lz -lhdf5
-
 LUA = $(LUA_HOME)/bin/lua
 LIB = -L$(BUILD_TOP)/dep/lib $(GL_LIB) -lglfw -ltet -llunum $(H5_LIB)
 
@@ -24,7 +20,7 @@ LUA_TARGET = $(patsubst %.lua, $(LUA_LIB)/%.lua, $(wildcard *.lua))
 default : $(LUVIEW_SO) $(LUA_TARGET)
 
 h5lua.o : h5lua.c
-	$(CC) $(CFLAGS) -c $< -std=c99 -D__LUVIEW_USE_HDF5 $(H5_INC) $(GL_INC)
+	$(CC) $(CFLAGS) -c $< -std=c99 $(H5_INC) $(GL_INC)
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< $(GL_INC)

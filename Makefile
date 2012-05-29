@@ -51,6 +51,9 @@ INSTALL_TOP = $(PWD)
 # C Flags
 CFLAGS = $(WARN) $(OPTIM) $(DEBUG) $(FPIC)
 
+# HDF5 (optional)
+HDF5_HOME ?=
+
 
 # Configuration for common platforms. If you need to use a different linker,
 # archiver, or C libraries then uncomment the UNAME = Custom line below, and
@@ -93,9 +96,16 @@ endif
 
 BUILD_TOP = $(shell pwd)
 LUA_LIB = $(BUILD_TOP)/lib/lua/5.2
+LUVIEW_SO = $(LUA_LIB)/luview.so
+
 GL_INC += -I$(BUILD_TOP)/dep/include
 GL_LIB += -L$(BUILD_TOP)/dep/lib
-LUVIEW_SO = $(LUA_LIB)/luview.so
+
+ifneq ($(HDF5_HOME), )
+H5_INC = -I$(HDF5_HOME)/include -D__LUVIEW_USE_HDF5
+H5_LIB = -L$(HDF5_HOME)/lib -lz -lhdf5
+endif
+
 
 
 
@@ -104,17 +114,19 @@ LUVIEW_SO = $(LUA_LIB)/luview.so
 # -------------------------------------------------
 export CC
 export CXX
+export SO
+export AR
+export CLIBS
 export CFLAGS
 export BUILD_TOP
 export LUA_HOME
 export LUA_LIB
 export ARCH_LUA
 export ARCH_GLFW
-export SO
-export AR
-export CLIBS
 export GL_LIB
 export GL_INC
+export H5_INC
+export H5_LIB
 export LUVIEW_SO
 # -------------------------------------------------
 

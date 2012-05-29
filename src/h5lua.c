@@ -400,5 +400,9 @@ void _pusharray_wshape(lua_State *L, double *A, const int *shape, int Nd)
 
 #else
 #include "lualib.h"
-void lua_h5_load(lua_State *L) { }
-#endif // __MARA_USE_HDF5
+int luaopen_hdf5(lua_State *L)
+{
+  lua_pushnil(L);
+  return 1;
+}
+#endif // __LUVIEW_USE_HDF5
