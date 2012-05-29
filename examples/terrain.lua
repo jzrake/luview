@@ -85,12 +85,15 @@ window:set_color(0, 0, 0)
 box:set_color(0.5, 0.9, 0.9)
 box:set_shader(lights)
 
+local actors = { triangles }
+
 pyluts:set_colormap("afmhot")
 window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
 window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
 window:set_callback("H", function() triangles:inc_scale() end, "increase scale height")
 window:set_callback("h", function() triangles:dec_scale() end, "decrease scale height")
 window:set_callback("n", function() window:end_scene() end, "next")
+window:set_callback("m", function() actors[2] = box end, "add box")
 
 window:render_scene{triangles}
-window:render_scene{box}
+window:render_scene(actors)

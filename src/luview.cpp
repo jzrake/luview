@@ -390,8 +390,9 @@ private:
     CurrentWindow->exec_callback("idle");
     return 1;
   }
-  void render_scene(std::vector<DrawableObject*> &actors)
+  void render_scene()
   {
+    lua_State *L = __lua_state;
     open_window_if_needed();
 
     EntryCB cb = Callbacks.begin();
@@ -403,7 +404,20 @@ private:
     }
 
     end_loop = false;
-    while (render_frame(actors)) { }
+    retrieve("actors_table");
+    int actors_ind = lua_gettop(L);
+    int go = 1;
+
+    while (go) {
+      std::vector<DrawableObject*> actors;
+      for (unsigned int i=1; i<=lua_rawlen(L, actors_ind); ++i) {
+	lua_rawgeti(L, actors_ind, i);
+	actors.push_back(checkarg<DrawableObject>(L, -1));
+	lua_pop(L, 1);
+      }
+      go = render_frame(actors);
+    }
+    lua_remove(L, actors_ind);
   }
 private:
   void TakeScreenshot(const char *basenm)
@@ -509,14 +523,9 @@ protected:
   {
     Window *self = checkarg<Window>(L, 1);
     luaL_argcheck(L, lua_type(L, 2) == LUA_TTABLE, 2, "table expected");
-    std::vector<DrawableObject*> actors;
-
-    for (unsigned int i=1; i<=lua_rawlen(L, 2); ++i) {
-      lua_rawgeti(L, 2, i);
-      actors.push_back(checkarg<DrawableObject>(L, -1));
-      lua_pop(L, 1);
-    }
-    self->render_scene(actors);
+    self->hold(2, "actors_table");
+    self->render_scene();
+    self->drop("actors_table");
     return 0;
   }
   static int _end_scene_(lua_State *L)
