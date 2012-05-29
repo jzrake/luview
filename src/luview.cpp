@@ -410,8 +410,8 @@ private:
 
     while (go) {
       std::vector<DrawableObject*> actors;
-      for (unsigned int i=1; i<=lua_rawlen(L, actors_ind); ++i) {
-	lua_rawgeti(L, actors_ind, i);
+      lua_pushnil(L);
+      while (lua_next(L, actors_ind) != 0) {
 	actors.push_back(checkarg<DrawableObject>(L, -1));
 	lua_pop(L, 1);
       }

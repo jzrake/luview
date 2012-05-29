@@ -1,0 +1,90 @@
+#!/usr/bin/env lua
+
+
+
+function plot_function(func)
+   local luview = require 'luview'
+   local lunum = require 'lunum'
+   local shaders = require 'shaders'
+
+   local window = luview.Window()
+   local box = luview.BoundingBox()
+   local height = luview.DataSource()
+   local verts = luview.ParametricVertexSource3D()
+   local triangles = luview.TrianglesEnsemble()
+   local points = luview.DataSource()
+   local surfshd = luview.ShaderProgram()
+   local pyluts = luview.MatplotlibColormaps()
+   local lights = shaders.load_shader("multlights")
+   local surfshd = shaders.load_shader("surfshd")
+
+   local Nx = 256
+   local Ny = 256
+   local A = lunum.zeros{Nx,Ny}
+
+   for i,j,k in A:indices() do
+      local u = -0.5 + i/Nx
+      local v = -0.5 + j/Ny
+      A[i*Ny + j] = func(u,v)
+   end
+
+   height:set_data(A)
+   height:set_normalize(true)
+   verts:set_input(height)
+
+   scalars = verts:get_output("scalars")
+   scalars:set_normalize(true)
+
+   triangles:set_data("triangles", verts:get_output("triangles"))
+   triangles:set_data("normals", verts:get_output("normals"))
+   triangles:set_data("color_table", pyluts)
+   triangles:set_data("scalars", scalars)
+   triangles:set_shader(surfshd)
+   triangles:set_alpha(1.0)
+   triangles:set_color(0.5, 0.5, 1.0)
+   triangles:set_orientation(-90,0,0)
+   triangles:set_position(0.0, -0.5, 0.0)
+   triangles:set_scale(1.0, 0.5, 1.0)
+
+   window:set_color(0.85, 0.83, 0.61)
+   box:set_color(0.2, 0.2, 0.2)
+   box:set_shader(lights)
+   box:set_scale(1.5, 1.5, 1.5)
+   box:set_linewidth(0.5)
+
+   local act = {box=box, surf=triangles}
+
+   window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
+   window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
+   window:set_callback("b", function() act.box = (act.box and {nil} or {box})[1] end,
+		       "toggle bounding box")
+   window:render_scene(act)
+end
+
+
+function main()
+   local optparse = require 'optparse'
+   local parser = optparse.OptionParser{
+      usage="%prog [options] [infile(s)]", version="0.2.0"}
+   parser.add_option{
+      "-h", "--help", action="store_true", dest="help", help="print help"}
+   parser.add_option{
+      "-f", "--func", action="store", dest="func", help="a function"}
+
+   local opts, args = parser.parse_args()
+   if opts.help then
+      opt.print_help()
+      os.exit()
+   end
+
+   local func = load(
+      string.format(
+	 [[
+	     return (function(x,y)
+			return %s
+		     end)
+	  ]], opts.func), nil, nil, math)()
+   if func(0,0) then plot_function(func) end
+
+end
+main()
