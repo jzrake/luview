@@ -44,7 +44,7 @@ function plot_function(func)
    triangles:set_color(0.5, 0.5, 1.0)
    triangles:set_orientation(-90,0,0)
    triangles:set_position(0.0, -0.5, 0.0)
-   triangles:set_scale(1.0, 0.5, 1.0)
+   triangles:set_scale(1.4, 0.5, 1.4)
 
    window:set_color(0.85, 0.83, 0.61)
    box:set_color(0.2, 0.2, 0.2)
