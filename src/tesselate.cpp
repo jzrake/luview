@@ -29,7 +29,7 @@
 
 
 #define TETLIBRARY
-#include "tetgen/tetgen.h"
+#include "tetgen.h"
 #include "luview.hpp"
 
 

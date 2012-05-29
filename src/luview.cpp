@@ -7,7 +7,6 @@
 #include <algorithm>
 
 #include "luview.hpp"
-#include "h5lua.hpp"
 #include "pyplotcm.h"
 
 extern "C" {
@@ -517,7 +516,8 @@ Window *Window::CurrentWindow;
 
 
 extern "C" {
-int luaopen_hdf5(lua_State *L);
+  int luaopen_lunum(lua_State *L);
+  int luaopen_hdf5(lua_State *L);
 }
 
 extern "C" int luaopen_luview(lua_State *L)
@@ -541,7 +541,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<ParametricSurface>(L);
   LuaCppObject::Register<TrianglesEnsemble>(L);
 
-  luaL_requiref(L, "hdf5", luaopen_hdf5, false);
+  luaL_requiref(L, "lunum", luaopen_lunum, false); lua_pop(L, 1);
+  luaL_requiref(L, "hdf5", luaopen_hdf5, false); lua_pop(L, 1);
 
   return 1;
 }

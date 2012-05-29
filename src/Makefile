@@ -1,11 +1,11 @@
 
 
-GL_INC = -I/usr/X11/include
+
 H5_INC = -I/Library/Science/hdf5/include
 H5_LIB = -L/Library/Science/hdf5/lib -lz -lhdf5
 
-LUA = ../bin/lua
-LIB = ../lib/libglfw.a ../lib/liblunum.a ../lib/libtet.a
+LUA = $(LUA_HOME)/bin/lua
+LIB = -L$(BUILD_TOP)/dep/lib $(GL_LIB) -lglfw -ltet -llunum $(H5_LIB)
 
 OBJ = 	luview.o \
 	shader.o \
@@ -19,36 +19,31 @@ OBJ = 	luview.o \
 	glInfo.o \
 
 
-default : $(LUVIEW_A) $(LUVIEW_SO)
+LUA_TARGET = $(patsubst %.lua, $(LUA_LIB)/%.lua, $(wildcard *.lua))
 
-volume.o : volume.cpp
-	$(CXX) $(CFLAGS) -c $< -I../include $(GL_INC)
-
-ren2tex.o : ren2tex.c
-	$(CC) $(CFLAGS) -c $< -I../include $(GL_INC)
+default : $(LUVIEW_SO) $(LUA_TARGET)
 
 h5lua.o : h5lua.c
-	$(CC) $(CFLAGS) -c $< -std=c99 -I../include -D__LUVIEW_USE_HDF5 $(H5_INC)
+	$(CC) $(CFLAGS) -c $< -std=c99 -D__LUVIEW_USE_HDF5 $(H5_INC) $(GL_INC)
 
 %.o : %.c
-	$(CC) $(CFLAGS) -c $<
+	$(CC) $(CFLAGS) -c $< $(GL_INC)
 
 %.o : %.cpp
-	$(CXX) $(CFLAGS) -c $< -I../include
+	$(CXX) $(CFLAGS) -c $< $(GL_INC)
 
 %.lc : %.lua
 	$(LUA) bin2c.lua +$< > $@
 
-../lib/libtet.a :
-	make -C tetgen tetlib
-	cp tetgen/libtet.a ../lib
+$(LUA_LIB)/%.lua : %.lua
+	cp $< $@
 
-$(LUVIEW_A)  : $(LIB) $(OBJ)
-	$(AR) $@ $?
+$(LUVIEW_A) : $(OBJ)
+	$(AR) $@ $? $(LIB)
 
-$(LUVIEW_SO) : $(LIB) $(OBJ)
-	$(SO) -o $(LUVIEW_SO) $^ $(GL_L) $(H5_LIB)
+$(LUVIEW_SO) : $(OBJ)
+	mkdir -p $(LUA_LIB)
+	$(SO) -o $@ $^ $(LIB)
 
 clean :
-	rm -f *.o $(LUVIEW_A) $(LUVIEW_SO) *.lc
-	make -C tetgen clean
+	rm -f *.o *.lc
