@@ -1,7 +1,6 @@
 #!/usr/bin/env lua
 
 
-
 function plot_function(func)
    local luview = require 'luview'
    local lunum = require 'lunum'
@@ -12,17 +11,18 @@ function plot_function(func)
    local height = luview.DataSource()
    local verts = luview.ParametricVertexSource3D()
    local triangles = luview.TrianglesEnsemble()
-   local points = luview.DataSource()
+   local image = luview.ImagePlane()
    local surfshd = luview.ShaderProgram()
    local pyluts = luview.MatplotlibColormaps()
    local lights = shaders.load_shader("multlights")
    local surfshd = shaders.load_shader("surfshd")
+   local cmshade = shaders.load_shader("cbar")
 
    local Nx = 256
    local Ny = 256
    local A = lunum.zeros{Nx,Ny}
 
-   for i,j,k in A:indices() do
+   for i,j in A:indices() do
       local u = -0.5 + i/Nx
       local v = -0.5 + j/Ny
       A[i*Ny + j] = func(u,v)
@@ -30,8 +30,16 @@ function plot_function(func)
 
    height:set_data(A)
    height:set_normalize(true)
-   verts:set_input(height)
+   height:set_mode("luminance")
 
+   image:set_data("image", height)
+   image:set_data("color_table", pyluts)
+   image:set_orientation(-90,0,0)
+   image:set_position(0.0, -0.5, 0.0)
+   image:set_scale(-1.0, Nx/Ny, 1.0)
+   image:set_shader(cmshade)
+
+   verts:set_input(height)
    scalars = verts:get_output("scalars")
    scalars:set_normalize(true)
 
@@ -43,21 +51,21 @@ function plot_function(func)
    triangles:set_alpha(1.0)
    triangles:set_color(0.5, 0.5, 1.0)
    triangles:set_orientation(-90,0,0)
-   triangles:set_position(0.0, -0.5, 0.0)
-   triangles:set_scale(1.4, 0.5, 1.4)
+   triangles:set_position(0.0, -0.25, 0.0)
+   triangles:set_scale(1.0, 0.75, 1.0)
 
    window:set_color(0.85, 0.83, 0.61)
    box:set_color(0.2, 0.2, 0.2)
    box:set_shader(lights)
-   box:set_scale(1.5, 1.5, 1.5)
+   box:set_scale(1.0, 1.0, 1.0)
    box:set_linewidth(0.5)
 
-   local act = {box=box, surf=triangles}
+   local act = {box=box, surf=triangles, im=image}
 
    window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
    window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
    window:set_callback("b", function() act.box = (act.box and {nil} or {box})[1] end,
-		       "toggle bounding box")
+                       "toggle bounding box")
    window:render_scene(act)
 end
 
@@ -79,11 +87,11 @@ function main()
 
    local func = load(
       string.format(
-	 [[
-	     return (function(x,y)
-			return %s
-		     end)
-	  ]], opts.func), nil, nil, math)()
+         [[
+             return (function(x,y)
+                        return %s
+                     end)
+          ]], opts.func), nil, nil, math)()
    if func(0,0) then plot_function(func) end
 
 end
