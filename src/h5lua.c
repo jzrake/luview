@@ -85,7 +85,6 @@ int luaC_h5_read_string(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);
@@ -114,7 +113,6 @@ int luaC_h5_write_string(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   hsize_t size = strlen(string);
@@ -139,7 +137,7 @@ int luaC_h5_open_file(lua_State *L)
 
   if (PresentFile >= 0) {
     H5Fclose(PresentFile);
-    PresentFile = 0;
+    PresentFile = -1;
   }
 
   if (strcmp(mode, "w") == 0) {
@@ -167,7 +165,7 @@ int luaC_h5_close_file(lua_State *L)
 {
   if (PresentFile) {
     H5Fclose(PresentFile);
-    PresentFile = 0;
+    PresentFile = -1;
     printf("[hdf5] closing file\n");
   }
   else {
@@ -221,7 +219,6 @@ int luaC_h5_write_numeric_table(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
   hid_t grp = H5Gcreate(PresentFile, gname, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   hid_t fspc = H5Screate(H5S_SCALAR);
@@ -232,12 +229,10 @@ int luaC_h5_write_numeric_table(lua_State *L)
 
     if (lua_type(L, -2) != LUA_TSTRING) {
       luaL_error(L, "all keys must be strings.\n");
-      return 0;
     }
     if (lua_type(L, -1) != LUA_TNUMBER) {
       luaL_error(L, "value with key %s is not a number.\n",
 	     lua_tostring(L, -2));
-      return 0;
     }
 
     const double v = lua_tonumber(L, -1);
@@ -260,7 +255,6 @@ int luaC_h5_read_array(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);
@@ -328,7 +322,6 @@ int luaC_h5_read_numeric_table(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   Lua = L;
@@ -348,7 +341,6 @@ int luaC_h5_get_nsets(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   Lua = L;
@@ -368,7 +360,6 @@ int luaC_h5_get_ndims(lua_State *L)
 
   if (PresentFile < 0) {
     luaL_error(L, "no open file.\n");
-    return 0;
   }
 
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);

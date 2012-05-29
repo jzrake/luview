@@ -1,6 +1,7 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
+local hdf5 = require 'hdf5'
 local shaders = require 'shaders'
 
 local window = luview.Window()
@@ -19,9 +20,9 @@ local function load_frame(fname, dir, var)
    local lumsrc = luview.DataSource()
 
    collectgarbage()
-   h5_open_file(fname, "r")
-   local lumdata = h5_read_array("cutplanes/"..dir.."_face/"..var)
-   h5_close_file()
+   hdf5.open_file(fname, "r")
+   local lumdata = hdf5.read_array("cutplanes/"..dir.."_face/"..var)
+   hdf5.close_file()
 
    lumsrc:set_mode("luminance")
    lumsrc:set_data(lumdata)
@@ -61,7 +62,7 @@ local function switch_light()
 end
 
 for _,d in pairs{"x","y","z"} do
-   images[d] = load_frame(cmdline.args[1], d, "rho")
+   images[d] = load_frame(arg[1], d, "rho")
 end
 setup_planes()
 

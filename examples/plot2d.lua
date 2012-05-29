@@ -2,6 +2,7 @@
 
 local luview = require 'luview'
 local lunum = require 'lunum'
+local hdf5 = require 'hdf5'
 local shaders = require 'shaders'
 
 local window = luview.Window()
@@ -14,10 +15,10 @@ local function load_frame(fname, var)
    local image = luview.ImagePlane()
 
    collectgarbage()
-   h5_open_file(fname, "r")
-   local lumdata = h5_read_array("prim/"..var)
+   hdf5.open_file(fname, "r")
+   local lumdata = hdf5.read_array("prim/"..var)
    local Nx, Ny = unpack(lumdata:shape())
-   h5_close_file()
+   hdf5.close_file()
 
    lumsrc:set_mode("luminance")
    lumsrc:set_data(lumdata)
@@ -44,7 +45,7 @@ local narg = 1
 local status = "continue"
 local actors = { }
 
-actors[1] = load_frame(cmdline.args[narg], "rho")
+actors[1] = load_frame(arg[narg], "rho")
 pyluts:set_colormap("afmhot")
 
 local function next_frame()
