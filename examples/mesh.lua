@@ -50,4 +50,4 @@ window:set_color(0.2, 0.2, 0.2)
 
 window:set_callback("]", function() narg=narg+1; load() end, "next file")
 window:set_callback("[", function() narg=narg-1; load() end, "previous file")
-while window:render_scene{box, triangles} == "continue" do end
+window:render_scene{box, triangles}

@@ -75,4 +75,4 @@ window:set_callback("-", function() p.z = p.z * 1.1 end, "zoom out")
 window:set_callback("+", function() p.z = p.z / 1.1 end, "zoom in")
 window:set_callback("idle", function() shade:set_program(vert, frag(p)) end)
 
-while window:render_scene{image} == "continue" do end
+window:render_scene{image}

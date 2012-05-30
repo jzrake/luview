@@ -2,7 +2,7 @@
 
 local luview = require 'luview'
 
-function plot2d(input)
+function plot2d(input, kwargs)
    local lunum = require 'lunum'
    local shaders = require 'shaders'
 
@@ -18,7 +18,7 @@ function plot2d(input)
    local surfshd = shaders.load_shader("surfshd")
    local cmshade = shaders.load_shader("cbar")
 
-   local act = {box=box, srf=srf, im=image}
+   local act = {box=box, srf=srf, img=image}
    local Nx, Ny, series_ind = 1
    local mode = '2d'
 
@@ -69,7 +69,7 @@ function plot2d(input)
       local sx, sy, sz = self:get_scale()
       self:set_scale(sx, sy/1.1, sz)
    end
-   window:set_color(0.85, 0.83, 0.61)
+   window:set_color(table.unpack(kwargs.background or {0.5, 0.5, 0.5}))
    box:set_color(0.2, 0.2, 0.2)
    box:set_shader(lights)
    box:set_scale(1.0, 1.0, 1.0)
@@ -100,8 +100,10 @@ function plot2d(input)
    window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
    window:set_callback("b", function() act.box = (act.box and {nil} or {box})[1] end,
                        "toggle bounding box")
-   window:set_callback("r", function() act.srf = (act.srf and {nil} or {srf})[1] end,
+   window:set_callback("g", function() act.srf = (act.srf and {nil} or {srf})[1] end,
                        "toggle 3d surface")
+   window:set_callback("t", function() act.img = (act.img and {nil} or {img})[1] end,
+                       "toggle 2d image")
    window:set_callback("H", function() srf:inc_height() end, "increase surface height")
    window:set_callback("h", function() srf:dec_height() end, "increase surface height")
    window:set_callback("i", function() toggle_3d() end, "toggle 2d/3d mode")
@@ -119,12 +121,20 @@ function main()
       "-f", "--func", action="store", dest="func", help="function to plot: f(x,y)"}
    parser.add_option{
       "-d", "--dset", action="store", dest="dset", help="named HDF5 dataset"}
+   parser.add_option{
+      "--background", action="store", dest="background", help="scene background color"}
+
+   local LuviewColors = {black = {0.00, 0.00, 0.00},
+			 white = {1.00, 1.00, 1.00},
+			 grey  = {0.50, 0.50, 0.50},
+			 sand  = {0.85, 0.83, 0.61}}
 
    local opts, args = parser.parse_args()
    if opts.help then
       opt.print_help()
       os.exit()
    end
+   local kwargs = {background = LuviewColors[opts.background or "grey"]}
 
    if #args > 0 then
       local hdf5 = require 'hdf5'
@@ -137,7 +147,7 @@ function main()
       if not opts.dset then
 	 error "HDF5 input requires a the name of a data set, use -d"
       end
-      plot2d(series)
+      plot2d(series, kwargs)
    end
 
    if opts.func then
@@ -148,7 +158,7 @@ function main()
 			   return %s
 			end)
 	     ]], opts.func), nil, nil, math)()
-      plot2d(func) 
+      plot2d(func, kwargs) 
    end
 end
 

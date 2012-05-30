@@ -54,8 +54,14 @@ make
 
 # EXAMPLE DATA #
 # ------------------------------------------------------------------------------
-wget --no-check-certificate https://github.com/downloads/jzrake/luview/luview-data.tar.gz
+wget http://zrake.webfactional.com/media/luview-data.tar.gz
 tar -xvf luview-data.tar.gz
 
 ./mythos data/KH-bnd-1024-chkpt.0006.h5 --dset prim/rho
+
+
+# EXAMPLE LUVIEW SRIPTS #
+# ------------------------------------------------------------------------------
+lua examples/mandelbrot.lua
+lua examples/stingray.lua
 

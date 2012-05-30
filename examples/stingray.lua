@@ -89,4 +89,4 @@ box:set_linewidth(0.2)
 
 window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
 window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
-while window:render_scene{triangles} == "continue" do end
+window:render_scene{triangles}
