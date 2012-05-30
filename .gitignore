@@ -9,6 +9,7 @@ bin
 lib
 include
 
+data
 dep/*
 !dep/Makefile
 
