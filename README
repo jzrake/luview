@@ -54,8 +54,8 @@ make
 
 # EXAMPLE DATA #
 # ------------------------------------------------------------------------------
-wget https://github.com/downloads/jzrake/luview/luview-data.tar.gz
+wget --no-check-certificate https://github.com/downloads/jzrake/luview/luview-data.tar.gz
 tar -xvf luview-data.tar.gz
 
-./mythos data/KH-bnd-chkpt.0006.h5 --dset prim/rho
+./mythos data/KH-bnd-1024-chkpt.0006.h5 --dset prim/rho
 
