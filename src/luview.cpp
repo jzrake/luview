@@ -344,7 +344,6 @@ private:
   static void open_window_if_needed()
   {
     if (glfwGetWindowParam(GLFW_OPENED)) return;
-    printf("opening window...\n");
     glfwOpenWindow(WindowWidth, WindowHeight, 5, 6, 5, 0, 8, 0, GLFW_WINDOW);
   }
 

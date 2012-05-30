@@ -18,7 +18,10 @@ function plot2d(input)
    local surfshd = shaders.load_shader("surfshd")
    local cmshade = shaders.load_shader("cbar")
 
+   local act = {box=box, srf=srf, im=image}
    local Nx, Ny, series_ind = 1
+   local mode = '2d'
+
    if type(input) == 'function' then
       Nx = 256
       Ny = 256
@@ -40,8 +43,6 @@ function plot2d(input)
 
    image:set_data("image", height)
    image:set_data("color_table", pyluts)
-   image:set_orientation(-90,0,0)
-   image:set_position(0.0, -0.5, 0.0)
    image:set_scale(-1.0, Nx/Ny, 1.0)
    image:set_shader(cmshade)
 
@@ -68,23 +69,42 @@ function plot2d(input)
       local sx, sy, sz = self:get_scale()
       self:set_scale(sx, sy/1.1, sz)
    end
-
    window:set_color(0.85, 0.83, 0.61)
    box:set_color(0.2, 0.2, 0.2)
    box:set_shader(lights)
    box:set_scale(1.0, 1.0, 1.0)
    box:set_linewidth(0.5)
 
-   local act = {box=box, srf=srf, im=image}
+   local function toggle_3d()
+      if mode == '3d' then
+	 act.srf = nil
+	 act.box = nil
+	 image:set_position(0.0, 0.0, 0.0)
+	 image:set_orientation(0,0,-90)
+	 window:set_position(0,0,-1.2)
+	 window:set_orientation(0,0,0)
+	 mode = '2d'
+      elseif mode == '2d' then
+	 act.srf = srf
+	 act.box = box
+	 image:set_position(0.0, -0.5, 0.0)
+	 image:set_orientation(-90,0,0)
+	 window:set_position(0,0,-2.0)
+	 window:set_orientation(18,0,0)
+	 mode = '3d'
+      end
+   end
+   toggle_3d()
 
    window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
    window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
    window:set_callback("b", function() act.box = (act.box and {nil} or {box})[1] end,
                        "toggle bounding box")
-   window:set_callback("s", function() act.srf = (act.srf and {nil} or {srf})[1] end,
+   window:set_callback("r", function() act.srf = (act.srf and {nil} or {srf})[1] end,
                        "toggle 3d surface")
    window:set_callback("H", function() srf:inc_height() end, "increase surface height")
    window:set_callback("h", function() srf:dec_height() end, "increase surface height")
+   window:set_callback("i", function() toggle_3d() end, "toggle 2d/3d mode")
    window:render_scene(act)
 end
 
