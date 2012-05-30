@@ -146,7 +146,7 @@ public:
   std::vector<double> call(std::vector<double> X);
   void set_message(const char *msg) { message = msg; }
   const char *get_message() { return message.c_str(); }
-  static CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos);
+  static CallbackFunction *create_from_stack(lua_State *L, int pos);
 private:
   std::string message;
   virtual std::vector<double> call_priv(double *x, int narg) = 0;
