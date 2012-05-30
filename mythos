@@ -29,7 +29,7 @@ function plot2d(input)
       for i,j in A:indices() do
 	 local u = -0.5 + i/Nx
 	 local v = -0.5 + j/Ny
-	 A[i*Ny + j] = func(u,v)
+	 A[i*Ny + j] = input(u,v)
       end
       height:set_data(A)
    elseif type(input) == 'table' then
