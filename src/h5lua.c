@@ -40,6 +40,9 @@ static herr_t group_to_lua_table(hid_t loc_id, const char *name, void *opdata)
 
   hid_t fspc = H5Screate(H5S_SCALAR);
   hid_t dset = H5Dopen(PresentGroup, name, H5P_DEFAULT);
+  if (dset < 0) {
+    luaL_error(Lua, "data set named %s", name);
+  }
   H5Dread(dset, H5T_NATIVE_DOUBLE, fspc, fspc, H5P_DEFAULT, &v);
   H5Dclose(dset);
 
@@ -82,12 +85,13 @@ int luaopen_hdf5(lua_State *L)
 int luaC_h5_read_string(lua_State *L)
 {
   const char *dsetnm = luaL_checkstring(L, 1);
-
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
-
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);
+  if (dset < 0) {
+    luaL_error(L, "no data set named %s", dsetnm);
+  }
   hid_t fspc = H5Dget_space(dset);
   hid_t strn = H5Dget_type(dset);
   hsize_t msize = H5Tget_size(strn);
@@ -112,7 +116,7 @@ int luaC_h5_write_string(lua_State *L)
   const char *string = luaL_checkstring(L, 2);
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
 
   hsize_t size = strlen(string);
@@ -218,7 +222,7 @@ int luaC_h5_write_numeric_table(lua_State *L)
   const char *gname = luaL_checkstring(L, 1);
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
   hid_t grp = H5Gcreate(PresentFile, gname, H5P_DEFAULT, H5P_DEFAULT, H5P_DEFAULT);
   hid_t fspc = H5Screate(H5S_SCALAR);
@@ -252,12 +256,13 @@ int luaC_h5_write_numeric_table(lua_State *L)
 int luaC_h5_read_array(lua_State *L)
 {
   const char *dsetnm = luaL_checkstring(L, 1);
-
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
-
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);
+  if (dset < 0) {
+    luaL_error(L, "no data set named %s", dsetnm);
+  }
   hid_t fspc = H5Dget_space(dset);
   size_t Nd  = H5Sget_simple_extent_ndims(fspc);
   hsize_t *dims = (hsize_t*) malloc(Nd*sizeof(hsize_t));
@@ -291,7 +296,7 @@ int luaC_h5_write_array(lua_State *L)
   int i;
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
     return 0;
   }
   if (A->dtype != ARRAY_TYPE_DOUBLE) {
@@ -321,7 +326,7 @@ int luaC_h5_read_numeric_table(lua_State *L)
   const char *gname = luaL_checkstring(L, 1);
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
 
   Lua = L;
@@ -340,7 +345,7 @@ int luaC_h5_get_nsets(lua_State *L)
   const char *gname = luaL_checkstring(L, 1);
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
 
   Lua = L;
@@ -359,10 +364,12 @@ int luaC_h5_get_ndims(lua_State *L)
   const char *dsetnm = luaL_checkstring(L, 1);
 
   if (PresentFile < 0) {
-    luaL_error(L, "no open file.\n");
+    luaL_error(L, "no open file");
   }
-
   hid_t dset = H5Dopen(PresentFile, dsetnm, H5P_DEFAULT);
+  if (dset < 0) {
+    luaL_error(L, "no data set named %s", dsetnm);
+  }
   hid_t fspc = H5Dget_space(dset);
   size_t Nd  = H5Sget_simple_extent_ndims(fspc);
   hsize_t *dims = (hsize_t*) malloc(Nd*sizeof(hsize_t));

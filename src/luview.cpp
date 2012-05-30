@@ -311,10 +311,11 @@ public:
   {
     Orientation[0] = 9.0;
     Position[2] = -2.0;
+    Initialize();
   }
   virtual ~Window()
   {
-    //    glfwTerminate();
+    glfwTerminate();
   }
   static void Initialize()
   {
@@ -575,8 +576,6 @@ extern "C" int luaopen_luview(lua_State *L)
 
   luaL_requiref(L, "lunum", luaopen_lunum, false); lua_pop(L, 1);
   luaL_requiref(L, "hdf5", luaopen_hdf5, false); lua_pop(L, 1);
-
-  Window::Initialize();
 
   return 1;
 }

@@ -1,8 +1,8 @@
 #!/usr/bin/env lua
 
+local luview = require 'luview'
 
-function plot_function(func)
-   local luview = require 'luview'
+function plot2d(input)
    local lunum = require 'lunum'
    local shaders = require 'shaders'
 
@@ -10,7 +10,7 @@ function plot_function(func)
    local box = luview.BoundingBox()
    local height = luview.DataSource()
    local verts = luview.ParametricVertexSource3D()
-   local triangles = luview.TrianglesEnsemble()
+   local srf = luview.TrianglesEnsemble()
    local image = luview.ImagePlane()
    local surfshd = luview.ShaderProgram()
    local pyluts = luview.MatplotlibColormaps()
@@ -18,17 +18,23 @@ function plot_function(func)
    local surfshd = shaders.load_shader("surfshd")
    local cmshade = shaders.load_shader("cbar")
 
-   local Nx = 256
-   local Ny = 256
-   local A = lunum.zeros{Nx,Ny}
-
-   for i,j in A:indices() do
-      local u = -0.5 + i/Nx
-      local v = -0.5 + j/Ny
-      A[i*Ny + j] = func(u,v)
+   local Nx, Ny, series_ind = 1
+   if type(input) == 'function' then
+      Nx = 256
+      Ny = 256
+      local A = lunum.zeros{Nx,Ny}
+      for i,j in A:indices() do
+	 local u = -0.5 + i/Nx
+	 local v = -0.5 + j/Ny
+	 A[i*Ny + j] = func(u,v)
+      end
+      height:set_data(A)
+   elseif type(input) == 'table' then
+      local fname, A = next(input)
+      Nx, Ny = table.unpack(A:shape())
+      height:set_data(A)
    end
 
-   height:set_data(A)
    height:set_normalize(true)
    height:set_mode("luminance")
 
@@ -43,16 +49,25 @@ function plot_function(func)
    scalars = verts:get_output("scalars")
    scalars:set_normalize(true)
 
-   triangles:set_data("triangles", verts:get_output("triangles"))
-   triangles:set_data("normals", verts:get_output("normals"))
-   triangles:set_data("color_table", pyluts)
-   triangles:set_data("scalars", scalars)
-   triangles:set_shader(surfshd)
-   triangles:set_alpha(1.0)
-   triangles:set_color(0.5, 0.5, 1.0)
-   triangles:set_orientation(-90,0,0)
-   triangles:set_position(0.0, -0.25, 0.0)
-   triangles:set_scale(1.0, 0.75, 1.0)
+   srf:set_data("triangles", verts:get_output("triangles"))
+   srf:set_data("normals", verts:get_output("normals"))
+   srf:set_data("color_table", pyluts)
+   srf:set_data("scalars", scalars)
+   srf:set_shader(surfshd)
+   srf:set_alpha(1.0)
+   srf:set_color(0.5, 0.5, 1.0)
+   srf:set_orientation(-90,0,0)
+   srf:set_position(0.0, 0.0, 0.0)
+   srf:set_scale(1.0, 0.25, 1.0)
+
+   function srf:inc_height()
+      local sx, sy, sz = self:get_scale()
+      self:set_scale(sx, sy*1.1, sz)
+   end
+   function srf:dec_height()
+      local sx, sy, sz = self:get_scale()
+      self:set_scale(sx, sy/1.1, sz)
+   end
 
    window:set_color(0.85, 0.83, 0.61)
    box:set_color(0.2, 0.2, 0.2)
@@ -60,12 +75,16 @@ function plot_function(func)
    box:set_scale(1.0, 1.0, 1.0)
    box:set_linewidth(0.5)
 
-   local act = {box=box, surf=triangles, im=image}
+   local act = {box=box, srf=srf, im=image}
 
    window:set_callback("]", function() pyluts:next_colormap() end, "next colormap")
    window:set_callback("[", function() pyluts:prev_colormap() end, "previous colormap")
    window:set_callback("b", function() act.box = (act.box and {nil} or {box})[1] end,
                        "toggle bounding box")
+   window:set_callback("s", function() act.srf = (act.srf and {nil} or {srf})[1] end,
+                       "toggle 3d surface")
+   window:set_callback("H", function() srf:inc_height() end, "increase surface height")
+   window:set_callback("h", function() srf:dec_height() end, "increase surface height")
    window:render_scene(act)
 end
 
@@ -73,11 +92,13 @@ end
 function main()
    local optparse = require 'optparse'
    local parser = optparse.OptionParser{
-      usage="%prog [options] [infile(s)]", version="0.2.0"}
+      usage="%prog [options] [input files]", version="0.2.0"}
    parser.add_option{
       "-h", "--help", action="store_true", dest="help", help="print help"}
    parser.add_option{
-      "-f", "--func", action="store", dest="func", help="a function"}
+      "-f", "--func", action="store", dest="func", help="function to plot: f(x,y)"}
+   parser.add_option{
+      "-d", "--dset", action="store", dest="dset", help="named HDF5 dataset"}
 
    local opts, args = parser.parse_args()
    if opts.help then
@@ -85,14 +106,30 @@ function main()
       os.exit()
    end
 
-   local func = load(
-      string.format(
-         [[
-             return (function(x,y)
-                        return %s
-                     end)
-          ]], opts.func), nil, nil, math)()
-   if func(0,0) then plot_function(func) end
+   if #args > 0 then
+      local hdf5 = require 'hdf5'
+      local series = { }
+      for _,fname in ipairs(args) do
+	 hdf5.open_file(fname)
+	 table.insert(series, hdf5.read_array(opts.dset))
+	 hdf5.close_file()
+      end
+      if not opts.dset then
+	 error "HDF5 input requires a the name of a data set, use -d"
+      end
+      plot2d(series)
+   end
 
+   if opts.func then
+      local func = load(
+	 string.format(
+	    [[
+		return (function(x,y)
+			   return %s
+			end)
+	     ]], opts.func), nil, nil, math)()
+      plot2d(func) 
+   end
 end
+
 main()
