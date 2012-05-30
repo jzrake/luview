@@ -37,11 +37,19 @@ CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
 # QUICK START #
 # ------------------------------------------------------------------------------
-make dep
 make
 source setup.sh
 ./mythos -f "6*(x^4 + x*y^3) * cos(20*x*y)"
 
+
+# HDF5 #
+# ------------------------------------------------------------------------------
+To compile with HDF5 support, set the environment variable HDF5_HOME before
+running make, for example
+
+make clean
+export HDF5_HOME=/Library/Science/hdf5
+make
 
 
 # EXAMPLE DATA #

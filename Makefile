@@ -40,10 +40,13 @@ OPTIM = -O0
 DEBUG =
 
 # location of Lua install on this system
-LUA_HOME ?= $(PWD)/lua
+LUA_HOME ?= $(PWD)/dep
 
 # location of GLFW install on this system
-GLFW_HOME = $(PWD)/glfw
+GLFW_HOME = $(PWD)/dep
+
+# HDF5 (optional)
+HDF5_HOME ?=
 
 # where to install luview library and include
 INSTALL_TOP = $(PWD)
@@ -51,8 +54,6 @@ INSTALL_TOP = $(PWD)
 # C Flags
 CFLAGS = $(WARN) $(OPTIM) $(DEBUG) $(FPIC)
 
-# HDF5 (optional)
-HDF5_HOME ?=
 
 
 # Configuration for common platforms. If you need to use a different linker,
