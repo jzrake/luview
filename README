@@ -65,3 +65,14 @@ tar -xvf luview-data.tar.gz
 lua examples/mandelbrot.lua
 lua examples/stingray.lua
 
+
+
+
+# CHANGELOG #
+
+05-30-2012: v0.2.00
+-------------------
+Initial release of Luview library and Mythos-3d plotting application.
+
+
+

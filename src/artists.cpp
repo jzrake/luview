@@ -345,7 +345,7 @@ void TrianglesEnsemble::draw_local()
       n[0] = n1[2]*n2[1] - n1[1]*n2[2];
       n[1] = n1[0]*n2[2] - n1[2]*n2[0];
       n[2] = n1[1]*n2[0] - n1[0]*n2[1];
-      
+
       glNormal3fv(n);
       glVertex3fv(v);
       glVertex3fv(u);

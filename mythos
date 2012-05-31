@@ -19,7 +19,7 @@ function plot2d(input, kwargs)
    local cmshade = shaders.load_shader("cbar")
 
    local act = {box=box, srf=srf, img=image}
-   local Nx, Ny, series_ind = 1
+   local Nx, Ny
    local mode = '2d'
 
    if type(input) == 'function' then
@@ -40,16 +40,13 @@ function plot2d(input, kwargs)
 
    height:set_normalize(true)
    height:set_mode("luminance")
-
    image:set_data("image", height)
    image:set_data("color_table", pyluts)
    image:set_scale(-1.0, Nx/Ny, 1.0)
    image:set_shader(cmshade)
-
    verts:set_input(height)
    scalars = verts:get_output("scalars")
    scalars:set_normalize(true)
-
    srf:set_data("triangles", verts:get_output("triangles"))
    srf:set_data("normals", verts:get_output("normals"))
    srf:set_data("color_table", pyluts)
@@ -60,6 +57,11 @@ function plot2d(input, kwargs)
    srf:set_orientation(-90,0,0)
    srf:set_position(0.0, 0.0, 0.0)
    srf:set_scale(1.0, 0.25, 1.0)
+   box:set_color(0.2, 0.2, 0.2)
+   box:set_shader(lights)
+   box:set_scale(1.0, 1.0, 1.0)
+   box:set_linewidth(0.5)
+   window:set_color(table.unpack(kwargs.background or {0.5, 0.5, 0.5}))
 
    function srf:inc_height()
       local sx, sy, sz = self:get_scale()
@@ -69,11 +71,6 @@ function plot2d(input, kwargs)
       local sx, sy, sz = self:get_scale()
       self:set_scale(sx, sy/1.1, sz)
    end
-   window:set_color(table.unpack(kwargs.background or {0.5, 0.5, 0.5}))
-   box:set_color(0.2, 0.2, 0.2)
-   box:set_shader(lights)
-   box:set_scale(1.0, 1.0, 1.0)
-   box:set_linewidth(0.5)
 
    local function toggle_3d()
       if mode == '3d' then
@@ -115,14 +112,19 @@ function main()
    local optparse = require 'optparse'
    local parser = optparse.OptionParser{
       usage="%prog [options] [input files]", version="0.2.0"}
+
    parser.add_option{
-      "-h", "--help", action="store_true", dest="help", help="print help"}
+      "-h", "--help", action="store_true", dest="help",
+      help="print help"}
    parser.add_option{
-      "-f", "--func", action="store", dest="func", help="function to plot: f(x,y)"}
+      "-f", "--func", action="store", dest="func",
+      help="function to plot: f(x,y)"}
    parser.add_option{
-      "-d", "--dset", action="store", dest="dset", help="named HDF5 dataset"}
+      "-d", "--dset", action="store", dest="dset",
+      help="named HDF5 dataset"}
    parser.add_option{
-      "--background", action="store", dest="background", help="scene background color"}
+      "--background", action="store", dest="background",
+      help="scene background color"}
 
    local LuviewColors = {black = {0.00, 0.00, 0.00},
 			 white = {1.00, 1.00, 1.00},
@@ -151,14 +153,10 @@ function main()
    end
 
    if opts.func then
-      local func = load(
-	 string.format(
-	    [[
-		return (function(x,y)
-			   return %s
-			end)
-	     ]], opts.func), nil, nil, math)()
-      plot2d(func, kwargs) 
+      local func = load(([[return (function(x,y)
+				      return %s
+				   end)]]):format(opts.func), nil, nil, math)()
+      plot2d(func, kwargs)
    end
 end
 
