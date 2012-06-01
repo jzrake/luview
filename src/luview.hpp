@@ -393,6 +393,14 @@ private:
   void draw_local();
 } ;
 
+class ParameterizedPathArtist : public DrawableObject
+{
+public:
+  ParameterizedPathArtist();
+private:
+  void draw_local();
+} ;
+
 class TrianglesEnsemble : public DrawableObject
 {
 public:

@@ -29,6 +29,41 @@ template <class T> static void draw_cylinder(const T *x0, const T *x1, T rad0, T
   glPopMatrix();
 }
 
+static void draw_sphere(GLfloat *x0, GLfloat rad)
+{
+  glPushMatrix();
+  glTranslated(x0[0], x0[1], x0[2]);
+
+  GLUquadric *quad = gluNewQuadric();
+  gluSphere(quad, rad, 36, 36);
+  gluDeleteQuadric(quad);
+
+  glPopMatrix();
+}
+
+ParameterizedPathArtist::ParameterizedPathArtist()
+{
+   gl_modes.push_back(GL_DEPTH_TEST);
+  gl_modes.push_back(GL_LIGHTING);
+  gl_modes.push_back(GL_LIGHT0);
+  gl_modes.push_back(GL_BLEND);
+  gl_modes.push_back(GL_COLOR_MATERIAL);
+  gl_modes.push_back(GL_AUTO_NORMAL);
+  gl_modes.push_back(GL_NORMALIZE); 
+}
+void ParameterizedPathArtist::draw_local()
+{
+  GLfloat x0[3], x1[3];
+  GLfloat lw = LineWidth * 0.01;
+
+  x0[0] = -0.15; x0[1] = -0.15; x0[2] = -0.15;
+  x1[0] = +0.15; x1[1] = +0.15; x1[2] = +0.15;
+  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+
+  draw_sphere(x0, lw);
+  draw_sphere(x1, lw);
+}
+
 
 BoundingBox::BoundingBox()
 {
@@ -84,6 +119,8 @@ void BoundingBox::draw_local()
   x0[0] = +0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
+
+  //  draw_sphere();
 }
 
 
@@ -448,4 +485,3 @@ void PointsEnsemble::draw_local()
     }
   }
 }
-
