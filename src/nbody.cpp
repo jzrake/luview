@@ -84,7 +84,7 @@ void NbodySimulation::init_particles()
     const double v = sqrt(M/r);
 
     p->id = i;
-    p->m = RandomDouble(0.1, 10.0);
+    p->m = RandomDouble(0.01, 10.0);
 
     /*
     double r = sqrt(p->x[0]*p->x[0] + p->x[1]*p->x[1] + p->x[2]*p->x[2]);

@@ -46,6 +46,7 @@ protected:
 
   void __do_normalize();
   void __trigger_refresh();
+  void __execute_cpu_transform();
   void __execute_gpu_transform();
   bool __ancestor_is_staged();
   bool __staged;

@@ -78,6 +78,7 @@ void DataSource::__trigger_refresh()
   if (__staged) {
     __refresh_cpu();
     __do_normalize();
+    __execute_cpu_transform();
     __cp_cpu_to_gpu();
     //    __execute_gpu_transform();
     __staged = false;
@@ -275,8 +276,16 @@ void DataSource::__do_normalize()
     __cpu_data[n] += x0;
   }
 }
+void DataSource::__execute_cpu_transform()
+{
+  if (!__cpu_transform || __cpu_data == NULL) return;
+  int Nt = this->get_size();
 
-
+  for (int n=0; n<Nt; ++n) {
+    const GLfloat x = __cpu_data[n];
+    __cpu_data[n] = __cpu_transform->call(x)[0];
+  }
+}
 void DataSource::__execute_gpu_transform()
 {
   /*
@@ -404,8 +413,8 @@ int DataSource::_get_transform_(lua_State *L)
 int DataSource::_set_transform_(lua_State *L)
 {
   DataSource *self = checkarg<DataSource>(L, 1);
-  CallbackFunction *cb = checkarg<CallbackFunction>(L, 2);
-  self->__cpu_transform = self->replace(self->__cpu_transform, cb);
+  CallbackFunction *newcb = CallbackFunction::create_from_stack(L, 2);
+  self->__cpu_transform = self->replace(self->__cpu_transform, newcb);
   self->__staged = true;
   return 0;
 }

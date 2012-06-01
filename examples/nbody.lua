@@ -12,8 +12,6 @@ local shader = shaders.load_shader("multlights")
 local positions = nbody:get_output("positions")
 local masses = nbody:get_output("masses")
 
-masses:set_normalize(false)
-
 pntens:set_data("points", positions)
 pntens:set_data("sizes", masses)
 pntens:set_scale(0.6, 0.6, 0.6)
