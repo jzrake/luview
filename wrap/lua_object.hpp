@@ -20,8 +20,10 @@ extern "C" {
 #include "lauxlib.h"
 }
 
+#define __HELD_OBJECTS_TABLE "__HELD_OBJECTS_TABLE"
+#define __LUA_ATTRIB_TABLE "__LUA_ATTRIB_TABLE"
 #define __LDEBUG 0
-#define __REGLUA "LuaCppObject"
+#define __REGLUA "__LUA_CPP_OBJECT_TABLE"
 
 // ---------------------------------------------------------------------------
 #define STACKDUMP {                                                     \
@@ -116,8 +118,8 @@ protected:
   {
     void *object_p = lua_touserdata(L, pos);
     if (object_p == NULL) {
-      luaL_error(L, "object of type '%s' is not a subtype of '%s'",
-		 luaL_typename(L, pos),
+      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
+		 luaL_typename(L, pos), pos,
 		 demangle(typeid(T).name()).c_str());
     }
 
@@ -125,8 +127,8 @@ protected:
     T *result = dynamic_cast<T*>(cpp_object);
 
     if (result == NULL) {
-      luaL_error(L, "object of type '%s' is not a subtype of '%s'",
-                 cpp_object->__type_name.c_str(),
+      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
+                 cpp_object->__type_name.c_str(), pos,
 		 demangle(typeid(T).name()).c_str());
     }
     return result;
@@ -164,8 +166,8 @@ protected:
        { "__gc", LuaCppObject::_gc},
        {NULL, NULL}};
     luaL_setfuncs(L, meta, 0);
-    lua_newtable(L); lua_setfield(L, -2, "held_objects");
-    lua_newtable(L); lua_setfield(L, -2, "lua_attributes");
+    lua_newtable(L); lua_setfield(L, -2, __HELD_OBJECTS_TABLE);
+    lua_newtable(L); lua_setfield(L, -2, __LUA_ATTRIB_TABLE);
     lua_setmetatable(L, -2);
 
     // Register the object with a unique reference id for easy retrieval as a
@@ -208,6 +210,12 @@ protected:
     }
     return refid;
   }
+
+public:
+  // ---------------------------------------------------------------------------
+  // The methods below have public access so that non-class members may create
+  // objects
+  // ---------------------------------------------------------------------------
   template <class T> static T *create(lua_State *L)
   {
     T *thing = new T;
@@ -215,14 +223,11 @@ protected:
     lua_pop(L, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
   }
-
-protected:
-  void retrieve(LuaCppObject *object)
+  static void retrieve(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
   // Pushes the LuaCppObject associated with `object` on the stack
   // ---------------------------------------------------------------------------
   {
-    lua_State *L = __lua_state;
     if (object == NULL) {
       lua_pushnil(L);
       return;
@@ -231,6 +236,11 @@ protected:
     lua_rawgeti(L, -1, object->__refid);
     lua_remove(L, -2);
   }
+protected:
+  void retrieve(LuaCppObject *object)
+  {
+    retrieve(__lua_state, object);
+  }
   void retrieve(const char *key)
   // ---------------------------------------------------------------------------
   // Pushes the pure Lua object this->held_objects[key] onto the stack
@@ -238,7 +248,7 @@ protected:
   {
     lua_State *L = __lua_state;
     retrieve(this);
-    luaL_getmetafield(L, -1, "held_objects");
+    luaL_getmetafield(L, -1, __HELD_OBJECTS_TABLE);
     lua_remove(L, -2); // done with `this`
     lua_getfield(L, -1, key);
     lua_remove(L, -2); // done with this->held_objects
@@ -301,7 +311,7 @@ private:
     lua_State *L = __lua_state;
     const int pos = lua_absindex(L, -1);
     retrieve(this);
-    luaL_getmetafield(L, -1, "held_objects");
+    luaL_getmetafield(L, -1, __HELD_OBJECTS_TABLE);
     lua_remove(L, -2); // removes `this`
     if (key == NULL) {
       lua_pushnumber(L, refid); // key is obj's refid (for LuaCppObject's)
@@ -344,9 +354,7 @@ private:
   // ---------------------------------------------------------------------------
   // Objects needing to instantiate their own Lua objects should do so here.
   // ---------------------------------------------------------------------------
-  {
-    
-  }
+  { }
   virtual std::string _get_type()
   // ---------------------------------------------------------------------------
   // May be over-ridden by derived classes in case a different type name is
@@ -357,10 +365,9 @@ private:
   }
   virtual int _call()
   {
-    luaL_error(__lua_state, "object does not respond to function calls");
-    return 0;
+    META_NOT_IMPLEMENTED("()");
   }
-  virtual std::string _tostring()
+  virtual std::string __tostring()
   {
     std::stringstream ss;
     ss<<"<"<<this->_get_type()<<" instance at "<<this<<">";
@@ -369,11 +376,10 @@ private:
   virtual int _newindex()
   {
     lua_State *L = __lua_state;
-    luaL_getmetafield(L, 1, "lua_attributes");
+    luaL_getmetafield(L, 1, __LUA_ATTRIB_TABLE);
     lua_pushvalue(L, 2);
     lua_pushvalue(L, 3);
     lua_settable(L, -3);
-
     return 0;
   }
   virtual int _index()
@@ -390,7 +396,7 @@ private:
     lua_State *L = __lua_state;
     std::string method_name = lua_tostring(L, 2);
 
-    luaL_getmetafield(L, 1, "lua_attributes");
+    luaL_getmetafield(L, 1, __LUA_ATTRIB_TABLE);
     lua_getfield(L, -1, method_name.c_str());
 
     if (!lua_isnil(L, -1)) {
@@ -466,7 +472,6 @@ private:
   static int _eq(lua_State *L) { META_STATIC(__eq); }
   static int _lt(lua_State *L) { META_STATIC(__lt); }
   static int _le(lua_State *L) { META_STATIC(__le); }
-
   static int _newindex(lua_State *L)
   {
     LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
@@ -482,6 +487,13 @@ private:
     LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
     lua_remove(L, 1); // leave all remaining arguments on the stack
     return self->_call();
+  }
+  static int _tostring(lua_State *L)
+  {
+    LuaCppObject *object = *((LuaCppObject**) lua_touserdata(L, 1));
+    std::string str = object->__tostring();
+    lua_pushstring(L, str.c_str());
+    return 1;
   }
   static int _gc(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -504,12 +516,6 @@ private:
 
     delete object;
     return 0;
-  }
-  static int _tostring(lua_State *L)
-  {
-    LuaCppObject *object = *((LuaCppObject**) lua_touserdata(L, 1));
-    lua_pushstring(L, object->_tostring().c_str());
-    return 1;
   }
 } ;
 

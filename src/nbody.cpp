@@ -9,7 +9,7 @@
 
 
 NbodySimulation::NbodySimulation() :
-  NumberOfParticles(600),
+  NumberOfParticles(400),
   TimeStep(4e-6),
   particles(NULL)
 {
@@ -22,20 +22,38 @@ NbodySimulation::~NbodySimulation()
 void NbodySimulation::advance()
 {
   MoveParticlesRK2(particles, NumberOfParticles, TimeStep);
-  refresh_output();
+
+  GLfloat *points = new GLfloat[NumberOfParticles*3];
+  GLfloat *masses = new GLfloat[NumberOfParticles];
+
+  for (int i=0; i<NumberOfParticles; ++i) {
+    struct MassiveParticle *p = particles + i;
+    points[3*i + 0] = p->x[0];
+    points[3*i + 1] = p->x[1];
+    points[3*i + 2] = p->x[2];
+    masses[i] = p->m;
+  }
+  int N[2] = { NumberOfParticles, 3 };
+  __output_ds["positions"]->set_data(points, N, 2);
+  __output_ds["masses"]->set_data(masses, N, 1);
+  __staged = true;
+  delete [] points;
+  delete [] masses;
 }
 void NbodySimulation::__init_lua_objects()
 {
-  hold(output_points = create<PointsSource>(__lua_state));
-  refresh_output();
+  hold(__output_ds["positions"] = create<DataSource>(__lua_state));
+  hold(__output_ds["masses"] = create<DataSource>(__lua_state));
+  __output_ds["positions"]->set_input(this);
+  __output_ds["masses"]->set_input(this);
+  advance();
 }
 NbodySimulation::LuaInstanceMethod
 NbodySimulation::__getattr__(std::string &method_name)
 {
   AttributeMap attr;
   attr["advance"] = _advance_;
-  attr["get_output"] = _get_output_;
-  RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
 }
 int NbodySimulation::_advance_(lua_State *L)
 {
@@ -43,25 +61,6 @@ int NbodySimulation::_advance_(lua_State *L)
   self->advance();
   return 0;
 }
-void NbodySimulation::refresh_output()
-{
-  double *points = new double[NumberOfParticles*3];
-  for (int i=0; i<NumberOfParticles; ++i) {
-    struct MassiveParticle *p = particles + i;
-    points[3*i + 0] = p->x[0];
-    points[3*i + 1] = p->x[1];
-    points[3*i + 2] = p->x[2];
-  }
-  output_points->set_points(points, NumberOfParticles, 3);
-  delete [] points;
-}
-int NbodySimulation::_get_output_(lua_State *L)
-{
-  NbodySimulation *self = checkarg<NbodySimulation>(L, 1);
-  self->retrieve(self->output_points);
-  return 1;
-}
-
 void NbodySimulation::init_particles()
 {
   const int N = NumberOfParticles;
@@ -87,16 +86,21 @@ void NbodySimulation::init_particles()
     p->id = i;
     p->m = RandomDouble(0.1, 10.0);
 
-    p->x[0] = r*cos(t);//1+RandomDouble(-0.1, 0.1);//r*cos(t);
+    /*
+    double r = sqrt(p->x[0]*p->x[0] + p->x[1]*p->x[1] + p->x[2]*p->x[2]);
+    double v = sqrt(M/r);
+    p->x[0] = 1.0 + RandomDouble(-0.1, 0.1);
     p->x[1] = RandomDouble(-0.1, 0.1);
-    p->x[2] = r*sin(t);//1+RandomDouble(-0.1, 0.1);//r*sin(t);
+    p->x[2] = 1.0 + RandomDouble(-0.1, 0.1);
+    */
 
-    //    double r = sqrt(p->x[0]*p->x[0] + p->x[1]*p->x[1] + p->x[2]*p->x[2]);
-    //    double v = sqrt(M/r);
+    p->x[0] = r*cos(t);
+    p->x[1] = RandomDouble(-0.1, 0.1);
+    p->x[2] = r*sin(t);
 
-    p->v[0] = RandomDouble(-0.1, 0.1) + 0.9*v*p->x[2]/r;
+    p->v[0] = RandomDouble(-0.1, 0.1) + v*p->x[2]/r;
     p->v[1] = RandomDouble(-0.1, 0.1);
-    p->v[2] = RandomDouble(-0.1, 0.1) - 0.9*v*p->x[0]/r;
+    p->v[2] = RandomDouble(-0.1, 0.1) - v*p->x[0]/r;
   }
 }
 

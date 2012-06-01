@@ -63,7 +63,7 @@ local function test_gc()
 
    print("collected?")
 
-   for k,v in pairs(LuaCppObject) do
+   for k,v in pairs(__LUA_CPP_OBJECT_TABLE) do
       print(k,v)
    end
 end
@@ -81,8 +81,8 @@ local function test_hold_drop()
    david:set_dog(sadie)
    sadie:set_owner(david)
 
-   for k,v in pairs(getmetatable(david).held_objects) do print(k,v) end
-   for k,v in pairs(getmetatable(sadie).held_objects) do print(k,v) end
+   for k,v in pairs(getmetatable(david).__HELD_OBJECTS_TABLE) do print(k,v) end
+   for k,v in pairs(getmetatable(sadie).__HELD_OBJECTS_TABLE) do print(k,v) end
 
    print("sadie, " .. sadie:get_refid() .. " should NOT be collected")
    print("murphy, " .. murphy:get_refid() .. " should be collected")
@@ -112,7 +112,6 @@ local function test_callback()
 end
 
 local function test_add_method()
-
    local sadie = tests.Dog()
    function sadie:run_around()
       print("running aound! ok, playing...")
@@ -120,6 +119,12 @@ local function test_add_method()
    end
    sadie:run_around()
 end
+
+local function test_complex()
+   print(2 + tests.j)
+end
+test_complex()
+os.exit()
 
 test_add_method()
 test_callback()

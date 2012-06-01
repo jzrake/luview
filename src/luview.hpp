@@ -17,7 +17,6 @@ extern "C" {
 // -----------------------------------------------------------------------------
 class CallbackFunction;
 class DataSource;
-class PointsSource;
 class ShaderProgram;
 // -----------------------------------------------------------------------------
 
@@ -319,7 +318,7 @@ private:
   void draw_local();
 } ;
 
-class NbodySimulation : public LuaCppObject
+class NbodySimulation : public DataSource
 {
 public:
   NbodySimulation();
@@ -334,10 +333,8 @@ private:
   } ;
   int NumberOfParticles;
   double TimeStep;
-  PointsSource *output_points;
   MassiveParticle *particles;
   void init_particles();
-  void refresh_output();
   void ComputeForces(struct MassiveParticle *P0, int N);
   void ComputeForces2(struct MassiveParticle *P0, int N);
   void MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt);
@@ -348,7 +345,6 @@ protected:
   void __init_lua_objects();
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _advance_(lua_State *L);
-  static int _get_output_(lua_State *L);
 } ;
 
 class BoundingBox : public DrawableObject
@@ -374,6 +370,17 @@ public:
   ParametricSurface();
 private:
   GLfloat Lx0, Lx1, Ly0, Ly1;
+  void draw_local();
+} ;
+
+class PointsEnsemble : public DrawableObject
+{
+public:
+  GLuint sprite_texture;
+  PointsEnsemble();
+  ~PointsEnsemble();
+private:
+  void load_sprite();
   void draw_local();
 } ;
 

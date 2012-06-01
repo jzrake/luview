@@ -316,6 +316,68 @@ std::vector<double> LuaFunction::call_priv(double *x, int narg)
   return res;
 }
 
+#include <complex>
+class LuaComplexDouble : public LuaCppObject
+{
+public:
+  std::complex<double> z;
+  LuaComplexDouble() : z(0,0) { }
+protected:
+  virtual int __addd() {
+    lua_State *L = __lua_state;
+    LuaComplexDouble *a, *b;
+
+    STACKDUMP;
+
+    if (lua_isnumber(L, 1)) {
+      a = create<LuaComplexDouble>(L);
+      a->z = lua_tonumber(L, 1);
+    }
+    else {
+      a = checkarg<LuaComplexDouble>(L, 1);
+    }
+    if (lua_isnumber(L, 2)) {
+      b = create<LuaComplexDouble>(L);
+      b->z = lua_tonumber(L, 2);
+    }
+    else {
+      b = checkarg<LuaComplexDouble>(L, 2);
+    }
+
+    LuaComplexDouble *ret = create<LuaComplexDouble>(L);
+    ret->z = a->z + b->z;
+    retrieve(L, ret);
+    return 1;
+  }
+  virtual std::string __tostring()
+  {
+    std::stringstream ss;
+    ss<<this->z;
+    return ss.str();
+  }
+  virtual LuaInstanceMethod __getattr__(std::string &method_name)
+  {
+    AttributeMap attr;
+    attr["conj"] = _conj_;
+    attr["norm"] = _norm_;
+    RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
+  }
+  static int _conj_(lua_State *L) {
+    LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
+    LuaComplexDouble *ret = create<LuaComplexDouble>(L);
+    ret->z = conj(self->z);
+    self->retrieve(ret);
+    return 1;
+  }
+  static int _norm_(lua_State *L) {
+    LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
+    LuaComplexDouble *ret = create<LuaComplexDouble>(L);
+    ret->z = norm(self->z);
+    self->retrieve(ret);
+    return 0;
+  }
+} ;
+
 
 int main()
 {
@@ -331,6 +393,12 @@ int main()
   LuaCppObject::Register<Poodle>(L);
   LuaCppObject::Register<PetOwner>(L);
   LuaCppObject::Register<CppFunction>(L);
+
+  LuaComplexDouble *J = LuaCppObject::create<LuaComplexDouble>(L);
+  J->z = std::complex<double>(0,1);
+  LuaCppObject::retrieve(L, J);
+  lua_setfield(L, -2, "j");
+
   lua_setglobal(L, "tests");
 
   if (luaL_dofile(L, "run.lua")) {

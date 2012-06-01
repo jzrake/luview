@@ -12,6 +12,7 @@ OBJ = 	luview.o \
 	pyplotcm.o \
 	tesselate.o \
 	h5lua.o \
+	nbody.o \
 	glInfo.o \
 
 
