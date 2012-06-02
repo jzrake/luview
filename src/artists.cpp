@@ -29,7 +29,7 @@ template <class T> static void draw_cylinder(const T *x0, const T *x1, T rad0, T
   glPopMatrix();
 }
 
-static void draw_sphere(GLfloat *x0, GLfloat rad)
+static void draw_sphere(const GLfloat *x0, GLfloat rad)
 {
   glPushMatrix();
   glTranslated(x0[0], x0[1], x0[2]);
@@ -53,15 +53,28 @@ ParameterizedPathArtist::ParameterizedPathArtist()
 }
 void ParameterizedPathArtist::draw_local()
 {
-  GLfloat x0[3], x1[3];
+  EntryDS cp = DataSources.find("points");
+
+  if (cp != DataSources.end()) {
+    glActiveTexture(GL_TEXTURE0 + 2);
+    cp->second->compile();
+    cp->second->check_has_data("path");
+    cp->second->check_num_dimensions("path", 2);
+    cp->second->check_num_points("path", 3, 1);
+  }
+  else {
+    return;
+  }
+
+  int Np = cp->second->get_num_points(0);
+  const GLfloat *points = cp->second->get_data();
   GLfloat lw = LineWidth * 0.01;
 
-  x0[0] = -0.15; x0[1] = -0.15; x0[2] = -0.15;
-  x1[0] = +0.15; x1[1] = +0.15; x1[2] = +0.15;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
-
-  draw_sphere(x0, lw);
-  draw_sphere(x1, lw);
+  for (int n=0; n<Np-1; ++n) {
+    draw_sphere(&points[3*n], lw);
+    draw_cylinder<GLfloat>(&points[3*n], &points[3*(n+1)], lw, lw);
+  }
+  draw_sphere(&points[3*(Np-1)], lw);
 }
 
 
@@ -84,15 +97,23 @@ void BoundingBox::draw_local()
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = -0.5; x1[2] = -0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_sphere(x0, lw);
+  draw_sphere(x1, lw);
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
   x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_sphere(x0, lw);
+  draw_sphere(x1, lw);
   x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_sphere(x0, lw);
+  draw_sphere(x1, lw);
   x0[0] = -0.5; x0[1] = +0.5; x0[2] = +0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_sphere(x0, lw);
+  draw_sphere(x1, lw);
 
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = -0.5; x1[1] = +0.5; x1[2] = -0.5;
@@ -119,8 +140,6 @@ void BoundingBox::draw_local()
   x0[0] = +0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
   draw_cylinder<GLfloat>(x0, x1, lw, lw);
-
-  //  draw_sphere();
 }
 
 
