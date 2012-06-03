@@ -29,7 +29,7 @@ void IntegralCurve::__refresh_cpu()
   double r1[3], r2[3], r3[3], r4[3];
   double k1[3], k2[3], k3[3], k4[3];
 
-  double ds = 1e-2, s = 0.0, s1 = 1.0;
+  double ds = 1e-2, s = 0.0, s1 = 10.0;
   std::memcpy(r, r0, 3*sizeof(double));
 
   std::vector<double> points;
@@ -64,7 +64,6 @@ void IntegralCurve::__refresh_cpu()
       r2[1] = r[1] + 0.5*k2[1];
       r2[2] = r[2] + 0.5*k2[2];
     }
-
     {
       std::vector<double> v1 = __cpu_transform->call(r2, 3);
       double v = sqrt(v1[0]*v1[0] + v1[1]*v1[1] + v1[2]*v1[2]);

@@ -581,6 +581,8 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<PointsEnsemble>(L);
   LuaCppObject::Register<ParameterizedPathArtist>(L);
 
+  LuaCppObject::Register<TextRendering>(L);
+
   luaL_requiref(L, "lunum", luaopen_lunum, false); lua_pop(L, 1);
   luaL_requiref(L, "hdf5", luaopen_hdf5, false); lua_pop(L, 1);
 

@@ -14,6 +14,7 @@ OBJ = 	luview.o \
 	h5lua.o \
 	nbody.o \
 	icrv.o \
+	text.o \
 	glInfo.o \
 
 
@@ -23,6 +24,9 @@ default : $(LUVIEW_SO) $(LUA_TARGET)
 
 h5lua.o : h5lua.c
 	$(CC) $(CFLAGS) -c $< -std=c99 $(H5_INC) $(GL_INC)
+
+text.o : text.cpp
+	$(CXX) $(CFLAGS) -c $< $(GL_INC) -I/usr/X11/include/freetype2
 
 %.o : %.c
 	$(CC) $(CFLAGS) -c $< $(GL_INC)
@@ -41,7 +45,7 @@ $(LUVIEW_A) : $(OBJ)
 
 $(LUVIEW_SO) : $(OBJ)
 	mkdir -p $(LUA_LIB)
-	$(SO) -o $@ $^ $(LIB)
+	$(SO) -o $@ $^ $(LIB) -L/usr/X11/lib -lfreetype ../dep/lib/libftgl.a
 
 clean :
 	rm -f *.o *.lc

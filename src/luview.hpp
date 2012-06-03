@@ -41,7 +41,13 @@ protected:
   int __num_indices;
   int __num_points[__DATASOURCE_MAXDIMS];
 
-  // if true for component then map output into [0,1]
+  // If other than zero, then the last `__num_component_axes` axes are
+  // considered components rather than domain dimensions: 1 => vectors, 2 =>
+  // matrices, 3 => 3rd rank tensors, etc. Initially 0.
+  int __num_component_axes;
+
+  // If `__normalize` is true for component then map output into
+  // [0,1]. Initially false.
   bool __normalize;
 
   virtual void __do_normalize();
@@ -84,6 +90,8 @@ public:
      ni -> __num_indices */
   void set_indices(const GLuint *indices, int ni);
 
+  void set_num_component_axes(int n);
+
   void check_num_dimensions(const char *name, int ndims);
   void check_num_points(const char *name, int npnts, int dim);
   void check_has_data(const char *name);
@@ -103,6 +111,8 @@ protected:
   static int _set_data_(lua_State *L); // return a lunum array
   static int _get_mode_(lua_State *L);
   static int _set_mode_(lua_State *L);
+  static int _get_num_component_axes_(lua_State *L);
+  static int _set_num_component_axes_(lua_State *L);
   static int _get_input_(lua_State *L);
   static int _set_input_(lua_State *L);
   static int _get_transform_(lua_State *L);
@@ -416,6 +426,14 @@ class VolumeRendering : public DrawableObject
 {
 public:
   VolumeRendering();
+private:
+  void draw_local();
+} ;
+
+class TextRendering : public DrawableObject
+{
+public:
+  TextRendering();
 private:
   void draw_local();
 } ;

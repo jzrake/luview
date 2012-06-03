@@ -42,6 +42,7 @@ DataSource::DataSource()
     __texture_format(0),
     __num_dimensions(1),
     __num_indices(0),
+    __num_component_axes(0),
     __normalize(false),
     __staged(true)
 {
@@ -147,6 +148,11 @@ void DataSource::set_indices(const GLuint *indices, int ni)
   __ind_data = (GLuint*) realloc(__ind_data, sz);
   std::memcpy(__ind_data, indices, sz);
   __num_indices = ni;
+  __staged = true;
+}
+void DataSource::set_num_component_axes(int n)
+{
+  __num_component_axes = n;
   __staged = true;
 }
 void DataSource::check_num_dimensions(const char *name, int ndims)
@@ -280,10 +286,12 @@ void DataSource::__execute_cpu_transform()
 {
   if (!__cpu_transform || __cpu_data == NULL) return;
   int Nt = this->get_size();
-
-  for (int n=0; n<Nt; ++n) {
-    const GLfloat x = __cpu_data[n];
-    __cpu_data[n] = __cpu_transform->call(x)[0];
+  int Nd = this->get_num_dimensions();
+  int Nc = this->__num_component_axes ? this->get_num_points(Nd-1) : 1;
+  for (int n=0; n<Nt; n+=Nc) {
+    const GLfloat *x = &__cpu_data[n];
+    const std::vector<double> X(x, x+Nc);
+    __cpu_data[n] = __cpu_transform->call(X)[0];
   }
 }
 void DataSource::__execute_gpu_transform()
@@ -321,6 +329,7 @@ void DataSource::__execute_gpu_transform()
 }
 
 
+
 DataSource::LuaInstanceMethod
 DataSource::__getattr__(std::string &method_name)
 {
@@ -329,6 +338,8 @@ DataSource::__getattr__(std::string &method_name)
   attr["set_normalize"] = _set_normalize_;
   attr["get_data"] = _get_data_;
   attr["set_data"] = _set_data_;
+  attr["get_num_component_axes"] = _get_num_component_axes_;
+  attr["set_num_component_axes"] = _set_num_component_axes_;
   attr["get_input"] = _get_input_;
   attr["set_input"] = _set_input_;
   attr["get_transform"] = _get_transform_;
@@ -389,6 +400,18 @@ int DataSource::_set_mode_(lua_State *L)
   DataSource *self = checkarg<DataSource>(L, 1);
   const char *mode = luaL_checkstring(L, 2);
   self->set_mode(mode);
+  return 0;
+}
+int DataSource::_get_num_component_axes_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  lua_pushnumber(L, self->__num_component_axes);
+  return 1;
+}
+int DataSource::_set_num_component_axes_(lua_State *L)
+{
+  DataSource *self = checkarg<DataSource>(L, 1);
+  self->set_num_component_axes(luaL_checkinteger(L, 2));
   return 0;
 }
 int DataSource::_get_input_(lua_State *L)

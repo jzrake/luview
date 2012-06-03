@@ -3,42 +3,41 @@
 #include "luview.hpp"
 #include <cmath>
 
-template <class T> static void draw_cylinder(const T *x0, const T *x1, T rad0, T rad1)
+static void draw_cylinder(const GLfloat *x0, const GLfloat *x1,
+			  GLfloat rad0, GLfloat rad1, int qual)
 {
-  T r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
-  T mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
+  GLfloat r[3] = {x1[0] - x0[0], x1[1] - x0[1], x1[2] - x0[2]};
+  GLfloat mag = sqrt(r[0]*r[0] + r[1]*r[1] + r[2]*r[2]);
   r[0] /= mag;
   r[1] /= mag;
   r[2] /= mag;
 
-  T a[3], zhat[3] = { 0, 0, 1 };
+  GLfloat a[3], zhat[3] = { 0, 0, 1 };
   a[0] = zhat[1]*r[2] - zhat[2]*r[1];
   a[1] = zhat[2]*r[0] - zhat[0]*r[2];
   a[2] = zhat[0]*r[1] - zhat[1]*r[0];
 
-  T angle = acos(r[2]) * 180.0 / M_PI;
+  GLfloat angle = acos(r[2]) * 180.0 / M_PI;
 
   glPushMatrix();
   glTranslated(x0[0], x0[1], x0[2]);
   glRotated(angle, a[0], a[1], a[2]);
 
   GLUquadric *quad = gluNewQuadric();
-  gluCylinder(quad, rad0, rad1, mag, 72, 1);
+  gluCylinder(quad, rad0, rad1, mag, qual, 1);
   gluDeleteQuadric(quad);
 
   glPopMatrix();
 }
 
-static void draw_sphere(const GLfloat *x0, GLfloat rad)
+static void draw_sphere(const GLfloat *x0, GLfloat rad, int qual)
 {
+  GLUquadric *quad = gluNewQuadric();
   glPushMatrix();
   glTranslated(x0[0], x0[1], x0[2]);
-
-  GLUquadric *quad = gluNewQuadric();
-  gluSphere(quad, rad, 36, 36);
-  gluDeleteQuadric(quad);
-
+  gluSphere(quad, rad, qual, qual);
   glPopMatrix();
+  gluDeleteQuadric(quad);
 }
 
 ParameterizedPathArtist::ParameterizedPathArtist()
@@ -71,10 +70,10 @@ void ParameterizedPathArtist::draw_local()
   GLfloat lw = LineWidth * 0.01;
 
   for (int n=0; n<Np-1; ++n) {
-    draw_sphere(&points[3*n], lw);
-    draw_cylinder<GLfloat>(&points[3*n], &points[3*(n+1)], lw, lw);
+    draw_sphere(&points[3*n], lw, 12);
+    draw_cylinder(&points[3*n], &points[3*(n+1)], lw, lw, 24);
   }
-  draw_sphere(&points[3*(Np-1)], lw);
+  draw_sphere(&points[3*(Np-1)], lw, 12);
 }
 
 
@@ -96,50 +95,50 @@ void BoundingBox::draw_local()
 
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = -0.5; x1[2] = -0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
-  draw_sphere(x0, lw);
-  draw_sphere(x1, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
+  draw_sphere(x0, lw, 72);
+  draw_sphere(x1, lw, 72);
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
   x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
-  draw_sphere(x0, lw);
-  draw_sphere(x1, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
+  draw_sphere(x0, lw, 72);
+  draw_sphere(x1, lw, 72);
   x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
-  draw_sphere(x0, lw);
-  draw_sphere(x1, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
+  draw_sphere(x0, lw, 72);
+  draw_sphere(x1, lw, 72);
   x0[0] = -0.5; x0[1] = +0.5; x0[2] = +0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
-  draw_sphere(x0, lw);
-  draw_sphere(x1, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
+  draw_sphere(x0, lw, 72);
+  draw_sphere(x1, lw, 72);
 
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = -0.5; x1[1] = +0.5; x1[2] = -0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = -0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = +0.5;
   x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = +0.5; x0[1] = -0.5; x0[2] = +0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
 
   x0[0] = -0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = -0.5; x1[1] = -0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = -0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = -0.5; x1[1] = +0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = +0.5; x0[1] = -0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = -0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
   x0[0] = +0.5; x0[1] = +0.5; x0[2] = -0.5;
   x1[0] = +0.5; x1[1] = +0.5; x1[2] = +0.5;
-  draw_cylinder<GLfloat>(x0, x1, lw, lw);
+  draw_cylinder(x0, x1, lw, lw, 72);
 }
 
 
@@ -294,7 +293,7 @@ void SegmentsEnsemble::draw_local()
     for (int n=0; n<Np; ++n) {
       const GLfloat *u = &verts[3*indices[2*n + 0]];
       const GLfloat *v = &verts[3*indices[2*n + 1]];
-      draw_cylinder<GLfloat>(u, v, 0.01*LineWidth, 0.01*LineWidth);
+      draw_cylinder(u, v, 0.01*LineWidth, 0.01*LineWidth, 24);
     }
   }
   else {
