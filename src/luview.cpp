@@ -92,18 +92,21 @@ std::vector<double> CallbackFunction::call(double u, double v, double w)
   double x[3] = {u,v,w};
   return call_priv(x, 3);
 }
-std::vector<double> CallbackFunction::call(std::vector<double> X)
+std::vector<double> CallbackFunction::call(const double *x, int narg)
+{
+  return call_priv(x, narg);
+}
+std::vector<double> CallbackFunction::call(const std::vector<double> &X)
 {
   return call_priv(&X[0], X.size());
 }
 
-std::vector<double> LuaFunction::call_priv(double *x, int narg)
+std::vector<double> LuaFunction::call_priv(const double *x, int narg)
 {
   lua_State *L = __lua_state;
   std::vector<double> res;
   int nstart = lua_gettop(L);
   retrieve("lua_callback");
-
 
   for (int i=0; i<narg; ++i) {
     lua_pushnumber(L, x[i]);
@@ -116,6 +119,7 @@ std::vector<double> LuaFunction::call_priv(double *x, int narg)
     res.push_back(lua_tonumber(L, -1));
     lua_pop(L, 1);
   }
+
   reverse(res.begin(), res.end());
   return res;
 }
@@ -563,6 +567,7 @@ extern "C" int luaopen_luview(lua_State *L)
   LuaCppObject::Register<DataSource>(L);
   LuaCppObject::Register<GridSource2D>(L);
   LuaCppObject::Register<ParametricVertexSource3D>(L);
+  LuaCppObject::Register<IntegralCurve>(L);
   LuaCppObject::Register<BoundingBox>(L);
   LuaCppObject::Register<ShaderProgram>(L);
   LuaCppObject::Register<ImagePlane>(L);

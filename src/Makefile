@@ -13,6 +13,7 @@ OBJ = 	luview.o \
 	tesselate.o \
 	h5lua.o \
 	nbody.o \
+	icrv.o \
 	glInfo.o \
 
 

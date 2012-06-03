@@ -44,11 +44,11 @@ protected:
   // if true for component then map output into [0,1]
   bool __normalize;
 
-  void __do_normalize();
-  void __trigger_refresh();
-  void __execute_cpu_transform();
-  void __execute_gpu_transform();
-  bool __ancestor_is_staged();
+  virtual void __do_normalize();
+  virtual void __trigger_refresh();
+  virtual void __execute_cpu_transform();
+  virtual void __execute_gpu_transform();
+  virtual bool __ancestor_is_staged();
   bool __staged;
 
   virtual void __refresh_cpu() { } // re-compile data from sources into cpu buffer
@@ -136,6 +136,16 @@ protected:
   void __init_lua_objects();
 } ;
 
+class IntegralCurve :  public DataSource
+{
+public:
+  IntegralCurve();
+protected:
+  void __execute_cpu_transform() { }
+  void __refresh_cpu();
+  void __init_lua_objects();
+} ;
+
 class CallbackFunction : public LuaCppObject
 {
 public:
@@ -143,20 +153,21 @@ public:
   std::vector<double> call(double u);
   std::vector<double> call(double u, double v);
   std::vector<double> call(double u, double v, double w);
-  std::vector<double> call(std::vector<double> X);
+  std::vector<double> call(const double *x, int narg);
+  std::vector<double> call(const std::vector<double> &X);
   void set_message(const char *msg) { message = msg; }
   const char *get_message() { return message.c_str(); }
   static CallbackFunction *create_from_stack(lua_State *L, int pos);
 private:
   std::string message;
-  virtual std::vector<double> call_priv(double *x, int narg) = 0;
+  virtual std::vector<double> call_priv(const double *x, int narg) = 0;
   int _call();
 } ;
 
 class LuaFunction : public CallbackFunction
 {
 private:
-  virtual std::vector<double> call_priv(double *x, int narg);
+  virtual std::vector<double> call_priv(const double *x, int narg);
 } ;
 
 class ColormapCollection : public DataSource
@@ -311,14 +322,6 @@ protected:
   static int _set_shader_(lua_State *L);
 } ;
 
-class VolumeRendering : public DrawableObject
-{
-public:
-  VolumeRendering();
-private:
-  void draw_local();
-} ;
-
 class NbodySimulation : public DataSource
 {
 public:
@@ -405,6 +408,14 @@ class TrianglesEnsemble : public DrawableObject
 {
 public:
   TrianglesEnsemble();
+private:
+  void draw_local();
+} ;
+
+class VolumeRendering : public DrawableObject
+{
+public:
+  VolumeRendering();
 private:
   void draw_local();
 } ;
