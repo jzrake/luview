@@ -430,12 +430,23 @@ private:
   void draw_local();
 } ;
 
+class FTFont;
 class TextRendering : public DrawableObject
 {
+private:
+  std::map<std::string, FTFont*> fonts;
+  std::string text;
 public:
   TextRendering();
+  ~TextRendering();
+  void set_text(std::string t);
+  const std::string &get_text();
 private:
   void draw_local();
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _get_text_(lua_State *L);
+  static int _set_text_(lua_State *L);
 } ;
 
 
