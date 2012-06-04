@@ -28,7 +28,13 @@ TextRendering::TextRendering()
 }
 TextRendering::~TextRendering()
 {
-  //  delete font;
+  delete fonts["bitmap"];
+  delete fonts["buffer"];
+  delete fonts["extrude"];
+  delete fonts["outline"];
+  delete fonts["pixmap"];
+  delete fonts["polygon"];
+  delete fonts["texture"];
 }
 void TextRendering::draw_local()
 {
