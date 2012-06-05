@@ -2,10 +2,6 @@
 #include "luview.hpp"
 #include "FTGL/ftgl.h"
 
-//  FTPolygonFont font("/usr/X11/lib/X11/fonts/TTF/VeraSeBd.ttf");
-//  FTBitmapFont font("/usr/X11/lib/X11/fonts/TTF/VeraSeBd.ttf");
-//  FTOutlineFont font("/usr/X11/lib/X11/fonts/TTF/VeraSeBd.ttf");
-
 TextRendering::TextRendering()
 {
   gl_modes.push_back(GL_DEPTH_TEST);
@@ -19,12 +15,12 @@ TextRendering::TextRendering()
   const char *font_file = "/usr/X11/lib/X11/fonts/TTF/Vera.ttf";
 
   fonts["bitmap"] = new FTBitmapFont(font_file);
-  fonts["buffer"] = new FTExtrudeFont(font_file);
+  fonts["buffer"] = new FTBufferFont(font_file);
   fonts["extrude"] = new FTExtrudeFont(font_file);
-  fonts["outline"] = new FTExtrudeFont(font_file);
-  fonts["pixmap"] = new FTExtrudeFont(font_file);
-  fonts["polygon"] = new FTExtrudeFont(font_file);
-  fonts["texture"] = new FTExtrudeFont(font_file);
+  fonts["outline"] = new FTOutlineFont(font_file);
+  fonts["pixmap"] = new FTPixmapFont(font_file);
+  fonts["polygon"] = new FTPolygonFont(font_file);
+  fonts["texture"] = new FTTextureFont(font_file);
 }
 TextRendering::~TextRendering()
 {
@@ -38,7 +34,7 @@ TextRendering::~TextRendering()
 }
 void TextRendering::draw_local()
 {
-  FTFont *font = fonts["extrude"];
+  FTFont *font = fonts["outline"];
 
   if (font->Error()) {
     luaL_error(__lua_state, "could not open TrueType font");
