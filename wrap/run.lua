@@ -121,14 +121,14 @@ local function test_add_method()
 end
 
 local function test_complex()
-   print(2 + tests.j)
+   print(tests.j + 2)
 end
 test_complex()
-os.exit()
 
-test_add_method()
-test_callback()
-test_hold_drop()
-test_casting()
-test_method_calls()
-test_gc()
+
+--test_add_method()
+--test_callback()
+--test_hold_drop()
+--test_casting()
+--test_method_calls()
+--test_gc()

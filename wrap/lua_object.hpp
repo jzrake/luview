@@ -48,6 +48,14 @@ extern "C" {
     return self->method();						\
   }									\
 // ---------------------------------------------------------------------------
+#define META_STATIC_BINARY(method) {					\
+    LuaCppObject *A = testarg<LuaCppObject>(L, 1);			\
+    LuaCppObject *B = testarg<LuaCppObject>(L, 2);			\
+    if (A) return A->method();						\
+    if (B) return B->method();						\
+    return 0;								\
+  }									\
+// ---------------------------------------------------------------------------
 
 
 
@@ -92,8 +100,9 @@ class LuaCppObject
   // stack.
   // ---------------------------------------------------------------------------
   {
+    std::string m = demangle(typeid(T).name());
     lua_pushcfunction(L, __new__<T>);
-    lua_setfield(L, -2, demangle(typeid(T).name()).c_str());
+    lua_setfield(L, -2, m.c_str());
   }
 
 protected:
@@ -132,6 +141,19 @@ protected:
 		 demangle(typeid(T).name()).c_str());
     }
     return result;
+  }
+  template <class T> static T *testarg(lua_State *L, int pos)
+  // ---------------------------------------------------------------------------
+  // This function first ensures that the argument at position `pos` is a valid
+  // user data. If so, it tries to dynamic_cast it to the template parameter
+  // `T`. This cast will fail if the object does not inherit from `T`, and the
+  // method returns NULL.
+  // ---------------------------------------------------------------------------
+  {
+    void *object_p = lua_touserdata(L, pos);
+    if (object_p == NULL) return NULL;
+    LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);
+    return dynamic_cast<T*>(cpp_object);
   }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
@@ -460,18 +482,18 @@ private:
   virtual int __lt() { META_NOT_IMPLEMENTED("<"); }
   virtual int __le() { META_NOT_IMPLEMENTED("<="); }
 
-  static int _add(lua_State *L) { META_STATIC(__add); }
-  static int _sub(lua_State *L) { META_STATIC(__sub); }
-  static int _mul(lua_State *L) { META_STATIC(__mul); }
-  static int _div(lua_State *L) { META_STATIC(__div); }
-  static int _pow(lua_State *L) { META_STATIC(__pow); }
-  static int _mod(lua_State *L) { META_STATIC(__mod); }
-  static int _unm(lua_State *L) { META_STATIC(__unm); }
-  static int _concat(lua_State *L) { META_STATIC(__concat); }
+  static int _add(lua_State *L) { META_STATIC_BINARY(__add); }
+  static int _sub(lua_State *L) { META_STATIC_BINARY(__sub); }
+  static int _mul(lua_State *L) { META_STATIC_BINARY(__mul); }
+  static int _div(lua_State *L) { META_STATIC_BINARY(__div); }
+  static int _pow(lua_State *L) { META_STATIC_BINARY(__pow); }
+  static int _mod(lua_State *L) { META_STATIC_BINARY(__mod); }
+  static int _unm(lua_State *L) { META_STATIC_BINARY(__unm); }
+  static int _concat(lua_State *L) { META_STATIC_BINARY(__concat); }
   static int _len(lua_State *L) { META_STATIC(__len); }
-  static int _eq(lua_State *L) { META_STATIC(__eq); }
-  static int _lt(lua_State *L) { META_STATIC(__lt); }
-  static int _le(lua_State *L) { META_STATIC(__le); }
+  static int _eq(lua_State *L) { META_STATIC_BINARY(__eq); }
+  static int _lt(lua_State *L) { META_STATIC_BINARY(__lt); }
+  static int _le(lua_State *L) { META_STATIC_BINARY(__le); }
   static int _newindex(lua_State *L)
   {
     LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));

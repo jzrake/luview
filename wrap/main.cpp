@@ -116,6 +116,7 @@ protected:
 class Cat : public Animal
 {
 public:
+  virtual ~Cat() { }
   void speak()
   {
     printf("meow!\n");
@@ -149,6 +150,7 @@ protected:
 class Dog : public Animal
 {
 public:
+  virtual ~Dog() { }
   void speak()
   {
     printf("bark!\n");
@@ -163,6 +165,7 @@ public:
 class Poodle : public Dog
 {
 public:
+  virtual ~Poodle() { }
   void speak()
   {
     printf("bark!\n");
@@ -183,6 +186,7 @@ private:
 
 public:
   PetOwner() : dog(NULL), cat(NULL) { }
+  virtual ~PetOwner() { }
   void set_dog(Dog *_dog)
   {
     if (dog) drop(dog);
@@ -323,11 +327,9 @@ public:
   std::complex<double> z;
   LuaComplexDouble() : z(0,0) { }
 protected:
-  virtual int __addd() {
+  virtual int __add() {
     lua_State *L = __lua_state;
     LuaComplexDouble *a, *b;
-
-    STACKDUMP;
 
     if (lua_isnumber(L, 1)) {
       a = create<LuaComplexDouble>(L);
@@ -347,6 +349,7 @@ protected:
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
     ret->z = a->z + b->z;
     retrieve(L, ret);
+
     return 1;
   }
   virtual std::string __tostring()
@@ -377,7 +380,6 @@ protected:
     return 0;
   }
 } ;
-
 
 int main()
 {
