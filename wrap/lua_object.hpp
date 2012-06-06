@@ -23,7 +23,7 @@ extern "C" {
 #define __CXX_INSTANCE_HELD_OBJECTS   "__CXX_INSTANCE_HELD_OBJECTS"
 #define __CXX_INSTANCE_ATTRIB         "__CXX_INSTANCE_ATTRIB"
 #define __CXX_OBJECT_LOOKUP           "__CXX_OBJECT_LOOKUP"
-#define __LDEBUG 0
+#define __LDEBUG 1
 
 // ---------------------------------------------------------------------------
 #define STACKDUMP {                                                     \
@@ -115,31 +115,6 @@ protected:
   {
     return make_lua_obj(L, new T);
   }
-  template <class T> static T *checkarg(lua_State *L, int pos)
-  // ---------------------------------------------------------------------------
-  // This function first ensures that the argument at position `pos` is a valid
-  // user data. If so, it tries to dynamic_cast it to the template parameter
-  // `T`. This cast will fail if the object does not inherit from `T`, causing a
-  // graceful Lua error.
-  // ---------------------------------------------------------------------------
-  {
-    void *object_p = lua_touserdata(L, pos);
-    if (object_p == NULL) {
-      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
-		 luaL_typename(L, pos), pos,
-		 demangle(typeid(T).name()).c_str());
-    }
-
-    LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);
-    T *result = dynamic_cast<T*>(cpp_object);
-
-    if (result == NULL) {
-      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
-                 cpp_object->__type_name.c_str(), pos,
-		 demangle(typeid(T).name()).c_str());
-    }
-    return result;
-  }
   template <class T> static T *testarg(lua_State *L, int pos)
   // ---------------------------------------------------------------------------
   // This function first ensures that the argument at position `pos` is a valid
@@ -153,6 +128,20 @@ protected:
     LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);
     return dynamic_cast<T*>(cpp_object);
   }
+  template <class T> static T *checkarg(lua_State *L, int pos)
+  // ---------------------------------------------------------------------------
+  // Convenience function, calls testarg and throws a Lua error if the result is
+  // NULL.
+  // ---------------------------------------------------------------------------
+  {
+    T *object_p = testarg<T>(L, pos);
+    if (object_p == NULL) {
+      std::string tn = demangle(typeid(T).name());
+      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
+		 luaL_typename(L, pos), pos, tn.c_str());
+    }
+    return object_p;
+  }
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
   // This function is responsible for creating a Lua userdata out of a C++
@@ -161,11 +150,10 @@ protected:
   // leaving the new userdata on the stack to be picked up by Lua.
   // ---------------------------------------------------------------------------
   {
-    LuaCppObject **place = (LuaCppObject**)
-      lua_newuserdata(L, sizeof(LuaCppObject*));
+    const size_t sz = sizeof(LuaCppObject*);
+    LuaCppObject **place = (LuaCppObject**) lua_newuserdata(L, sz);
     *place = object;
 
-    lua_newtable(L);
     static luaL_Reg meta[] =
       {{ "__add", LuaCppObject::_add},
        { "__sub", LuaCppObject::_sub},
@@ -185,6 +173,8 @@ protected:
        { "__tostring", LuaCppObject::_tostring},
        { "__gc", LuaCppObject::_gc},
        {NULL, NULL}};
+
+    lua_newtable(L);
     luaL_setfuncs(L, meta, 0);
     lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_HELD_OBJECTS);
     lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_ATTRIB);
@@ -204,7 +194,6 @@ protected:
     if (__LDEBUG) {
       printf("created object with refid %d\n", object->__refid);
     }
-
     return 1;
   }
 
@@ -380,22 +369,11 @@ private:
     return 0;
   }
   virtual int _index()
-  // ---------------------------------------------------------------------------
-  // Arguments:
-  //
-  // (1) object: a user data pointing to a LuaCppObject
-  // (2) method_name: a string
-  //
-  // Returns: a static c-function which wraps the instance method
-  //
-  // ---------------------------------------------------------------------------
   {
     lua_State *L = __lua_state;
     std::string method_name = lua_tostring(L, 2);
-
     luaL_getmetafield(L, 1, __CXX_INSTANCE_ATTRIB);
     lua_getfield(L, -1, method_name.c_str());
-
     if (!lua_isnil(L, -1)) {
       lua_remove(L, -2);
       return 1;
@@ -403,10 +381,8 @@ private:
     else {
       lua_pop(L, 2);
     }
-
     LuaInstanceMethod m = __getattr__(method_name);
     if (m == NULL) return 0;
-
     lua_pushcfunction(L, m);
     return 1;
   }
@@ -471,17 +447,17 @@ private:
   static int _le(lua_State *L) { META_STATIC_BINARY(__le); }
   static int _newindex(lua_State *L)
   {
-    LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    LuaCppObject *self = checkarg<LuaCppObject>(L, 1);
     return self->_newindex();
   }
   static int _index(lua_State *L)
   {
-    LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    LuaCppObject *self = checkarg<LuaCppObject>(L, 1);
     return self->_index();
   }
   static int _call(lua_State *L)
   {
-    LuaCppObject *self = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    LuaCppObject *self = checkarg<LuaCppObject>(L, 1);
     lua_remove(L, 1); // leave all remaining arguments on the stack
     return self->_call();
   }
@@ -501,7 +477,7 @@ private:
   // Returns: nothing
   // ---------------------------------------------------------------------------
   {
-    LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
+    LuaCppObject *object = checkarg<LuaCppObject>(L, 1);
 
     lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
     luaL_unref(L, -1, object->__refid);
