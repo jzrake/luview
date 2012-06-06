@@ -65,8 +65,6 @@ class LuaCppObject
   typedef int (*LuaInstanceMethod)(lua_State *L);
   typedef std::map<std::string, LuaInstanceMethod> AttributeMap;
 
-  // Used as the key into the symbol table (with weak values) of registered
-  // objects at global key `LuaCppObject`.
   int __refid;
   lua_State *__lua_state;
   std::string __type_name;
@@ -209,29 +207,6 @@ protected:
 
     return 1;
   }
-  static int make_cpp_handle(lua_State *L, int pos)
-  // ---------------------------------------------------------------------------
-  // This function is responsible for creating a C++ object out of the Lua
-  // object at stack index `pos`. It is only invoked by C++ code indirectly
-  // through LuaCppObject::LuaCppObject(lua_State *L, int pos). Its main purpose
-  // is to facilitate the creation of C++ callback functions which invoke Lua
-  // functions, but it could also be used, for example, to wrap a Lua table with
-  // a C++ class. The function returns a refid (key into __CXX_OBJECT_LOOKUP) whose value
-  // is the Lua object at stack index `pos`.
-  // ---------------------------------------------------------------------------
-  {
-    pos = lua_absindex(L, pos);
-    lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
-    lua_pushvalue(L, pos);
-
-    int refid = luaL_ref(L, -2);
-    lua_pop(L, 2);
-
-    if (__LDEBUG) {
-      printf("created lua C++ handle with refid %d\n", refid);
-    }
-    return refid;
-  }
 
 public:
   // ---------------------------------------------------------------------------
@@ -271,12 +246,12 @@ protected:
     lua_State *L = __lua_state;
     retrieve(this);
     luaL_getmetafield(L, -1, __CXX_INSTANCE_HELD_OBJECTS);
-    lua_remove(L, -2); // done with `this`
+    lua_remove(L, -2); // all finished with `this`
     lua_getfield(L, -1, key);
-    lua_remove(L, -2); // done with this->held_objects
+    lua_remove(L, -2); // all finished with this->held_objects
   }
   // ---------------------------------------------------------------------------
-  // Holds a C++ object, or a Lua object respectively.
+  // Holds a C++ object, or a Lua object respectively
   // ---------------------------------------------------------------------------
   void hold(LuaCppObject *obj)
   {
