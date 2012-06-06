@@ -20,10 +20,10 @@ extern "C" {
 #include "lauxlib.h"
 }
 
-#define __HELD_OBJECTS_TABLE "__HELD_OBJECTS_TABLE"
-#define __LUA_ATTRIB_TABLE "__LUA_ATTRIB_TABLE"
+#define __CXX_INSTANCE_HELD_OBJECTS   "__CXX_INSTANCE_HELD_OBJECTS"
+#define __CXX_INSTANCE_ATTRIB         "__CXX_INSTANCE_ATTRIB"
+#define __CXX_OBJECT_LOOKUP           "__CXX_OBJECT_LOOKUP"
 #define __LDEBUG 0
-#define __REGLUA "__LUA_CPP_OBJECT_TABLE"
 
 // ---------------------------------------------------------------------------
 #define STACKDUMP {                                                     \
@@ -92,7 +92,7 @@ class LuaCppObject
     lua_pushstring(L, "v");
     lua_setfield(L, -2, "__mode");
     lua_setmetatable(L, -2);
-    lua_setglobal(L, __REGLUA);
+    lua_setfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
   }
   template <class T> static void Register(lua_State *L)
   // ---------------------------------------------------------------------------
@@ -188,14 +188,14 @@ protected:
        { "__gc", LuaCppObject::_gc},
        {NULL, NULL}};
     luaL_setfuncs(L, meta, 0);
-    lua_newtable(L); lua_setfield(L, -2, __HELD_OBJECTS_TABLE);
-    lua_newtable(L); lua_setfield(L, -2, __LUA_ATTRIB_TABLE);
+    lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_HELD_OBJECTS);
+    lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_ATTRIB);
     lua_setmetatable(L, -2);
 
     // Register the object with a unique reference id for easy retrieval as a
     // Lua object.
     // -------------------------------------------------------------------------
-    lua_getglobal(L, __REGLUA);
+    lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
     lua_pushvalue(L, -2);
     object->__refid = luaL_ref(L, -2);
     object->__lua_state = L;
@@ -216,12 +216,12 @@ protected:
   // through LuaCppObject::LuaCppObject(lua_State *L, int pos). Its main purpose
   // is to facilitate the creation of C++ callback functions which invoke Lua
   // functions, but it could also be used, for example, to wrap a Lua table with
-  // a C++ class. The function returns a refid (key into __REGLUA) whose value
+  // a C++ class. The function returns a refid (key into __CXX_OBJECT_LOOKUP) whose value
   // is the Lua object at stack index `pos`.
   // ---------------------------------------------------------------------------
   {
     pos = lua_absindex(L, pos);
-    lua_getglobal(L, __REGLUA);
+    lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
     lua_pushvalue(L, pos);
 
     int refid = luaL_ref(L, -2);
@@ -254,7 +254,7 @@ public:
       lua_pushnil(L);
       return;
     }
-    lua_getglobal(L, __REGLUA);
+    lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
     lua_rawgeti(L, -1, object->__refid);
     lua_remove(L, -2);
   }
@@ -270,7 +270,7 @@ protected:
   {
     lua_State *L = __lua_state;
     retrieve(this);
-    luaL_getmetafield(L, -1, __HELD_OBJECTS_TABLE);
+    luaL_getmetafield(L, -1, __CXX_INSTANCE_HELD_OBJECTS);
     lua_remove(L, -2); // done with `this`
     lua_getfield(L, -1, key);
     lua_remove(L, -2); // done with this->held_objects
@@ -333,7 +333,7 @@ private:
     lua_State *L = __lua_state;
     const int pos = lua_absindex(L, -1);
     retrieve(this);
-    luaL_getmetafield(L, -1, __HELD_OBJECTS_TABLE);
+    luaL_getmetafield(L, -1, __CXX_INSTANCE_HELD_OBJECTS);
     lua_remove(L, -2); // removes `this`
     if (key == NULL) {
       lua_pushnumber(L, refid); // key is obj's refid (for LuaCppObject's)
@@ -398,7 +398,7 @@ private:
   virtual int _newindex()
   {
     lua_State *L = __lua_state;
-    luaL_getmetafield(L, 1, __LUA_ATTRIB_TABLE);
+    luaL_getmetafield(L, 1, __CXX_INSTANCE_ATTRIB);
     lua_pushvalue(L, 2);
     lua_pushvalue(L, 3);
     lua_settable(L, -3);
@@ -418,7 +418,7 @@ private:
     lua_State *L = __lua_state;
     std::string method_name = lua_tostring(L, 2);
 
-    luaL_getmetafield(L, 1, __LUA_ATTRIB_TABLE);
+    luaL_getmetafield(L, 1, __CXX_INSTANCE_ATTRIB);
     lua_getfield(L, -1, method_name.c_str());
 
     if (!lua_isnil(L, -1)) {
@@ -528,7 +528,7 @@ private:
   {
     LuaCppObject *object = *static_cast<LuaCppObject**>(lua_touserdata(L, 1));
 
-    lua_getglobal(L, __REGLUA);
+    lua_getfield(L, LUA_REGISTRYINDEX, __CXX_OBJECT_LOOKUP);
     luaL_unref(L, -1, object->__refid);
     lua_pop(L, 1);
 

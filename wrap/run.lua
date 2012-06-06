@@ -5,7 +5,7 @@ local function test_method_calls()
    local dog = tests.Dog()
    local cat = tests.Cat()
 
-   for number, animal in pairs({dog, cat}) do
+   for number, animal in pairs{dog, cat} do
       print("for animal type " .. animal:get_type())
       animal:speak()
       animal:eat(number)
@@ -63,7 +63,7 @@ local function test_gc()
 
    print("collected?")
 
-   for k,v in pairs(__LUA_CPP_OBJECT_TABLE) do
+   for k,v in pairs(debug.getregistry()["__CXX_OBJECT_LOOKUP"]) do
       print(k,v)
    end
 end
@@ -81,8 +81,12 @@ local function test_hold_drop()
    david:set_dog(sadie)
    sadie:set_owner(david)
 
-   for k,v in pairs(getmetatable(david).__HELD_OBJECTS_TABLE) do print(k,v) end
-   for k,v in pairs(getmetatable(sadie).__HELD_OBJECTS_TABLE) do print(k,v) end
+   for k,v in pairs(getmetatable(david).__CXX_INSTANCE_HELD_OBJECTS) do
+      print(k,v)
+   end
+   for k,v in pairs(getmetatable(sadie).__CXX_INSTANCE_HELD_OBJECTS) do
+      print(k,v)
+   end
 
    print("sadie, " .. sadie:get_refid() .. " should NOT be collected")
    print("murphy, " .. murphy:get_refid() .. " should be collected")
@@ -123,12 +127,13 @@ end
 local function test_complex()
    print(tests.j + 2)
 end
+
 test_complex()
+test_add_method()
+test_callback()
+test_hold_drop()
+test_casting()
+test_method_calls()
+test_gc()
 
-
---test_add_method()
---test_callback()
---test_hold_drop()
---test_casting()
---test_method_calls()
---test_gc()
+--for k,v in pairs(debug.getregistry()) do print(k,v) end
