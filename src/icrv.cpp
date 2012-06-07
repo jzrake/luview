@@ -11,8 +11,17 @@ extern "C" {
 
 IntegralCurve::IntegralCurve() : DataSource()
 {
-
+  rstart[0] = 0.0;
+  rstart[1] = 0.0;
+  rstart[2] = 0.0;
 }
+void IntegralCurve::set_starting_point(const double *r0)
+{
+  rstart[0] = r0[0];
+  rstart[1] = r0[1];
+  rstart[2] = r0[2];
+}
+
 void IntegralCurve::__init_lua_objects()
 {
   hold(__output_ds["scalars"] = create<DataSource>(__lua_state));
@@ -24,13 +33,13 @@ void IntegralCurve::__refresh_cpu()
 {
   if (__cpu_transform == NULL) return;
 
-  double r[3] = { 0.1, 0.1, 0.1 };
+  double r[3] = {rstart[0], rstart[1], rstart[2]};
   double r1[3], r2[3], r3[3], r4[3];
   double k1[3], k2[3], k3[3], k4[3];
 
   double ds = 1e-2, s = 0.0, s1 = 5;
-
   std::vector<double> points;
+
   while (s < s1) {
     points.push_back(r[0]);
     points.push_back(r[1]);
@@ -103,4 +112,25 @@ void IntegralCurve::__refresh_cpu()
   std::vector<GLfloat> fpoints(points.begin(), points.end());
   int N[2] = { fpoints.size()/3, 3 };
   this->set_data(&fpoints[0], N, 2);
+}
+
+
+
+
+IntegralCurve::LuaInstanceMethod
+IntegralCurve::__getattr__(std::string &method_name)
+{
+  AttributeMap attr;
+  attr["set_starting_point"] = _set_starting_point_;
+  RETURN_ATTR_OR_CALL_SUPER(DataSource);
+}
+int IntegralCurve::_set_starting_point_(lua_State *L)
+{
+  IntegralCurve *self = checkarg<IntegralCurve>(L, 1);
+  double x[3];
+  x[0] = luaL_checknumber(L, 2);
+  x[1] = luaL_checknumber(L, 3);
+  x[2] = luaL_checknumber(L, 4);
+  self->set_starting_point(x);
+  return 0;
 }

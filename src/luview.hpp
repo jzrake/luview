@@ -148,12 +148,18 @@ protected:
 
 class IntegralCurve :  public DataSource
 {
+private:
+  double rstart[3]; // starting point
 public:
   IntegralCurve();
+  void set_starting_point(const double *r0);
 protected:
   void __execute_cpu_transform() { }
   void __refresh_cpu();
   void __init_lua_objects();
+protected:
+  virtual LuaInstanceMethod __getattr__(std::string &method_name);
+  static int _set_starting_point_(lua_State *L);
 } ;
 
 class CallbackFunction : public LuaCppObject
