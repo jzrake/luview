@@ -37,7 +37,7 @@ void IntegralCurve::__refresh_cpu()
   double r1[3], r2[3], r3[3], r4[3];
   double k1[3], k2[3], k3[3], k4[3];
 
-  double ds = 1e-2, s = 0.0, s1 = 5;
+  double ds = 4e-2, s = 0.0, s1 = 50;
   std::vector<double> points;
 
   while (s < s1) {
