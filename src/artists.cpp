@@ -42,13 +42,14 @@ static void draw_sphere(const GLfloat *x0, GLfloat rad, int qual)
 
 ParameterizedPathArtist::ParameterizedPathArtist()
 {
-   gl_modes.push_back(GL_DEPTH_TEST);
+  gl_modes.push_back(GL_DEPTH_TEST);
   gl_modes.push_back(GL_LIGHTING);
   gl_modes.push_back(GL_LIGHT0);
   gl_modes.push_back(GL_BLEND);
   gl_modes.push_back(GL_COLOR_MATERIAL);
   gl_modes.push_back(GL_AUTO_NORMAL);
-  gl_modes.push_back(GL_NORMALIZE); 
+  gl_modes.push_back(GL_NORMALIZE);
+  gl_modes.push_back(GL_CULL_FACE);
 }
 void ParameterizedPathArtist::draw_local()
 {
