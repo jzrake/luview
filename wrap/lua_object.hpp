@@ -128,7 +128,8 @@ protected:
     LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);
     return dynamic_cast<T*>(cpp_object);
   }
-  template <class T> static T *checkarg(lua_State *L, int pos)
+  template <class T> static T *checkarg(lua_State *L, int pos,
+					const char *key=NULL)
   // ---------------------------------------------------------------------------
   // Convenience function, calls testarg and throws a Lua error if the result is
   // NULL.
@@ -137,8 +138,14 @@ protected:
     T *object_p = testarg<T>(L, pos);
     if (object_p == NULL) {
       std::string tn = demangle(typeid(T).name());
-      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
-		 luaL_typename(L, pos), pos, tn.c_str());
+      if (key == NULL) {
+	luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
+		   luaL_typename(L, pos), pos, tn.c_str());
+      }
+      else {
+	luaL_error(L, "attribute '%s' must be a subtype of '%s'",
+		   key, tn.c_str());
+      }
     }
     return object_p;
   }
@@ -146,7 +153,7 @@ protected:
   {
     lua_State *L = __lua_state;
     retrieve(key);
-    T *ret = lua_isnil(L, -1) ? dflt : testarg<T>(L, -1);
+    T *ret = lua_isnil(L, -1) ? dflt : checkarg<T>(L, -1, key);
     lua_pop(__lua_state, 1);
     return ret;
   }
@@ -182,7 +189,6 @@ protected:
     lua_pop(L, 1);
     return ret;
   }
-
   double check_item_double(const char *key)
   {
     lua_State *L = __lua_state;

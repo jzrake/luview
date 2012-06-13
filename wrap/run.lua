@@ -132,8 +132,8 @@ local function test_implicit_set()
    local blue = tests.Cat()
    local zrakey = tests.PetOwner()
    blue:set_name("blue-cat")
-   zrakey.vet_animal = blue
-   print(zrakey.vet_animal:get_name())
+   zrakey.vet_animal = zrakey
+--   print(zrakey.vet_animal:get_name())
    zrakey:vet_trip()
 end
 
