@@ -30,7 +30,9 @@ CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
   }
   else {
     LuaFunction *f = create<LuaFunction>(L);
-    f->hold(2, "lua_callback");
+    lua_pop(L, 1);
+    lua_pushvalue(L, pos);
+    f->set_item("lua_callback");
     return f;
   }
 }
@@ -197,12 +199,18 @@ public:
   }
   void auto_cat()
   {
-    cat = create<Cat>(__lua_state);
+    cat = create<Cat>();
     hold(cat);
+    lua_pop(__lua_state, 1);
     cat->set_name("cleo-kitty");
   }
-
 protected:
+  virtual void __init_lua_objects()
+  {
+    create<Dog>();
+    set_item("default_dog");
+    set_item_int("number_of_pets", 2);
+  }
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
   {
     AttributeMap attr;
@@ -334,27 +342,23 @@ public:
 protected:
   virtual int __add() {
     lua_State *L = __lua_state;
-    LuaComplexDouble *a, *b;
+    std::complex<double> a, b;
 
     if (lua_isnumber(L, 1)) {
-      a = create<LuaComplexDouble>(L);
-      a->z = lua_tonumber(L, 1);
+      a = lua_tonumber(L, 1);
     }
     else {
-      a = checkarg<LuaComplexDouble>(L, 1);
+      a = checkarg<LuaComplexDouble>(L, 1)->z;
     }
     if (lua_isnumber(L, 2)) {
-      b = create<LuaComplexDouble>(L);
-      b->z = lua_tonumber(L, 2);
+      b = lua_tonumber(L, 2);
     }
     else {
-      b = checkarg<LuaComplexDouble>(L, 2);
+      b = checkarg<LuaComplexDouble>(L, 2)->z;
     }
 
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
-    ret->z = a->z + b->z;
-    retrieve(L, ret);
-
+    ret->z = a + b;
     return 1;
   }
   virtual std::string __tostring()
@@ -374,14 +378,12 @@ protected:
     LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
     ret->z = conj(self->z);
-    self->retrieve(ret);
     return 1;
   }
   static int _norm_(lua_State *L) {
     LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
     ret->z = norm(self->z);
-    self->retrieve(ret);
     return 0;
   }
 } ;
@@ -403,7 +405,6 @@ int main()
 
   LuaComplexDouble *J = LuaCppObject::create<LuaComplexDouble>(L);
   J->z = std::complex<double>(0,1);
-  LuaCppObject::retrieve(L, J);
   lua_setfield(L, -2, "j");
 
   lua_setglobal(L, "tests");
