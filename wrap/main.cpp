@@ -146,7 +146,6 @@ protected:
   }
 } ;
 
-
 class Dog : public Animal
 {
 public:
@@ -160,7 +159,6 @@ public:
     printf("eating %d rabbits...\n", number);
   }
 } ;
-
 
 class Poodle : public Dog
 {
@@ -213,6 +211,7 @@ protected:
     attr["get_cat"] = _get_cat_;
     attr["get_dog"] = _get_dog_;
     attr["auto_cat"] = _auto_cat_;
+    attr["vet_trip"] = _vet_trip_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   static int _set_dog_(lua_State *L) {
@@ -240,6 +239,12 @@ protected:
   static int _auto_cat_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
     self->auto_cat();
+    return 0;
+  }
+  static int _vet_trip_(lua_State *L) {
+    PetOwner *self = checkarg<PetOwner>(L, 1);
+    Animal *vet_animal = self->check_item<Animal>("vet_animal");
+    std::cout<<"taking "<<vet_animal->get_name()<<" to the vet"<<std::endl;;
     return 0;
   }
 } ;

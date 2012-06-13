@@ -128,12 +128,25 @@ local function test_complex()
    print(tests.j + 2)
 end
 
-test_complex()
-test_add_method()
-test_callback()
-test_hold_drop()
-test_casting()
-test_method_calls()
-test_gc()
+local function test_implicit_set()
+   local blue = tests.Cat()
+   local zrakey = tests.PetOwner()
+   blue:set_name("blue-cat")
+   zrakey.vet_animal = blue
+   print(zrakey.vet_animal:get_name())
+   zrakey:vet_trip()
+end
+
+test_implicit_set()
+
+
+--test_complex()
+--test_add_method()
+--test_callback()
+--test_hold_drop()
+--test_casting()
+--test_method_calls()
+--test_gc()
+
 
 --for k,v in pairs(debug.getregistry()) do print(k,v) end
