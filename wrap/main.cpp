@@ -30,9 +30,7 @@ CallbackFunction *CallbackFunction::create_from_stack(lua_State *L, int pos)
   }
   else {
     LuaFunction *f = create<LuaFunction>(L);
-    lua_pop(L, 1);
-    lua_pushvalue(L, pos);
-    f->set_item("lua_callback");
+    f->hold(2, "lua_callback");
     return f;
   }
 }
@@ -148,6 +146,7 @@ protected:
   }
 } ;
 
+
 class Dog : public Animal
 {
 public:
@@ -161,6 +160,7 @@ public:
     printf("eating %d rabbits...\n", number);
   }
 } ;
+
 
 class Poodle : public Dog
 {
@@ -199,18 +199,12 @@ public:
   }
   void auto_cat()
   {
-    cat = create<Cat>();
+    cat = create<Cat>(__lua_state);
     hold(cat);
-    lua_pop(__lua_state, 1);
     cat->set_name("cleo-kitty");
   }
+
 protected:
-  virtual void __init_lua_objects()
-  {
-    create<Dog>();
-    set_item("default_dog");
-    set_item_int("number_of_pets", 2);
-  }
   virtual LuaInstanceMethod __getattr__(std::string &method_name)
   {
     AttributeMap attr;
@@ -219,7 +213,6 @@ protected:
     attr["get_cat"] = _get_cat_;
     attr["get_dog"] = _get_dog_;
     attr["auto_cat"] = _auto_cat_;
-    attr["vet_trip"] = _vet_trip_;
     RETURN_ATTR_OR_CALL_SUPER(LuaCppObject);
   }
   static int _set_dog_(lua_State *L) {
@@ -247,12 +240,6 @@ protected:
   static int _auto_cat_(lua_State *L) {
     PetOwner *self = checkarg<PetOwner>(L, 1);
     self->auto_cat();
-    return 0;
-  }
-  static int _vet_trip_(lua_State *L) {
-    PetOwner *self = checkarg<PetOwner>(L, 1);
-    Animal *vet_animal = self->check_item<Animal>("vet_animal");
-    std::cout<<"taking "<<vet_animal->get_name()<<" to the vet"<<std::endl;;
     return 0;
   }
 } ;
@@ -342,23 +329,27 @@ public:
 protected:
   virtual int __add() {
     lua_State *L = __lua_state;
-    std::complex<double> a, b;
+    LuaComplexDouble *a, *b;
 
     if (lua_isnumber(L, 1)) {
-      a = lua_tonumber(L, 1);
+      a = create<LuaComplexDouble>(L);
+      a->z = lua_tonumber(L, 1);
     }
     else {
-      a = checkarg<LuaComplexDouble>(L, 1)->z;
+      a = checkarg<LuaComplexDouble>(L, 1);
     }
     if (lua_isnumber(L, 2)) {
-      b = lua_tonumber(L, 2);
+      b = create<LuaComplexDouble>(L);
+      b->z = lua_tonumber(L, 2);
     }
     else {
-      b = checkarg<LuaComplexDouble>(L, 2)->z;
+      b = checkarg<LuaComplexDouble>(L, 2);
     }
 
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
-    ret->z = a + b;
+    ret->z = a->z + b->z;
+    retrieve(L, ret);
+
     return 1;
   }
   virtual std::string __tostring()
@@ -378,12 +369,14 @@ protected:
     LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
     ret->z = conj(self->z);
+    self->retrieve(ret);
     return 1;
   }
   static int _norm_(lua_State *L) {
     LuaComplexDouble *self = checkarg<LuaComplexDouble>(L, 1);
     LuaComplexDouble *ret = create<LuaComplexDouble>(L);
     ret->z = norm(self->z);
+    self->retrieve(ret);
     return 0;
   }
 } ;
@@ -405,6 +398,7 @@ int main()
 
   LuaComplexDouble *J = LuaCppObject::create<LuaComplexDouble>(L);
   J->z = std::complex<double>(0,1);
+  LuaCppObject::retrieve(L, J);
   lua_setfield(L, -2, "j");
 
   lua_setglobal(L, "tests");

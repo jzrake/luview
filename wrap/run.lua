@@ -81,10 +81,10 @@ local function test_hold_drop()
    david:set_dog(sadie)
    sadie:set_owner(david)
 
-   for k,v in pairs(getmetatable(david).__CXX_INSTANCE_ATTRIB) do
+   for k,v in pairs(getmetatable(david).__CXX_INSTANCE_HELD_OBJECTS) do
       print(k,v)
    end
-   for k,v in pairs(getmetatable(sadie).__CXX_INSTANCE_ATTRIB) do
+   for k,v in pairs(getmetatable(sadie).__CXX_INSTANCE_HELD_OBJECTS) do
       print(k,v)
    end
 
@@ -117,9 +117,8 @@ end
 
 local function test_add_method()
    local sadie = tests.Dog()
-   sadie:teach_play(function() print("chasing rabbit!") end)
    function sadie:run_around()
-      print("running around! ok, playing...")
+      print("running aound! ok, playing...")
       self:play()
    end
    sadie:run_around()
@@ -129,17 +128,6 @@ local function test_complex()
    print(tests.j + 2)
 end
 
-local function test_implicit_set()
-   local blue = tests.Cat()
-   local zrakey = tests.PetOwner()
-   blue:set_name("blue-cat")
-   zrakey.vet_animal = blue
-   print(zrakey.vet_animal:get_name())
-   print(zrakey.number_of_pets)
-   print(zrakey.default_dog)
-   zrakey:vet_trip()
-end
-
 test_complex()
 test_add_method()
 test_callback()
@@ -147,6 +135,5 @@ test_hold_drop()
 test_casting()
 test_method_calls()
 test_gc()
-test_implicit_set()
 
 --for k,v in pairs(debug.getregistry()) do print(k,v) end

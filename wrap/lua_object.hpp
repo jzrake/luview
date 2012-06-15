@@ -20,6 +20,7 @@ extern "C" {
 #include "lauxlib.h"
 }
 
+#define __CXX_INSTANCE_HELD_OBJECTS   "__CXX_INSTANCE_HELD_OBJECTS"
 #define __CXX_INSTANCE_ATTRIB         "__CXX_INSTANCE_ATTRIB"
 #define __CXX_OBJECT_LOOKUP           "__CXX_OBJECT_LOOKUP"
 #define __LDEBUG 1
@@ -127,8 +128,7 @@ protected:
     LuaCppObject *cpp_object = *static_cast<LuaCppObject**>(object_p);
     return dynamic_cast<T*>(cpp_object);
   }
-  template <class T> static T *checkarg(lua_State *L, int pos,
-					const char *key=NULL)
+  template <class T> static T *checkarg(lua_State *L, int pos)
   // ---------------------------------------------------------------------------
   // Convenience function, calls testarg and throws a Lua error if the result is
   // NULL.
@@ -137,155 +137,11 @@ protected:
     T *object_p = testarg<T>(L, pos);
     if (object_p == NULL) {
       std::string tn = demangle(typeid(T).name());
-      if (key == NULL) {
-	luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
-		   luaL_typename(L, pos), pos, tn.c_str());
-      }
-      else {
-	luaL_error(L, "attribute '%s' must be a subtype of '%s'",
-		   key, tn.c_str());
-      }
+      luaL_error(L, "object of type '%s' at %d is not a subtype of '%s'",
+		 luaL_typename(L, pos), pos, tn.c_str());
     }
     return object_p;
   }
-
-  double check_item_double(const char *key)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    if (lua_isnil(L, -1)) {
-      luaL_error(L, "'%s' object has no attribute '%s'", __type_name.c_str(),
-		 key);
-    }
-    double ret = lua_tonumber(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  template <class T> T *check_item(const char *key)
-  {
-    lua_State *L = __lua_state;
-    T *ret = get_item<T>(key, NULL);
-    if (ret == NULL) {
-      luaL_error(L, "'%s' object has no attribute '%s'", __type_name.c_str(),
-		 key);
-    }
-    return ret;
-  }
-  int check_item_int(const char *key)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    if (lua_isnil(L, -1)) {
-      luaL_error(L, "'%s' object has no attribute '%s'", __type_name.c_str(),
-		 key);
-    }
-    int ret = lua_tointeger(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  bool check_item_bool(const char *key)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    if (lua_isnil(L, -1)) {
-      luaL_error(L, "'%s' object has no attribute '%s'", __type_name.c_str(),
-		 key);
-    }
-    bool ret = lua_toboolean(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  const char *check_item_string(const char *key)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    if (lua_isnil(L, -1)) {
-      luaL_error(L, "'%s' object has no attribute '%s'", __type_name.c_str(),
-		 key);
-    }
-    const char *ret = lua_tostring(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  template <class T> T *get_item(const char *key, T *dflt)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    T *ret = lua_isnil(L, -1) ? dflt : checkarg<T>(L, -1, key);
-    lua_pop(L, 1);
-    return ret;
-  }
-  double get_item_double(const char *key, double dflt)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    double ret = lua_isnil(L, -1) ? dflt : lua_tonumber(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  int get_item_int(const char *key, int dflt)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    int ret = lua_isnil(L, -1) ? dflt : lua_tointeger(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  bool get_item_bool(const char *key, bool dflt)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    bool ret = lua_isnil(L, -1) ? dflt : lua_toboolean(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  const char *get_item_string(const char *key, const char *dflt)
-  {
-    lua_State *L = __lua_state;
-    retrieve(key);
-    const char *ret = lua_isnil(L, -1) ? dflt : lua_tostring(L, -1);
-    lua_pop(L, 1);
-    return ret;
-  }
-  void set_item(const char *key)
-  // ---------------------------------------------------------------------------
-  // Sets the item at the top of the stack as `key` in the objects's table
-  // ---------------------------------------------------------------------------
-  {
-    _hold_or_drop('h', LUA_NOREF, key);
-    lua_pop(__lua_state, 1);
-  }
-  template <class T> void set_item(const char *key, T *val)
-  {
-    retrieve(val);
-    set_item(key);
-  }
-  void set_item_nil(const char *key)
-  {
-    lua_pushnil(__lua_state);
-    set_item(key);
-  }
-  void set_item_double(const char *key, double val)
-  {
-    lua_pushnumber(__lua_state, val);
-    set_item(key);
-  }
-  void set_item_int(const char *key, int val)
-  {
-    lua_pushinteger(__lua_state, val);
-    set_item(key);
-  }
-  void set_item_bool(const char *key, bool val)
-  {
-    lua_pushboolean(__lua_state, val);
-    set_item(key);
-  }
-  void set_item_string(const char *key, const char *val)
-  {
-    lua_pushstring(__lua_state, val);
-    set_item(key);
-  }
-
   static int make_lua_obj(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
   // This function is responsible for creating a Lua userdata out of a C++
@@ -320,6 +176,7 @@ protected:
 
     lua_newtable(L);
     luaL_setfuncs(L, meta, 0);
+    lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_HELD_OBJECTS);
     lua_newtable(L); lua_setfield(L, -2, __CXX_INSTANCE_ATTRIB);
     lua_setmetatable(L, -2);
 
@@ -343,18 +200,14 @@ protected:
 public:
   // ---------------------------------------------------------------------------
   // The methods below have public access so that non-class members may create
-  // objects. The new object is returned, and is left at the top of stack.
+  // objects
   // ---------------------------------------------------------------------------
   template <class T> static T *create(lua_State *L)
   {
     T *thing = new T;
     make_lua_obj(L, thing);
-    // make_lua_obj leaves `thing` on top of the stack
+    lua_pop(L, 1); // make_lua_obj left `thing` on top of the stack
     return thing;
-  }
-  template <class T> T *create()
-  {
-    return create<T>(__lua_state);
   }
   static void retrieve(lua_State *L, LuaCppObject *object)
   // ---------------------------------------------------------------------------
@@ -381,10 +234,10 @@ protected:
   {
     lua_State *L = __lua_state;
     retrieve(this);
-    luaL_getmetafield(L, -1, __CXX_INSTANCE_ATTRIB);
+    luaL_getmetafield(L, -1, __CXX_INSTANCE_HELD_OBJECTS);
     lua_remove(L, -2); // all finished with `this`
     lua_getfield(L, -1, key);
-    lua_remove(L, -2); // all finished with `this->held_objects`
+    lua_remove(L, -2); // all finished with this->held_objects
   }
   // ---------------------------------------------------------------------------
   // Holds a C++ object, or a Lua object respectively
@@ -444,7 +297,7 @@ private:
     lua_State *L = __lua_state;
     const int pos = lua_absindex(L, -1);
     retrieve(this);
-    luaL_getmetafield(L, -1, __CXX_INSTANCE_ATTRIB);
+    luaL_getmetafield(L, -1, __CXX_INSTANCE_HELD_OBJECTS);
     lua_remove(L, -2); // removes `this`
     if (key == NULL) {
       lua_pushnumber(L, refid); // key is obj's refid (for LuaCppObject's)
