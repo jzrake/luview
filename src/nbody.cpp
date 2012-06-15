@@ -9,31 +9,29 @@
 
 
 NbodySimulation::NbodySimulation() :
-  NumberOfParticles(400),
-  TimeStep(4e-6),
-  particles(NULL)
+  TimeStep(1e-4)
 {
-  init_particles();
+
 }
 NbodySimulation::~NbodySimulation()
 {
-  if (particles) free(particles); 
+
 }
 void NbodySimulation::advance()
 {
-  MoveParticlesRK2(particles, NumberOfParticles, TimeStep);
+  MoveParticlesRK2(&particles[0], particles.size(), TimeStep);
 
-  GLfloat *points = new GLfloat[NumberOfParticles*3];
-  GLfloat *masses = new GLfloat[NumberOfParticles];
+  GLfloat *points = new GLfloat[particles.size()*3];
+  GLfloat *masses = new GLfloat[particles.size()];
 
-  for (int i=0; i<NumberOfParticles; ++i) {
-    struct MassiveParticle *p = particles + i;
+  for (unsigned int i=0; i<particles.size(); ++i) {
+    struct MassiveParticle *p = &particles[i];
     points[3*i + 0] = p->x[0];
     points[3*i + 1] = p->x[1];
     points[3*i + 2] = p->x[2];
     masses[i] = p->m;
   }
-  int N[2] = { NumberOfParticles, 3 };
+  int N[2] = { particles.size(), 3 };
   __output_ds["positions"]->set_data(points, N, 2);
   __output_ds["masses"]->set_data(masses, N, 1);
   __staged = true;
@@ -53,6 +51,8 @@ NbodySimulation::__getattr__(std::string &method_name)
 {
   AttributeMap attr;
   attr["advance"] = _advance_;
+  attr["add_particle"] = _add_particle_;
+  attr["clear_particles"] = _clear_particles_;
   RETURN_ATTR_OR_CALL_SUPER(DataSource);
 }
 int NbodySimulation::_advance_(lua_State *L)
@@ -61,51 +61,26 @@ int NbodySimulation::_advance_(lua_State *L)
   self->advance();
   return 0;
 }
-void NbodySimulation::init_particles()
+int NbodySimulation::_add_particle_(lua_State *L)
 {
-  const int N = NumberOfParticles;
-  const double M = 1e7;
-
-  particles = (MassiveParticle*) realloc(particles, N*sizeof(MassiveParticle));
-
-  particles[0].m    = M;
-  particles[0].x[0] = 0.0;
-  particles[0].x[1] = 0.0;
-  particles[0].x[2] = 0.0;
-  particles[0].v[0] = 0.0;
-  particles[0].v[1] = 0.0;
-  particles[0].v[2] = 0.0;
-
-  for (int i=1; i<N; ++i) {
-    struct MassiveParticle *p = particles + i;
-
-    const double r = RandomDouble(0.5, 1.0);
-    const double t = RandomDouble(0.0, 2*M_PI);
-    const double v = sqrt(M/r);
-
-    p->id = i;
-    p->m = RandomDouble(0.01, 10.0);
-
-    /*
-    double r = sqrt(p->x[0]*p->x[0] + p->x[1]*p->x[1] + p->x[2]*p->x[2]);
-    double v = sqrt(M/r);
-    p->x[0] = 1.0 + RandomDouble(-0.1, 0.1);
-    p->x[1] = RandomDouble(-0.1, 0.1);
-    p->x[2] = 1.0 + RandomDouble(-0.1, 0.1);
-    */
-
-    p->x[0] = r*cos(t);
-    p->x[1] = RandomDouble(-0.1, 0.1);
-    p->x[2] = r*sin(t);
-
-    p->v[0] = RandomDouble(-0.1, 0.1) + v*p->x[2]/r;
-    p->v[1] = RandomDouble(-0.1, 0.1);
-    p->v[2] = RandomDouble(-0.1, 0.1) - v*p->x[0]/r;
-  }
+  NbodySimulation *self = checkarg<NbodySimulation>(L, 1);
+  MassiveParticle p;
+  p.x[0] = luaL_checknumber(L, 2);
+  p.x[1] = luaL_checknumber(L, 3);
+  p.x[2] = luaL_checknumber(L, 4);
+  p.v[0] = luaL_checknumber(L, 5);
+  p.v[1] = luaL_checknumber(L, 6);
+  p.v[2] = luaL_checknumber(L, 7);
+  p.m = luaL_checknumber(L, 8);
+  self->particles.push_back(p);
+  return 0;
 }
-
-
-
+int NbodySimulation::_clear_particles_(lua_State *L)
+{
+  NbodySimulation *self = checkarg<NbodySimulation>(L, 1);
+  self->particles.clear();
+  return 0;
+}
 void NbodySimulation::MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt)
 {
   ComputeForces(P0, N);
@@ -200,6 +175,8 @@ void NbodySimulation::MoveParticlesRK4(struct MassiveParticle *P0, int N, double
 
 void NbodySimulation::ComputeForces(struct MassiveParticle *P0, int N)
 {
+  const double SofteningRadius = 1e-2;
+
   for (int i=0; i<N; ++i) {
     for (int m=0; m<3; ++m) {
       P0[i].a[m] = 0.0;
@@ -216,7 +193,7 @@ void NbodySimulation::ComputeForces(struct MassiveParticle *P0, int N)
       const double *x1 = p1->x;
 
       const double R[3] = { x1[0]-x0[0], x1[1]-x0[1], x1[2]-x0[2] };
-      const double r = sqrt(R[0]*R[0] + R[1]*R[1] + R[2]*R[2]);
+      const double r = sqrt(R[0]*R[0] + R[1]*R[1] + R[2]*R[2]) + SofteningRadius;
 
       p0->a[0] += p1->m * R[0] / (r*r*r);
       p0->a[1] += p1->m * R[1] / (r*r*r);

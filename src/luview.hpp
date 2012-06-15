@@ -351,10 +351,8 @@ private:
     double m;
     double x[3], v[3], a[3];
   } ;
-  int NumberOfParticles;
   double TimeStep;
-  MassiveParticle *particles;
-  void init_particles();
+  std::vector<MassiveParticle> particles;
   void ComputeForces(struct MassiveParticle *P0, int N);
   void ComputeForces2(struct MassiveParticle *P0, int N);
   void MoveParticlesFwE(struct MassiveParticle *P0, int N, double dt);
@@ -365,6 +363,8 @@ protected:
   void __init_lua_objects();
   virtual LuaInstanceMethod __getattr__(std::string &method_name);
   static int _advance_(lua_State *L);
+  static int _clear_particles_(lua_State *L);
+  static int _add_particle_(lua_State *L);
 } ;
 
 class BoundingBox : public DrawableObject
